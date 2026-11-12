@@ -58,34 +58,6 @@ local function makeTool(name: string, handleSize: Vector3?, color: Color3?): Too
 	return tool
 end
 
-local function roleTag(char: Model, text: string, color: Color3)
-	local head = char:FindFirstChild("Head") :: BasePart?
-	if not head then
-		return
-	end
-	local old = head:FindFirstChild("RoleTag")
-	if old then
-		old:Destroy()
-	end
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "RoleTag"
-	gui.Size = UDim2.fromOffset(120, 26)
-	gui.StudsOffset = Vector3.new(0, 2.6, 0)
-	gui.AlwaysOnTop = false
-	gui.MaxDistance = 60
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.Text = text
-	label.TextColor3 = color
-	label.TextStrokeColor3 = Color3.fromRGB(42, 31, 61)
-	label.TextStrokeTransparency = 0
-	label.Parent = gui
-	gui.Parent = head
-end
-
 local function skin(char: Model, color: Color3)
 	local bc = char:FindFirstChildOfClass("BodyColors")
 	if bc then
@@ -141,25 +113,6 @@ local function flashlight(char: Model)
 	end
 end
 
-local function hunterHat(char: Model)
-	local head = char:FindFirstChild("Head") :: BasePart?
-	if not head or char:FindFirstChild("HunterHat") then
-		return
-	end
-	local brim = Instance.new("Part")
-	brim.Name = "HunterHat"
-	brim.Size = Vector3.new(2.4, 0.2, 2.4)
-	brim.Color = Color3.fromRGB(45, 32, 25)
-	weld(brim, head, CFrame.new(0, 0.65, 0))
-	brim.Parent = char
-	local crown = Instance.new("Part")
-	crown.Name = "HunterHatTop"
-	crown.Size = Vector3.new(1.4, 0.7, 1.4)
-	crown.Color = Color3.fromRGB(45, 32, 25)
-	weld(crown, head, CFrame.new(0, 1.05, 0))
-	crown.Parent = char
-end
-
 local function setStats(hum: Humanoid, health: number, speed: number)
 	hum.MaxHealth = health
 	hum.Health = health
@@ -203,7 +156,6 @@ function CharacterService.applyRole(player: Player, role: string)
 	if not char or not hum then
 		return
 	end
-	char:SetAttribute("Role", role)
 	if role == "Alpha" then
 		skin(char, ALPHA_SKIN)
 		eyes(char, Color3.fromRGB(255, 40, 60), 0.35)
@@ -211,22 +163,14 @@ function CharacterService.applyRole(player: Player, role: string)
 			char:ScaleTo(1.3)
 		end)
 		setStats(hum, Weapons.health.alpha, Weapons.speed.alpha)
-		roleTag(char, "ALPHA", ROLE_COLORS.Alpha)
 	elseif role == "Zombie" then
 		skin(char, ZOMBIE_SKIN)
 		eyes(char, ROLE_COLORS.Zombie, 0.25)
 		setStats(hum, Weapons.health.basic, Weapons.speed.basic)
-		local tag = char:FindFirstChild("Head") and (char.Head :: any):FindFirstChild("RoleTag")
-		if tag then
-			tag:Destroy()
-		end
 	else
 		setStats(hum, Weapons.health.human, Weapons.speed.human)
 		flashlight(char)
-		if role == "Hunter" then
-			hunterHat(char)
-			roleTag(char, "HUNTER", ROLE_COLORS.Hunter)
-		end
+		-- secret roles: the Hunter looks like everyone else (no hat, no name tag)
 	end
 	CharacterService.giveTools(player, role)
 end

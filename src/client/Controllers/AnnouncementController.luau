@@ -18,7 +18,7 @@ local CARD_TIME = {
 	SomeoneInfected = 3,
 	YourRole = 2,
 	YourRules = 3,
-	HunterIs = 1.5,
+	HunterChosen = 1.5,
 	Result = 3,
 	YourCoins = 2,
 	Infected = 2.5,
@@ -32,9 +32,9 @@ local ROLE_TITLE = {
 	Zombie = "YOU ARE A ZOMBIE",
 }
 local ROLE_RULES = {
-	Survivor = "Hide  -  Revive friends  -  Survive 6:00\nOnly the Hunter has a gun",
-	Hunter = "Protect the survivors  -  Only you have a gun\nGrab ammo boxes  -  [R] reload",
-	Alpha = "Wait for release  -  Infect everyone\n2 hits downs a human",
+	Survivor = "Hide  -  Revive friends  -  Survive 6:00\nOne secret Hunter has a gun. One secret Alpha is infected.",
+	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
+	Alpha = "Your role is SECRET  -  Wait for release\nInfect everyone  -  2 hits downs a human",
 	Zombie = "Infect everyone  -  3 hits downs a human",
 }
 local RESULT_TEXT = {
@@ -141,13 +141,10 @@ local function fill(name: string, data: any)
 		title.Text = Theme.roleText[data.role] or ""
 		title.TextColor3 = Theme.roleColor[data.role] or C.bone
 		subtitle.Text = ROLE_RULES[data.role] or ""
-	elseif name == "HunterIs" then
-		local names = data.hunter1Name or "nobody"
-		if data.hunter2Name then
-			names ..= " & " .. data.hunter2Name
-		end
-		title.Text = "THE HUNTER IS " .. string.upper(names)
+	elseif name == "HunterChosen" then
+		title.Text = "A HUNTER WALKS AMONG YOU"
 		title.TextColor3 = C.peach
+		subtitle.Text = "Nobody knows who. Trust no one."
 	elseif name == "Result" then
 		local r = RESULT_TEXT[data.winner] or RESULT_TEXT.NoWinner
 		title.Text = r[1]
@@ -188,19 +185,15 @@ local function playQueue()
 end
 
 local bannerToken = 0
-local function showBanner(name: string, data: any)
+local function showBanner(name: string, _data: any)
 	local text, color = "", C.blood
 	if name == "AlphaAwakened" then
-		local who = data.alpha1Name or "???"
-		if data.alpha2Name then
-			who ..= " & " .. data.alpha2Name
-		end
-		text = "THE ALPHA HAS AWAKENED - it's " .. who
+		text = "THE ALPHA HAS AWAKENED - it could be anyone"
 	elseif name == "HunterFallen" then
 		text = "THE HUNTER HAS FALLEN - GRAB THE GUN!"
 		color = C.peach
 	elseif name == "NewHunter" then
-		text = string.upper(data.playerIdName or "?") .. " IS THE NEW HUNTER"
+		text = "SOMEONE PICKED UP THE GUN"
 		color = C.peach
 	end
 	bannerToken += 1

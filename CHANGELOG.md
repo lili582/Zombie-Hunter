@@ -5,6 +5,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Added
+- Secret roles: nobody is told who the Alpha or the Hunter is. Cards and banners never name them, the player list shows `?` for every other non-zombie player all round, and the Hunter has no hat or name tag. Basic (infected) zombies are still shown.
 - Studio playtests start a round with 2+ players automatically (`Classic.studioMinPlayers`); live servers still need 5.
 - Phase 1 playable Classic round (target v0.1.0):
   - Pure rules core (`src/shared/Rules`): role picker with anti-repeat, round phases and timers,

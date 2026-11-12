@@ -57,16 +57,6 @@ local function enterWaitingOrIntermission(s: State, fx: { Effect })
 	end
 end
 
-local function idsWithRole(s: State, role: Types.Role): { number }
-	local ids = {}
-	for _, id in Util.sortedIds(s.players) do
-		if s.players[id].role == role then
-			table.insert(ids, id)
-		end
-	end
-	return ids
-end
-
 local function enterHeadStart(s: State, fx: { Effect })
 	local ids = Util.sortedIds(s.players)
 	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.specialCount)
@@ -99,22 +89,14 @@ local function enterHeadStart(s: State, fx: { Effect })
 		table.insert(fx, { type = "Announce", card = "YourRole", toPlayerId = id, data = { role = role } })
 		table.insert(fx, { type = "Announce", card = "YourRules", toPlayerId = id, data = { role = role } })
 	end
-	-- Public: only the Hunters. The Alpha's id is never in a public effect before release.
-	local hunters = idsWithRole(s, "Hunter")
-	table.insert(
-		fx,
-		{ type = "Announce", card = "HunterIs", data = { hunter1 = hunters[1], hunter2 = hunters[2] } }
-	)
+	-- Secret roles: public cards never name the Alpha or the Hunter.
+	table.insert(fx, { type = "Announce", card = "HunterChosen" })
 end
 
 local function enterActive(s: State, fx: { Effect })
 	s.alphaRevealed = true
 	setPhase(s, "Active", s.config.roundLength, fx)
-	local alphas = idsWithRole(s, "Alpha")
-	table.insert(
-		fx,
-		{ type = "Announce", card = "AlphaAwakened", data = { alpha1 = alphas[1], alpha2 = alphas[2] } }
-	)
+	table.insert(fx, { type = "Announce", card = "AlphaAwakened" }) -- secret: no name
 end
 
 local function endRound(s: State, winner: Types.Winner, fx: { Effect })
@@ -259,13 +241,14 @@ function RoundRules.apply(state: State, event: Types.Event): (State, { Effect })
 	return s, fx
 end
 
--- What one client is allowed to see. The Alpha stays hidden until released:
--- before that, every non-Hunter looks like "?" to other players.
+-- What one client is allowed to see.
 function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 	local players = {}
 	for id, p in s.players do
 		local role: string = p.role
-		if not s.alphaRevealed and id ~= viewerId and (p.role == "Alpha" or p.role == "Survivor") then
+		-- Secret roles: you only see your own role. Infected (basic) zombies are shown,
+		-- everyone else (Alpha, Hunter, Survivors) is "?" for the whole round.
+		if id ~= viewerId and p.role ~= "Zombie" then
 			role = "?"
 		end
 		if s.phase ~= "HeadStart" and s.phase ~= "Active" and s.phase ~= "Results" then

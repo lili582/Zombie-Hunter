@@ -133,7 +133,7 @@ local function onPickUpGun(s: State, playerId: number, fx: { Effect })
 	p.role = "Hunter"
 	s.gunDropped = false
 	table.insert(fx, { type = "NewHunter", playerId = playerId })
-	table.insert(fx, { type = "Announce", card = "NewHunter", data = { playerId = playerId } })
+	table.insert(fx, { type = "Announce", card = "NewHunter" }) -- secret: no name
 end
 
 function Infection.step(s: State, event: Types.Event, fx: { Effect })
@@ -198,7 +198,7 @@ function Infection.onPlayerLeft(s: State, leaver: Types.PlayerState, fx: { Effec
 	table.insert(fx, { type = "Announce", card = "YourRole", toPlayerId = newId, data = { role = "Alpha" } })
 	table.insert(fx, { type = "Announce", card = "YourRules", toPlayerId = newId, data = { role = "Alpha" } })
 	if s.phase == "Active" then
-		table.insert(fx, { type = "Announce", card = "AlphaAwakened", data = { alpha1 = newId } })
+		table.insert(fx, { type = "Announce", card = "AlphaAwakened" }) -- secret: no name
 	end
 end
 

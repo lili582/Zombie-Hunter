@@ -224,7 +224,7 @@ local function onDied(player: Player, char: Model)
 		return
 	end
 	if p.role == "Alpha" or p.role == "Zombie" then
-		local killer = char:GetAttribute("LastHunter")
+		local killer = CombatService.takeLastHunter(player)
 		if type(killer) == "number" then
 			RoundManager.send({ type = "ZombieKilled", killerId = killer, victimId = player.UserId })
 		end
