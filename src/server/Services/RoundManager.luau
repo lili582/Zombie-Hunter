@@ -242,6 +242,10 @@ runEffect = function(f: any)
 			CharacterService.applyRole(player, "Hunter")
 			CombatService.resetGun(player, "Revolver")
 		end
+	elseif f.type == "MapChosen" then
+		-- Only the Town greybox (or your hand-built workspace.Map) exists so far, so there is
+		-- nothing to swap yet. When more maps are added, load f.mapId here.
+		print(`RoundManager: map {f.mapId}`)
 	elseif f.type == "AbilityUsed" then
 		AbilityService.onUsed(f)
 	elseif f.type == "PointsAwarded" then
@@ -259,6 +263,7 @@ local function broadcast()
 	for _, player in Players:GetPlayers() do
 		remote:FireClient(player, RoundRules.viewFor(state, player.UserId))
 	end
+	LobbyService.refresh(state)
 	dirty = false
 end
 

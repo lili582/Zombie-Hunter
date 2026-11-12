@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
+local Maps = require(Shared.Config.Maps)
 local Theme = require(script.Parent.Theme)
 
 local C = Theme.colors
@@ -40,6 +41,7 @@ local BANNERS = {
 	HeliIncoming = true,
 	HeliHere = true,
 	AlphaPicked = true,
+	Voted = true,
 }
 
 local ROLE_TITLE = {
@@ -628,6 +630,10 @@ local function showBanner(name: string, data: any)
 	elseif name == "HeliHere" then
 		text = "THE HELICOPTER IS HERE - GET TO THE ZONE!"
 		color = C.butter
+	elseif name == "Voted" then
+		local map = Maps.get(data.mapId)
+		text = `YOU VOTED: {if map then map.name else "?"}`
+		color = C.lavender
 	elseif name == "AlphaPicked" then
 		local class = AlphaClasses.get(data.class)
 		text = `IF YOU ARE THE ALPHA: {class.name}`

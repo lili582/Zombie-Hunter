@@ -529,7 +529,7 @@ local function render()
 	elseif phase == "Intermission" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.bone
-		ui.sub.Text = `NEXT ROUND: {string.upper(view.nextMode or "Classic")}`
+		ui.sub.Text = `NEXT ROUND: {string.upper(view.nextMode or "Classic")}  -  VOTE FOR A MAP AT THE BOARD`
 	elseif phase == "HeadStart" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.blood

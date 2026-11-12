@@ -60,6 +60,10 @@ export type RoundState = {
 	baseConfig: any, -- config between rounds; `config` is this + the round's mode
 	nextMode: string?, -- mode picked for the next round (shown in the lobby)
 	lastMode: string?, -- mode of the last round (a special mode never repeats)
+	mapChoices: { string }, -- maps on the vote board this intermission
+	votes: { [number]: string }, -- player -> voted map
+	mapHistory: { string }, -- maps of the last rounds (oldest first)
+	mapId: string?, -- map of the current / last round
 }
 
 export type Event =
@@ -82,6 +86,7 @@ export type Event =
 	| { type: "UseMedkit", playerId: number, targetId: number }
 	| { type: "SetAlphaClass", playerId: number, class: string }
 	| { type: "UseAbility", playerId: number }
+	| { type: "VoteMap", playerId: number, mapId: string }
 
 export type Effect = { type: string, [string]: any }
 -- Effect types:
@@ -99,6 +104,7 @@ export type Effect = { type: string, [string]: any }
 --   EnteredLocker {playerId, lockerId}  LeftLocker {playerId, lockerId, pulledBy?}
 --   Healed {playerId, targetId}
 --   AlphaClassSet {playerId, class}  AbilityUsed {playerId, class, ability}
+--   MapVoted {playerId, mapId}  MapChosen {mapId}
 --   PointsAwarded {playerId, amount, reason}
 --   Announce {card, toPlayerId?, data?}
 --   RoundOver {winner}
