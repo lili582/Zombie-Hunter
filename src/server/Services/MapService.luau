@@ -243,40 +243,208 @@ local function buildAlphaStation(parent: Instance, at: Vector3, facing: Vector3)
 	)
 end
 
+-- Things on the lobby walls that LobbyService updates (nil if the lobby was hand-built).
+export type LobbyRefs = {
+	mapSlots: { { label: TextLabel, prompt: ProximityPrompt } },
+	modeLabel: TextLabel,
+}
+MapService.lobby = nil :: LobbyRefs?
+
+-- The safehouse: the one cozy place. Warm string lights, a couch and an old TV, the map vote
+-- board, the Alpha pedestals, a shop counter for later... and a zombie peeking in the window.
+local SAFEHOUSE = {
+	wall = Color3.fromRGB(58, 40, 86), -- dusk
+	ceiling = Color3.fromRGB(42, 31, 61),
+	floor = Color3.fromRGB(70, 55, 45),
+	rug = Color3.fromRGB(120, 96, 160),
+	couch = Color3.fromRGB(150, 90, 110),
+	wood = Color3.fromRGB(96, 70, 58),
+	zombie = Color3.fromRGB(118, 156, 96),
+	bulbs = {
+		Color3.fromRGB(255, 143, 184),
+		Color3.fromRGB(163, 234, 200),
+		Color3.fromRGB(255, 224, 138),
+		Color3.fromRGB(191, 169, 242),
+		Color3.fromRGB(156, 200, 255),
+	},
+}
+
 local function buildLobby()
 	local lobby = Instance.new("Model")
 	lobby.Name = "Lobby"
 	lobby.Parent = workspace
-	local base = Vector3.new(0, 300, 0)
-	local floor = part(lobby, "Floor", Vector3.new(60, 2, 60), CFrame.new(base), Color3.fromRGB(70, 55, 45))
-	floor.Material = Enum.Material.WoodPlanks
-	for _, w in
-		{
-			{ Vector3.new(0, 9, 30), Vector3.new(60, 16, 2) },
-			{ Vector3.new(0, 9, -30), Vector3.new(60, 16, 2) },
-			{ Vector3.new(30, 9, 0), Vector3.new(2, 16, 60) },
-			{ Vector3.new(-30, 9, 0), Vector3.new(2, 16, 60) },
-		}
-	do
-		part(lobby, "Wall", w[2], CFrame.new(base + w[1]), Color3.fromRGB(58, 40, 86)) -- dusk
+	local base = Vector3.new(0, 300, 0) -- floor top is base.Y + 1
+	local W, D, H = 84, 64, 18
+	local function at(x: number, y: number, z: number): Vector3
+		return base + Vector3.new(x, y, z)
 	end
-	part(
-		lobby,
-		"Ceiling",
-		Vector3.new(60, 1, 60),
-		CFrame.new(base + Vector3.new(0, 17, 0)),
-		Color3.fromRGB(42, 31, 61)
+	-- a CFrame at `pos` whose front face (where signs draw) points along `dir`
+	local function facing(pos: Vector3, dir: Vector3): CFrame
+		return CFrame.lookAt(pos, pos + dir)
+	end
+	local function piece(name: string, size: Vector3, pos: Vector3, color: Color3): Part
+		return part(lobby, name, size, CFrame.new(pos), color)
+	end
+
+	-- room
+	local floor = piece("Floor", Vector3.new(W, 2, D), base, SAFEHOUSE.floor)
+	floor.Material = Enum.Material.WoodPlanks
+	piece("Ceiling", Vector3.new(W, 1, D), at(0, H + 1.5, 0), SAFEHOUSE.ceiling)
+	piece("Wall", Vector3.new(W, H, 2), at(0, 1 + H / 2, -D / 2), SAFEHOUSE.wall) -- north
+	piece("Wall", Vector3.new(2, H, D), at(W / 2, 1 + H / 2, 0), SAFEHOUSE.wall) -- east
+	piece("Wall", Vector3.new(2, H, D), at(-W / 2, 1 + H / 2, 0), SAFEHOUSE.wall) -- west
+	-- south wall with two windows (x = -20 and +20, from 5 to 12 above the floor)
+	local z = D / 2
+	piece("Wall", Vector3.new(W, 5, 2), at(0, 3.5, z), SAFEHOUSE.wall)
+	piece("Wall", Vector3.new(W, H - 12, 2), at(0, 13 + (H - 12) / 2, z), SAFEHOUSE.wall)
+	for _, seg in { { -33.5, 17 }, { 0, 30 }, { 33.5, 17 } } do
+		piece("Wall", Vector3.new(seg[2], 7, 2), at(seg[1], 9.5, z), SAFEHOUSE.wall)
+	end
+	for _, x in { -20, 20 } do
+		local glass = piece("Window", Vector3.new(10, 7, 0.3), at(x, 9.5, z), Color3.fromRGB(150, 160, 200))
+		glass.Material = Enum.Material.Glass
+		glass.Transparency = 0.75
+	end
+	-- outside: the night, and someone who wants in
+	local night = piece("Night", Vector3.new(W + 20, 40, 1), at(0, 10, z + 10), Color3.fromRGB(10, 8, 18))
+	night.Material = Enum.Material.SmoothPlastic
+	local head = piece("Peeker", Vector3.new(2, 2, 2), at(21, 10.5, z + 3), SAFEHOUSE.zombie)
+	head.CanCollide = false
+	for _, x in { 20.5, 21.5 } do
+		local eye = piece("PeekerEye", Vector3.new(0.4, 0.4, 0.1), at(x, 10.8, z + 1.95), SAFEHOUSE.bulbs[2])
+		eye.Material = Enum.Material.Neon
+		eye.CanCollide = false
+	end
+	for _, x in { 18, 24 } do
+		piece("PeekerHand", Vector3.new(1, 0.6, 1.6), at(x, 6.3, z + 1.6), SAFEHOUSE.zombie).CanCollide =
+			false
+	end
+	local moon = Instance.new("PointLight")
+	moon.Color = Color3.fromRGB(150, 160, 230)
+	moon.Range = 14
+	moon.Brightness = 1
+	moon.Parent = head
+
+	-- warm light + string lights along the long walls
+	local lamp = piece("Lamp", Vector3.new(2, 1, 2), at(0, H + 0.5, 0), COLORS.lamp)
+	lamp.Material = Enum.Material.Neon
+	local warm = Instance.new("PointLight")
+	warm.Range = 50
+	warm.Brightness = 1.4
+	warm.Color = Color3.fromRGB(255, 200, 150)
+	warm.Parent = lamp
+	for _, wz in { -D / 2 + 1.5, D / 2 - 1.5 } do
+		piece("Wire", Vector3.new(W - 4, 0.1, 0.1), at(0, H - 0.5, wz), Color3.fromRGB(30, 26, 36))
+		local i = 0
+		for x = -W / 2 + 4, W / 2 - 4, 5 do
+			i += 1
+			local color = SAFEHOUSE.bulbs[(i - 1) % #SAFEHOUSE.bulbs + 1]
+			local bulb = piece("StringLight", Vector3.new(0.6, 0.6, 0.6), at(x, H - 1, wz), color)
+			bulb.Shape = Enum.PartType.Ball
+			bulb.Material = Enum.Material.Neon
+			bulb.CanCollide = false
+			if i % 4 == 0 then
+				local glow = Instance.new("PointLight")
+				glow.Color = color
+				glow.Range = 12
+				glow.Brightness = 1
+				glow.Parent = bulb
+			end
+		end
+	end
+
+	-- cozy corner: rug, couch, an old TV with no signal
+	piece("Rug", Vector3.new(26, 0.2, 18), at(0, 1.1, 4), SAFEHOUSE.rug).CanCollide = false
+	piece("CouchSeat", Vector3.new(14, 2, 4), at(-26, 2, 25), SAFEHOUSE.couch)
+	piece("CouchBack", Vector3.new(14, 4, 1.5), at(-26, 4, 27.5), SAFEHOUSE.couch)
+	piece("CouchArm", Vector3.new(1.5, 3, 4), at(-33.5, 2.5, 25), SAFEHOUSE.couch)
+	piece("CouchArm", Vector3.new(1.5, 3, 4), at(-18.5, 2.5, 25), SAFEHOUSE.couch)
+	piece("TVStand", Vector3.new(6, 3, 3), at(-26, 2.5, 13), SAFEHOUSE.wood)
+	piece("TV", Vector3.new(5, 4, 4), at(-26, 6, 13), Color3.fromRGB(40, 36, 44))
+	local screen = piece("TVScreen", Vector3.new(4, 3, 0.2), at(-26, 6, 15.05), Color3.fromRGB(90, 90, 130))
+	screen.Material = Enum.Material.Neon
+	screen.Transparency = 0.35
+
+	-- the map vote board (north wall): 3 posters + a pad in front of each
+	local board = Instance.new("Model")
+	board.Name = "VoteBoard"
+	board.Parent = lobby
+	local wallZ = -D / 2 + 1.2
+	local south = Vector3.new(0, 0, 1)
+	sign(
+		board,
+		"VoteHeader",
+		Vector3.new(40, 3, 0.3),
+		facing(at(0, 15.5, wallZ), south),
+		"VOTE FOR THE NEXT MAP",
+		COLORS.lamp
 	)
-	local bulb =
-		part(lobby, "Bulb", Vector3.new(1, 1, 1), CFrame.new(base + Vector3.new(0, 15, 0)), COLORS.lamp)
-	bulb.Shape = Enum.PartType.Ball
-	bulb.Material = Enum.Material.Neon
-	local light = Instance.new("PointLight")
-	light.Range = 45
-	light.Brightness = 2
-	light.Color = Color3.fromRGB(255, 200, 150)
-	light.Parent = bulb
-	CollectionService:AddTag(bulb, "FlickerLight")
+	local slots = {}
+	for i, x in { -16, 0, 16 } do
+		local label = sign(
+			board,
+			`MapSlot{i}`,
+			Vector3.new(12, 8, 0.3),
+			facing(at(x, 9, wallZ), south),
+			"",
+			Color3.fromRGB(255, 246, 238)
+		)
+		local pad =
+			piece("VotePad", Vector3.new(8, 0.4, 6), at(x, 1.2, wallZ + 7), Color3.fromRGB(191, 169, 242))
+		pad.Material = Enum.Material.Neon
+		pad.Transparency = 0.5
+		pad.CanCollide = false
+		pad.Parent = board
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "Vote"
+		prompt.ObjectText = "Map"
+		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 8
+		prompt.RequiresLineOfSight = false
+		prompt.Enabled = false
+		prompt:SetAttribute("Slot", i)
+		CollectionService:AddTag(prompt, "MapVotePrompt")
+		prompt.Parent = pad
+		table.insert(slots, { label = label, prompt = prompt })
+	end
+
+	-- what's next (south wall, above the windows)
+	local modeLabel = sign(
+		lobby,
+		"ModeSign",
+		Vector3.new(30, 3, 0.3),
+		facing(at(0, 15.5, D / 2 - 1.2), Vector3.new(0, 0, -1)),
+		"WAITING FOR PLAYERS",
+		COLORS.blood
+	)
+
+	-- shop counter + dressing mirror (west wall): open in v0.4
+	local east = Vector3.new(1, 0, 0)
+	piece("ShopCounter", Vector3.new(4, 4, 16), at(-37, 3, -10), SAFEHOUSE.wood)
+	sign(
+		lobby,
+		"ShopSign",
+		Vector3.new(14, 3, 0.3),
+		facing(at(-W / 2 + 1.2, 12, -10), east),
+		"SHOP - OPENS SOON",
+		COLORS.lamp
+	)
+	local mirror =
+		piece("Mirror", Vector3.new(0.3, 10, 6), at(-W / 2 + 1.2, 7, 2), Color3.fromRGB(200, 205, 220))
+	mirror.Material = Enum.Material.Glass
+	mirror.Reflectance = 0.4
+	sign(
+		lobby,
+		"MirrorSign",
+		Vector3.new(10, 2, 0.3),
+		facing(at(-W / 2 + 1.2, 13.5, 2), east),
+		"CATALOG - SOON",
+		Color3.fromRGB(191, 169, 242)
+	)
+
+	-- the Alpha pedestals (east wall)
+	buildAlphaStation(lobby, at(W / 2 - 8, 1, 0), Vector3.new(-1, 0, 0))
 
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "LobbySpawn"
@@ -284,12 +452,12 @@ local function buildLobby()
 	spawn.Neutral = true
 	spawn.Duration = 0 -- no forcefield
 	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.CFrame = CFrame.new(base + Vector3.new(0, 1.5, 0))
+	spawn.CFrame = CFrame.new(at(0, 1.5, 0))
 	spawn.Color = Color3.fromRGB(255, 143, 184)
 	spawn.Parent = lobby
 	CollectionService:AddTag(spawn, "LobbySpawn")
 
-	buildAlphaStation(lobby, base + Vector3.new(24, 1, 0), Vector3.new(-1, 0, 0))
+	MapService.lobby = { mapSlots = slots, modeLabel = modeLabel }
 end
 
 local function buildTown()

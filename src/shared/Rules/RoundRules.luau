@@ -12,6 +12,8 @@ local Survival = require("./Survival")
 local Abilities = require("./Abilities")
 local ModePicker = require("./ModePicker")
 local Modes = require("../Config/Modes")
+local Maps = require("../Config/Maps")
+local MapVote = require("./MapVote")
 
 type State = Types.RoundState
 type Effect = Types.Effect
@@ -42,6 +44,10 @@ function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): S
 		baseConfig = config,
 		nextMode = nil,
 		lastMode = nil,
+		mapChoices = {},
+		votes = {},
+		mapHistory = {},
+		mapId = nil,
 	}
 end
 
@@ -81,6 +87,14 @@ end
 local function enterWaitingOrIntermission(s: State, fx: { Effect })
 	if Util.count(s.players) >= s.config.minPlayers then
 		s.nextMode = pickMode(s)
+		s.mapChoices = MapVote.choices(
+			s.baseConfig.mapPool or Maps.order,
+			s.mapHistory,
+			Maps.choices,
+			Maps.maxRepeats,
+			s.rng
+		)
+		s.votes = {}
 		setPhase(s, "Intermission", s.config.intermission, fx)
 	else
 		if s.phase ~= "Waiting" then
@@ -96,6 +110,20 @@ local function enterHeadStart(s: State, fx: { Effect })
 	end
 	s.config = Modes.configFor(s.baseConfig, s.nextMode)
 	s.lastMode = s.config.modeId
+	-- the most-voted map
+	local mapId = MapVote.winner(s.mapChoices, s.votes, s.rng)
+	local map = Maps.get(mapId)
+	if mapId and map then
+		s.mapId = mapId
+		table.insert(s.mapHistory, mapId)
+		if #s.mapHistory > 5 then
+			table.remove(s.mapHistory, 1)
+		end
+		s.config.mapName = map.name
+		s.config.mapLine = map.line
+		table.insert(fx, { type = "MapChosen", mapId = mapId })
+	end
+	s.votes = {}
 	local ids = Util.sortedIds(s.players)
 	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.alphaCount, s.config.hunterCount)
 	for _, id in ids do
@@ -235,11 +263,21 @@ local function onJoined(s: State, playerId: number, fx: { Effect })
 	end
 end
 
+local function onVoteMap(s: State, playerId: number, mapId: string, fx: { Effect })
+	if s.phase ~= "Intermission" or not s.players[playerId] or not table.find(s.mapChoices, mapId) then
+		return
+	end
+	s.votes[playerId] = mapId
+	table.insert(fx, { type = "MapVoted", playerId = playerId, mapId = mapId })
+	table.insert(fx, { type = "Announce", card = "Voted", toPlayerId = playerId, data = { mapId = mapId } })
+end
+
 local function onLeft(s: State, playerId: number, fx: { Effect })
 	local leaver = s.players[playerId]
 	if not leaver then
 		return
 	end
+	s.votes[playerId] = nil
 	s.players[playerId] = nil
 	s.sinceSpecial[playerId] = nil
 	s.lastHits[playerId] = nil
@@ -272,6 +310,8 @@ function RoundRules.apply(state: State, event: Types.Event): (State, { Effect })
 		onJoined(s, event.playerId, fx)
 	elseif event.type == "PlayerLeft" then
 		onLeft(s, event.playerId, fx)
+	elseif event.type == "VoteMap" then
+		onVoteMap(s, event.playerId, event.mapId, fx)
 	else
 		local before = #fx
 		Infection.step(s, event, fx)
@@ -372,6 +412,11 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		modeName = s.config.modeName,
 		nextMode = s.nextMode,
 		humanWeapon = s.config.humanWeapon,
+		-- map vote (lobby): the board and your vote; the map being played
+		mapChoices = s.mapChoices,
+		mapVotes = MapVote.tally(s.mapChoices, s.votes),
+		myVote = s.votes[viewerId],
+		mapId = s.mapId,
 		-- Alpha class: your pick in the safehouse, and your ability while you are the Alpha
 		alphaPref = s.alphaPrefs[viewerId],
 		alphaClass = if me and me.role == "Alpha" then me.alphaClass else nil,

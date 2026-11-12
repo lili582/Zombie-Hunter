@@ -2,7 +2,7 @@
 
 Round-based Roblox horror game: one secret **Alpha Zombie**, one **Hunter** with the only gun, everyone else **Survivors**. Get downed, get revived — or rise as a zombie. 2014 Roblox build, cute-creepy pastel UI.
 
-**Status:** Phase 1 (target v0.1.0) — one playable Classic round on an auto-built greybox Town.
+**Status:** v0.3 in progress — Classic and Outbreak modes, Alpha classes, safehouse lobby with map vote, towers / helicopter / lockers on an auto-built greybox Town.
 
 - How to run it in Studio: [STUDIO_GUIDE.md](STUDIO_GUIDE.md)
 - Tests: `lune run tests/run`

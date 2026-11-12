@@ -86,6 +86,9 @@ function Util.cloneState(s: Types.RoundState): Types.RoundState
 	copy.towers = towers
 	copy.heli = table.clone(s.heli)
 	copy.alphaPrefs = table.clone(s.alphaPrefs)
+	copy.votes = table.clone(s.votes)
+	copy.mapHistory = table.clone(s.mapHistory)
+	copy.mapChoices = table.clone(s.mapChoices)
 	return copy
 end
 

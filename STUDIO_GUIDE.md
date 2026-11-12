@@ -123,6 +123,10 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 - [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. Lobby countdown shows **NEXT ROUND: OUTBREAK**; the MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
 
+- [ ] Safehouse: you spawn on the pink pad in a warm room with string lights, a couch and TV, a zombie face with mint eyes in the right window, SHOP and CATALOG signs (soon), the Alpha pedestals on the east wall and the vote board on the north wall.
+- [ ] During the countdown the HUD says **NEXT ROUND: CLASSIC - VOTE FOR A MAP AT THE BOARD** and the sign over the windows says the same mode. Step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
+- [ ] The intro's map card shows the voted map; the sign says **NOW PLAYING: CLASSIC** during the round.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:
@@ -134,4 +138,4 @@ Everything marked *(tune)* in the spec is in `Shared/Config`: round timers, hits
 
 ## Known Phase 1 limits (next phases)
 
-Points/coins are not saved yet (DataService, v0.4). No Alpha classes or 3D safehouse/map vote (v0.3). `AlphaStart` / `AlphaDoor` are no longer used (the Alpha spawns disguised with the survivors) but are still built.
+Points/coins are not saved yet (DataService, v0.4). Only one map exists, so the map vote has one choice until the v1.0 maps are added; adding a map = a builder in `MapService` + an entry in `Config/Maps` + loading it on `MapChosen` in `RoundManager`. `AlphaStart` / `AlphaDoor` are no longer used (the Alpha spawns disguised with the survivors) but are still built.
