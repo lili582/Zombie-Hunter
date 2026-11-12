@@ -15,7 +15,7 @@ The map, lobby and lighting are **built by code** the first time the server star
 ## A. Open the ready place file
 
 1. Open `ZombieHunter.rbxl` in Roblox Studio (double-click it, or Studio → File → Open from File).
-2. **For testing with few players**, open `ReplicatedStorage → Shared → Config → Classic` and change `minPlayers = 5` to `minPlayers = 3`. (Put it back to 5 before you publish.)
+2. Nothing to change for testing: inside Studio a round starts with **2+ players** automatically (`studioMinPlayers` in `Classic`); live servers still need 5.
 3. Go to **Test → Clients and Servers**, choose **3 players**, press **Start**. Studio opens 1 server window + 3 player windows.
 4. Recommended: **File → Publish to Roblox** (private), then **Home → Game Settings → Avatar → Avatar Type: R6** for the classic 2014 look. (The game also works on R15.)
 
@@ -88,9 +88,9 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 ---
 
-## Playtest checklist (3 players, minPlayers = 3)
+## Playtest checklist (3 players in Studio)
 
-- [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/3** until enough join.
+- [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
 - [ ] 20s countdown → cards: map name → SOMEONE IS INFECTED (names flicker, stop on "?") → your private role → your rules → THE HUNTER IS ….
 - [ ] Other players' list shows **?** for the Alpha and Survivors until release; the Hunter shows to all.
 - [ ] Alpha starts in the locked room up north; after 10s the door opens + banner **THE ALPHA HAS AWAKENED — it's …**.
