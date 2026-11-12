@@ -27,7 +27,7 @@ end
 -- Active round with known roles: 1 = Alpha, 2 = Hunter, the rest Survivors.
 function H.activeRound(n: number)
 	local s = H.run(RoundRules.new(Classic, Rng.new(1)), H.join(n))
-	s = H.run(s, { H.tick(30) })
+	s = H.run(s, { H.tick(Classic.intermission + Classic.headStart) })
 	assert(s.phase == "Active", "expected Active, got " .. s.phase)
 	for id, p in s.players do
 		p.role = if id == 1 then "Alpha" elseif id == 2 then "Hunter" else "Survivor"

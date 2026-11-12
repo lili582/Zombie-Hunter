@@ -3,11 +3,16 @@
 local Classic = {
 	mapName = "ABANDONED TOWN",
 	mapLine = "the lights went out at midnight",
+	modeName = "CLASSIC",
+	modeLine = "One of you is already infected. Survive 6:00. Trust no one.",
 	minPlayers = 5,
 	studioMinPlayers = 2, -- used automatically when testing in Roblox Studio
 	nameTagDistance = 0, -- studs; 0 = no floating player names or health bars at all
 	intermission = 20,
-	headStart = 10,
+	-- Head start = the intro cards (everyone frozen) + 10s for humans to run before the Alpha
+	-- is released. introLength must match the card times in AnnouncementController.
+	introLength = 16,
+	headStart = 26,
 	roundLength = 360,
 	results = 15,
 	bleedOut = 20,

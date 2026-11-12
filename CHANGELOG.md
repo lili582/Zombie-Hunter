@@ -9,6 +9,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 - The Alpha is the same height as all other players (no longer 1.3x bigger).
 
 ### Added
+- Creepier round intro: VHS scanlines, flickering lights, glitching titles, typed text; a MODE card; every player shown as a faceless shadow while "someone is infected" (a red light jumps between them and stops on nobody); your own character revealed in the dark with a heartbeat for your role card (red flash + shake for the Alpha); the infected card shows your zombie. Everyone is frozen during the 16s intro, then humans get 10s before the Alpha is released (`Classic.introLength`, `headStart` = 26).
 - Survivor escape: when a zombie attacks a Survivor, a timing bar appears; clicking/tapping/Space while the needle is in the green zone escapes the hit (+5 points, short speed burst, 1.2s safe). The server checks the timing (`Rules/Dodge`, 8 tests).
 - Compact player list (smaller rows, narrower, see-through), toggled with Tab or the small PLAYERS button; closed by default on phones. Roblox's default player list is hidden.
 - No floating player names or health bars over heads (`Classic.nameTagDistance = 0`), so players can't be spotted or identified from far away.

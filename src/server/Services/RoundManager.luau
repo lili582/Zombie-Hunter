@@ -133,6 +133,8 @@ local function sendEveryoneToLobby()
 end
 
 local function spawnRoundCharacters()
+	-- everyone stands frozen in the dark while the intro cards play
+	local introEnds = os.clock() + Classic.introLength
 	for id, p in state.players do
 		local player = playerById(id)
 		if not player or p.life == "Out" then
@@ -144,6 +146,7 @@ local function spawnRoundCharacters()
 			if p.role == "Hunter" then
 				CombatService.resetGun(player)
 			end
+			CharacterService.freeze(player, introEnds - os.clock())
 		end)
 	end
 end

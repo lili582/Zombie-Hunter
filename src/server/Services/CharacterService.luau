@@ -222,6 +222,24 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 	end
 end
 
+-- Can't move or jump for `seconds` (used while the intro cards play). Yields nothing.
+function CharacterService.freeze(player: Player, seconds: number)
+	local char = player.Character
+	local hum = humanoidOf(player)
+	if not char or not hum or seconds <= 0 then
+		return
+	end
+	local speed, jump = hum.WalkSpeed, hum.JumpPower
+	hum.WalkSpeed = 0
+	hum.JumpPower = 0
+	task.delay(seconds, function()
+		if player.Character == char and hum.Parent and hum.WalkSpeed == 0 then
+			hum.WalkSpeed = speed
+			hum.JumpPower = jump
+		end
+	end)
+end
+
 -- Downed: crawl slowly, no jump, revive prompt on the body.
 function CharacterService.setDowned(player: Player, downed: boolean, onPrompt: ((ProximityPrompt) -> ())?)
 	local char = player.Character
