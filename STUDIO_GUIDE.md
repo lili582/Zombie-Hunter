@@ -98,11 +98,11 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Another human holds **E** for 4s on the downed body → revived ("Name is coming!" + bar).
 - [ ] Not revived in 20s → **YOU'VE BEEN INFECTED!** → green zombie with mint eyes, claws equipped.
 - [ ] Hunter: click shoots (yellow tracer), ammo `6 / 36`, R reloads; 3 shots kill a basic zombie → respawns in 5s at a corner; +10 for the Hunter.
-- [ ] Survivors' click does nothing to shoot (they only have the bat; bat knocks zombies back).
+- [ ] Survivors have **no weapons**. When a zombie claws a Survivor, an **ESCAPE!** bar appears: click/tap/Space while the needle is in the green → ESCAPED! (speed burst, +5); miss or wait → CAUGHT! and the hit counts. Hunters get no escape bar.
 - [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter (banner: SOMEONE PICKED UP THE GUN, no name); nobody else can.
 - [ ] Last human turns → ZOMBIES WIN! → +coins card → back to the lobby → next round.
 - [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; timer turns pink and shakes under 1:00.
-- [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat; prompts show a tap button.
+- [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat (Hunter); Survivors tap to escape; prompts show a tap button.
 
 ## Your own map
 

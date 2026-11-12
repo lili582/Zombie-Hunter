@@ -59,6 +59,8 @@ function Scoring.award(s: State, effects: { Effect }): { Effect }
 				end
 			end
 			s.pendingAssists[f.playerId] = nil
+		elseif f.type == "Dodged" then
+			give(s, f.playerId, Points.dodge, "ESCAPED", out)
 		elseif f.type == "NewHunter" then
 			give(s, f.playerId, Points.pickUpGun, "PICKED UP THE GUN", out)
 		elseif f.type == "ZombieKilled" then

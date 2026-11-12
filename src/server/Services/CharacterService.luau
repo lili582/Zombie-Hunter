@@ -148,10 +148,9 @@ function CharacterService.giveTools(player: Player, role: string)
 			end
 		end
 	end
+	-- Survivors get nothing: no weapons, they hide, revive and escape attacks with timing.
 	if role == "Hunter" then
 		makeTool("Revolver", Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44)).Parent = backpack
-		makeTool("Bat", Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50)).Parent = backpack
-	elseif role == "Survivor" then
 		makeTool("Bat", Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50)).Parent = backpack
 	elseif role == "Alpha" or role == "Zombie" then
 		local claws = makeTool("Claws", nil)

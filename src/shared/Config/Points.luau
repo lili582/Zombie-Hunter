@@ -11,6 +11,7 @@ return {
 	zombieKill = 10,
 	alphaKill = 30,
 	pickUpGun = 15,
+	dodge = 5, -- survivor escaped an attack with good timing
 	teamWin = 30,
 	firstInfectionBonus = 10,
 	coinsPerPoint = 0.5,

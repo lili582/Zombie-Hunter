@@ -25,8 +25,8 @@ function HitValidation.shot(input: ShotInput, weapon: typeof(Weapons.Revolver)?)
 end
 
 function HitValidation.melee(input: SwingInput): (boolean, string?)
-	if input.role ~= "Survivor" and input.role ~= "Hunter" then
-		return false, "not_human"
+	if input.role ~= "Hunter" then
+		return false, "not_hunter" -- survivors carry no weapons
 	end
 	if input.sinceLast < Weapons.Melee.interval - 1e-6 then
 		return false, "too_fast"

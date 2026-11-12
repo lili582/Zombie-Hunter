@@ -5,9 +5,11 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- Survivors carry no weapons (the bat is Hunter-only).
 - The Alpha is the same height as all other players (no longer 1.3x bigger).
 
 ### Added
+- Survivor escape: when a zombie attacks a Survivor, a timing bar appears; clicking/tapping/Space while the needle is in the green zone escapes the hit (+5 points, short speed burst, 1.2s safe). The server checks the timing (`Rules/Dodge`, 8 tests).
 - Compact player list (smaller rows, narrower, see-through), toggled with Tab or the small PLAYERS button; closed by default on phones. Roblox's default player list is hidden.
 - No floating player names or health bars over heads (`Classic.nameTagDistance = 0`), so players can't be spotted or identified from far away.
 - Secret roles: nobody is told who the Alpha or the Hunter is. Cards and banners never name them, the player list shows `?` for every other non-zombie player all round, and the Hunter has no hat or name tag. Basic (infected) zombies are still shown.
