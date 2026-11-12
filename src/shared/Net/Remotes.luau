@@ -11,6 +11,7 @@ Remotes.names = {
 	"Reload",
 	"TimingAttempt", -- (id, needlePos) clicked during an escape / skill-check bar
 	"LockerLeave", -- leave the locker you are hiding in
+	"UseAbility", -- Alpha only: use your class ability
 	-- (melee and claws use Tool.Activated, which already reaches the server)
 	-- server -> client
 	"RoundStateChanged", -- filtered round snapshot
@@ -21,6 +22,7 @@ Remotes.names = {
 	"TimingChallenge", -- (id, kind "dodge"|"skill", window, zoneStart, zoneSize): click in time!
 	"TimingResult", -- (id, ok: boolean)
 	"NoiseAlert", -- (position) zombies only: a skill check failed at this tower
+	"RevealHumans", -- (characters, seconds) zombies only: a Screamer's scream shows these humans
 }
 
 local folder: Folder? = nil

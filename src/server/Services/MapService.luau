@@ -7,6 +7,9 @@
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local AlphaClasses = require(Shared.Config.AlphaClasses)
+
 local MapService = {}
 
 export type MapInfo = {
@@ -125,6 +128,121 @@ local function buildLighting()
 	end
 end
 
+-- A sign with text on its front face. Returns the TextLabel so services can update it.
+local function sign(
+	parent: Instance,
+	name: string,
+	size: Vector3,
+	cf: CFrame,
+	text: string,
+	color: Color3
+): TextLabel
+	local board = part(parent, name, size, cf, Color3.fromRGB(27, 20, 40))
+	board.Material = Enum.Material.SmoothPlastic
+	local surface = Instance.new("SurfaceGui")
+	surface.Face = Enum.NormalId.Front
+	surface.PixelsPerStud = 40
+	surface.LightInfluence = 0
+	surface.Parent = board
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = color
+	label.TextStrokeColor3 = Color3.fromRGB(42, 31, 61)
+	label.TextStrokeTransparency = 0
+	label.Text = text
+	label.Parent = surface
+	return label
+end
+MapService.sign = sign
+
+-- Alpha class pick: one pedestal per class with a figure in the class's shape and a prompt.
+-- `at` is the middle pedestal; pedestals face `facing` (a unit vector into the room).
+local CLASS_LOOK = {
+	Runner = { scale = Vector3.new(0.8, 1.1, 0.8), color = Color3.fromRGB(255, 143, 184) },
+	Tank = { scale = Vector3.new(1.5, 1.2, 1.4), color = Color3.fromRGB(200, 90, 120) },
+	Screamer = { scale = Vector3.new(1, 1, 1), color = Color3.fromRGB(255, 120, 200) },
+}
+local function buildAlphaStation(parent: Instance, at: Vector3, facing: Vector3)
+	local station = Instance.new("Model")
+	station.Name = "AlphaStation"
+	station.Parent = parent
+	local right = Vector3.new(0, 1, 0):Cross(facing).Unit
+	local look = CFrame.lookAt(Vector3.zero, facing)
+	for i, className in AlphaClasses.order do
+		local class = (AlphaClasses :: any)[className]
+		local shape = CLASS_LOOK[className]
+		local pos = at + right * ((i - 2) * 9)
+		local base = part(
+			station,
+			"Pedestal",
+			Vector3.new(5, 2, 5),
+			CFrame.new(pos + Vector3.new(0, 1, 0)),
+			Color3.fromRGB(58, 40, 86)
+		)
+		base.Material = Enum.Material.SmoothPlastic
+		-- a blocky zombie figure: legs, torso, arms, head, glowing eyes
+		local s = shape.scale
+		local function limb(size: Vector3, offset: Vector3)
+			local p = part(
+				station,
+				"Figure",
+				Vector3.new(size.X * s.X, size.Y * s.Y, size.Z * s.Z),
+				CFrame.new(pos) * look * CFrame.new(offset.X * s.X, 2 + offset.Y * s.Y, offset.Z * s.Z),
+				shape.color
+			)
+			p.CanCollide = false
+			return p
+		end
+		limb(Vector3.new(1, 2, 1), Vector3.new(-0.5, 1, 0))
+		limb(Vector3.new(1, 2, 1), Vector3.new(0.5, 1, 0))
+		limb(Vector3.new(2, 2, 1), Vector3.new(0, 3, 0))
+		limb(Vector3.new(1, 1, 2.2), Vector3.new(-1.5, 3.5, -1)) -- arms reaching out
+		limb(Vector3.new(1, 1, 2.2), Vector3.new(1.5, 3.5, -1))
+		local head = limb(Vector3.new(1.2, 1.2, 1.2), Vector3.new(0, 4.6, 0))
+		for _, x in { -0.25, 0.25 } do
+			local eye = part(
+				station,
+				"Eye",
+				Vector3.new(0.25, 0.25, 0.1),
+				head.CFrame * CFrame.new(x * s.X, 0.15, -0.62 * s.Z),
+				Color3.fromRGB(255, 40, 60)
+			)
+			eye.Material = Enum.Material.Neon
+			eye.CanCollide = false
+		end
+		sign(
+			station,
+			"ClassSign",
+			Vector3.new(7, 2.4, 0.3),
+			CFrame.new(pos) * look * CFrame.new(0, 9 * s.Y, 0),
+			class.name,
+			shape.color
+		)
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = `Play as {class.name}`
+		prompt.ObjectText = "Alpha class"
+		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 8
+		prompt.RequiresLineOfSight = false
+		prompt:SetAttribute("Class", className)
+		CollectionService:AddTag(prompt, "AlphaPickPrompt")
+		prompt.Parent = base
+	end
+	sign(
+		station,
+		"StationSign",
+		Vector3.new(24, 3, 0.3),
+		CFrame.new(at) * look * CFrame.new(0, 13.5, 2),
+		"IF YOU ARE THE ALPHA...",
+		Color3.fromRGB(255, 246, 238)
+	)
+end
+
 local function buildLobby()
 	local lobby = Instance.new("Model")
 	lobby.Name = "Lobby"
@@ -170,6 +288,8 @@ local function buildLobby()
 	spawn.Color = Color3.fromRGB(255, 143, 184)
 	spawn.Parent = lobby
 	CollectionService:AddTag(spawn, "LobbySpawn")
+
+	buildAlphaStation(lobby, base + Vector3.new(24, 1, 0), Vector3.new(-1, 0, 0))
 end
 
 local function buildTown()

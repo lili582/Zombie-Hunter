@@ -10,6 +10,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 - The Alpha is the same height as all other players (no longer 1.3x bigger).
 
 ### Added
+- **Alpha classes** (v0.3): pick **Runner**, **Tank** or **Screamer** at the pedestals in the lobby; it's used whenever you're the Alpha (default Runner, private). Runner 300 HP + **DASH** (speed burst), Tank 600 HP + **SLAM** (knocks nearby humans back and slows them), Screamer 350 HP + **SCREAM** (nearby humans glow through walls for every zombie, 5s). Press **Q** or tap the ability button; each ability has a cooldown and shows the Alpha's face like an attack. Numbers in `Config/AlphaClasses`. 7 new tests.
 - **Phase 2 objectives:**
   - Radio towers: each round picks 5 of the map's 8 tower spots (spread out). Hold E to repair (60s alone, +60% per extra repairer). Random skill checks while repairing (same timing bar): good = +2%, failed = -8% and a noise ping for zombies. Walk away, get hit, get downed or hide and the repair stops. Blinking red beacons are visible through the fog and turn mint when repaired.
   - Rescue helicopter: 3 repaired towers call it (one of 3 zones); it lands after 45s and waits 20s. Humans who reach the glowing zone escape (+40) and wait safe in the lobby. If it leaves with anyone on board, or every remaining human has escaped or turned: SURVIVORS ESCAPED.

@@ -9,6 +9,7 @@ local WinCheck = require("./WinCheck")
 local Scoring = require("./Scoring")
 local Objectives = require("./Objectives")
 local Survival = require("./Survival")
+local Abilities = require("./Abilities")
 
 type State = Types.RoundState
 type Effect = Types.Effect
@@ -35,6 +36,7 @@ function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): S
 		gunDropped = false,
 		alphaRevealed = false,
 		winner = nil,
+		alphaPrefs = {},
 	}
 end
 
@@ -71,6 +73,8 @@ local function enterHeadStart(s: State, fx: { Effect })
 		fresh.role = roles[id]
 		if fresh.role == "Survivor" then
 			fresh.medkits = s.config.medkitsPerSurvivor or 0
+		elseif fresh.role == "Alpha" then
+			Abilities.makeAlpha(s, fresh)
 		end
 		s.players[id] = fresh
 		if fresh.role == "Survivor" then
@@ -101,7 +105,12 @@ local function enterHeadStart(s: State, fx: { Effect })
 	for _, id in ids do
 		local role = s.players[id].role
 		table.insert(fx, { type = "Announce", card = "YourRole", toPlayerId = id, data = { role = role } })
-		table.insert(fx, { type = "Announce", card = "YourRules", toPlayerId = id, data = { role = role } })
+		table.insert(fx, {
+			type = "Announce",
+			card = "YourRules",
+			toPlayerId = id,
+			data = { role = role, alphaClass = s.players[id].alphaClass },
+		})
 	end
 	-- Secret roles: public cards never name the Alpha or the Hunter.
 	table.insert(fx, { type = "Announce", card = "HunterChosen" })
@@ -233,6 +242,7 @@ function RoundRules.apply(state: State, event: Types.Event): (State, { Effect })
 		Infection.step(s, event, fx)
 		Objectives.step(s, event, fx)
 		Survival.step(s, event, fx)
+		Abilities.step(s, event, fx)
 		for i = before + 1, #fx do
 			local f = fx[i]
 			if f.type == "HitLanded" then
@@ -322,6 +332,10 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		hidden = me ~= nil and me.hiddenIn ~= nil,
 		repairing = if me then me.repairing else nil,
 		medkits = if me then me.medkits else 0,
+		-- Alpha class: your pick in the safehouse, and your ability while you are the Alpha
+		alphaPref = s.alphaPrefs[viewerId],
+		alphaClass = if me and me.role == "Alpha" then me.alphaClass else nil,
+		abilityIn = if me and me.role == "Alpha" then Abilities.readyIn(s, me) else nil,
 	}
 end
 

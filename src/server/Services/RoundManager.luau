@@ -18,6 +18,8 @@ local AnnouncementService = require(Services.AnnouncementService)
 local MapService = require(Services.MapService)
 local TimingService = require(Services.TimingService)
 local ObjectiveService = require(Services.ObjectiveService)
+local AbilityService = require(Services.AbilityService)
+local LobbyService = require(Services.LobbyService)
 
 local RoundManager = {}
 
@@ -225,6 +227,8 @@ runEffect = function(f: any)
 			CharacterService.applyRole(player, "Hunter")
 			CombatService.resetGun(player)
 		end
+	elseif f.type == "AbilityUsed" then
+		AbilityService.onUsed(f)
 	elseif f.type == "PointsAwarded" then
 		local player = playerById(f.playerId)
 		if player then
@@ -297,6 +301,12 @@ function RoundManager.start()
 		heliZoneCount = #map.heliZones,
 	})
 	TimingService.init()
+	CharacterService.alphaClassOf = function(player: Player): string?
+		local p = state.players[player.UserId]
+		return if p and p.role == "Alpha" then p.alphaClass else nil
+	end
+	AbilityService.start(RoundManager)
+	LobbyService.start(RoundManager)
 	ObjectiveService.start(RoundManager, map)
 	CharacterService.onDied(onDied)
 	CombatService.start(RoundManager, map.ammoSpawns)

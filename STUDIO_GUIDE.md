@@ -114,6 +114,13 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Lockers: **Hide** (E) → dark screen with slats, zombies' claws can't reach you; **[E] LEAVE** to get out. A zombie holding **Search** on your locker pulls you out.
 - [ ] Survivors hold a **Medkit**: click near a hurt friend to heal one hit (or yourself).
 
+## v0.3 checklist
+
+- [ ] Lobby: 3 Alpha pedestals (RUNNER / TANK / SCREAMER). Press **E** at one: banner **IF YOU ARE THE ALPHA: TANK**, and the bottom line in the lobby shows your pick.
+- [ ] As the Alpha, the rules card says **ALPHA - TANK** and the ability. After release an ability button appears (bottom right, **Q**): it shows a cooldown after use. Basic zombies and humans never see it.
+- [ ] Runner DASH: face shows, very fast for 2.5s. Tank SLAM: humans within 14 studs fly back and are slow for 1.5s. Screamer SCREAM: every zombie sees nearby humans glow red through walls for 5s (humans hiding in lockers don't glow).
+- [ ] Tank has 600 HP, Runner 300, Screamer 350 (zombie HP bar).
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:

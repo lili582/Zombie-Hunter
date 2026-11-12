@@ -23,6 +23,9 @@ export type PlayerState = {
 	repairing: number?, -- tower id while repairing
 	repairCredit: number, -- tower progress this player added (for points)
 	medkits: number,
+	-- v0.3: Alpha classes
+	alphaClass: string?, -- set while this player is an Alpha
+	abilityReadyAt: number, -- round clock time the ability can be used again
 }
 
 export type Tower = { progress: number, done: boolean }
@@ -52,6 +55,8 @@ export type RoundState = {
 	towers: { [number]: Tower }, -- active towers this round, keyed by spot index
 	towersDone: number,
 	heli: Heli,
+	-- v0.3
+	alphaPrefs: { [number]: string }, -- Alpha class each player picked in the safehouse
 }
 
 export type Event =
@@ -72,6 +77,8 @@ export type Event =
 	| { type: "LockerExit", playerId: number }
 	| { type: "LockerSearch", attackerId: number, lockerId: number }
 	| { type: "UseMedkit", playerId: number, targetId: number }
+	| { type: "SetAlphaClass", playerId: number, class: string }
+	| { type: "UseAbility", playerId: number }
 
 export type Effect = { type: string, [string]: any }
 -- Effect types:
@@ -88,6 +95,7 @@ export type Effect = { type: string, [string]: any }
 --   HeliCalled {zone}  HeliLanded {zone}  HeliLeft {}  Escaped {playerId}
 --   EnteredLocker {playerId, lockerId}  LeftLocker {playerId, lockerId, pulledBy?}
 --   Healed {playerId, targetId}
+--   AlphaClassSet {playerId, class}  AbilityUsed {playerId, class, ability}
 --   PointsAwarded {playerId, amount, reason}
 --   Announce {card, toPlayerId?, data?}
 --   RoundOver {winner}
