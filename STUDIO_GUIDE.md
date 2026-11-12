@@ -92,7 +92,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
 - [ ] 20s countdown → cards: map name → SOMEONE IS INFECTED (names flicker, stop on "?") → your private role → your rules → A HUNTER WALKS AMONG YOU (no name).
-- [ ] **Secret roles:** every other player's role shows **?** in the list for the whole round (only infected zombies show ZOMBIE). No name tags or Hunter hat over heads.
+- [ ] **Secret roles:** every other player's role shows **?** in the list for the whole round (only infected zombies show ZOMBIE). No floating player names, health bars, name tags or Hunter hat over heads.
 - [ ] Alpha starts in the locked room up north; after 10s the door opens + banner **THE ALPHA HAS AWAKENED — it could be anyone** (no name).
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
 - [ ] Another human holds **E** for 4s on the downed body → revived ("Name is coming!" + bar).
