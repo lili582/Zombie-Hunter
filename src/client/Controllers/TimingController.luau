@@ -1,6 +1,8 @@
 --!strict
--- Survivor escape: when a zombie attacks you, a bar appears with a moving needle.
--- Click / tap / Space while the needle is in the mint zone to escape. One try per attack.
+-- Timing bar with a moving needle. Two kinds:
+--   "dodge": a zombie is attacking you (Survivors) - ESCAPE!
+--   "skill": skill check while repairing a radio tower - SKILL CHECK!
+-- Click / tap / Space while the needle is in the mint zone. One try per bar.
 -- The server decides if it counts (it checks the timing itself).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,14 +15,14 @@ local Theme = require(script.Parent.Theme)
 local C = Theme.colors
 local player = Players.LocalPlayer
 
-local DodgeController = {}
+local TimingController = {}
 
 local ui: { [string]: any } = {}
-local active: { id: number, window: number, startedAt: number, tried: boolean }? = nil
+local active: { id: number, window: number, startedAt: number, tried: boolean, kind: string }? = nil
 
 local function build()
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "Dodge"
+	gui.Name = "TimingBar"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.DisplayOrder = 5
@@ -97,32 +99,38 @@ local function tryEscape()
 		return
 	end
 	active.tried = true
-	Remotes.get("DodgeAttempt"):FireServer(active.id, needlePos())
+	Remotes.get("TimingAttempt"):FireServer(active.id, needlePos())
 end
 
-local function onChallenge(id: number, window: number, zoneStart: number, zoneSize: number)
-	active = { id = id, window = window, startedAt = os.clock(), tried = false }
+local function onChallenge(id: number, kind: string, window: number, zoneStart: number, zoneSize: number)
+	active = { id = id, window = window, startedAt = os.clock(), tried = false, kind = kind }
 	ui.zone.Position = UDim2.fromScale(zoneStart, 0)
 	ui.zone.Size = UDim2.fromScale(zoneSize, 1)
-	ui.title.Text = "ESCAPE!"
-	ui.title.TextColor3 = C.blood
+	if kind == "skill" then
+		ui.title.Text = "SKILL CHECK!"
+		ui.title.TextColor3 = C.butter
+	else
+		ui.title.Text = "ESCAPE!"
+		ui.title.TextColor3 = C.blood
+	end
 	ui.holder.Visible = true
 end
 
 local function onResult(id: number, escaped: boolean)
 	if active and active.id == id then
+		local skill = active.kind == "skill"
 		if escaped then
-			hideSoon("ESCAPED!", C.mint)
+			hideSoon(if skill then "GOOD!" else "ESCAPED!", C.mint)
 		else
-			hideSoon("CAUGHT!", C.blood)
+			hideSoon(if skill then "FAILED - THEY HEARD THAT" else "CAUGHT!", C.blood)
 		end
 	end
 end
 
-function DodgeController.start()
+function TimingController.start()
 	build()
-	Remotes.get("DodgeChallenge").OnClientEvent:Connect(onChallenge)
-	Remotes.get("DodgeResult").OnClientEvent:Connect(onResult)
+	Remotes.get("TimingChallenge").OnClientEvent:Connect(onChallenge)
+	Remotes.get("TimingResult").OnClientEvent:Connect(onResult)
 	UserInputService.InputBegan:Connect(function(input)
 		if not active then
 			return
@@ -143,4 +151,4 @@ function DodgeController.start()
 	end)
 end
 
-return DodgeController
+return TimingController

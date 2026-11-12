@@ -14,8 +14,7 @@ local function validReviver(s: State, reviverId: number?): boolean
 	if reviverId == nil then
 		return false
 	end
-	local r = s.players[reviverId]
-	return r ~= nil and r.life == "Alive" and Util.isHumanRole(r.role)
+	return Util.canAct(s.players[reviverId])
 end
 
 local function stopRevivesBy(s: State, reviverId: number, fx: { Effect })
@@ -46,6 +45,8 @@ local function turn(s: State, p: Types.PlayerState, fx: { Effect })
 	p.reviverId = nil
 	p.reviveProgress = 0
 	p.wasInfected = true
+	p.repairing = nil
+	p.hiddenIn = nil
 	stopRevivesBy(s, p.id, fx)
 	table.insert(fx, { type = "BecameZombie", playerId = p.id, byId = byId })
 	if wasHunter then
@@ -61,8 +62,8 @@ local function onHit(s: State, attackerId: number, victimId: number, fx: { Effec
 	if not Util.isZombieRole(a.role) or a.life ~= "Alive" then
 		return
 	end
-	if not Util.isHumanRole(v.role) or v.life ~= "Alive" then
-		return
+	if not Util.isHumanRole(v.role) or v.life ~= "Alive" or v.hiddenIn ~= nil then
+		return -- hiding in a locker keeps you safe until a zombie pulls you out
 	end
 	v.hitsTaken += 1
 	table.insert(fx, { type = "HitLanded", attackerId = attackerId, victimId = victimId })
@@ -127,7 +128,7 @@ end
 
 local function onPickUpGun(s: State, playerId: number, fx: { Effect })
 	local p = s.players[playerId]
-	if not s.gunDropped or not p or p.role ~= "Survivor" or p.life ~= "Alive" then
+	if not s.gunDropped or not p or p.role ~= "Survivor" or not Util.canAct(p) then
 		return
 	end
 	p.role = "Hunter"
@@ -180,9 +181,9 @@ function Infection.onPlayerLeft(s: State, leaver: Types.PlayerState, fx: { Effec
 		if Util.isZombieRole(p.role) then
 			zombies += 1
 			hasAlpha = hasAlpha or p.role == "Alpha"
-		elseif Util.isHumanRole(p.role) then
+		elseif Util.isHumanRole(p.role) and p.life ~= "Escaped" then
 			humans += 1
-			if p.role == "Survivor" and p.life == "Alive" then
+			if p.role == "Survivor" and Util.canAct(p) then
 				table.insert(survivors, id)
 			end
 		end

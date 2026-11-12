@@ -104,10 +104,20 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; timer turns pink and shakes under 1:00.
 - [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat (Hunter); Survivors tap to escape; prompts show a tap button.
 
+## Phase 2 checklist
+
+- [ ] 5 radio towers with blinking red beacons (seen far through the fog). Hold **E** at the box to repair; a bar shows %. Two players repair faster.
+- [ ] While repairing, a **SKILL CHECK!** bar pops up every 6-12s: click in the green = small boost; miss = progress lost and zombies see a red ripple at that tower.
+- [ ] Walking away, being clawed, getting downed or hiding stops the repair.
+- [ ] 3 towers done → banner **HELICOPTER INCOMING - 45s**, a glowing yellow ring + HELICOPTER label appears, the helicopter slowly comes down from the sky.
+- [ ] It lands → **GET TO THE ZONE!**; step into the ring → **YOU ESCAPED** card and you're sent to the safehouse. It leaves after 20s; if anyone got on → SURVIVORS ESCAPED.
+- [ ] Lockers: **Hide** (E) → dark screen with slats, zombies' claws can't reach you; **[E] LEAVE** to get out. A zombie holding **Search** on your locker pulls you out.
+- [ ] Survivors hold a **Medkit**: click near a hurt friend to heal one hit (or yourself).
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:
-`HumanStart` (1), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any). Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
+`HumanStart` (1), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
 
 ## Where to change numbers
 

@@ -28,8 +28,16 @@ local CARD_TIME = {
 	Result = 3,
 	YourCoins = 2,
 	Infected = 2.5,
+	Escaped = 3,
 }
-local BANNERS = { AlphaAwakened = true, HunterFallen = true, NewHunter = true }
+local BANNERS = {
+	AlphaAwakened = true,
+	HunterFallen = true,
+	NewHunter = true,
+	TowerRepaired = true,
+	HeliIncoming = true,
+	HeliHere = true,
+}
 
 local ROLE_TITLE = {
 	Survivor = "YOU ARE A SURVIVOR",
@@ -38,7 +46,7 @@ local ROLE_TITLE = {
 	Zombie = "YOU ARE A ZOMBIE",
 }
 local ROLE_RULES = {
-	Survivor = "No weapons  -  Hide  -  Revive friends  -  Survive 6:00\nZombie attack? CLICK IN TIME to escape!",
+	Survivor = "No weapons  -  Repair 3 radio towers  -  Hide in lockers  -  Revive friends\nZombie attack? CLICK IN TIME to escape!",
 	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
 	Alpha = "Your role is SECRET  -  Wait for release\nInfect everyone  -  2 hits downs a human",
 	Zombie = "Infect everyone  -  3 hits downs a human",
@@ -492,6 +500,12 @@ local function play(name: string, data: any, token: number)
 		setTitle(`+{data.coins} Z-COINS`, C.butter)
 		slam()
 		typeText(ui.subtitle, `{data.points} points this round`, 0.03, token)
+	elseif name == "Escaped" then
+		ui.card.BackgroundColor3 = Color3.fromRGB(10, 14, 30)
+		setTitle("YOU ESCAPED", C.baby)
+		slam()
+		doFlash(C.butter, 0.5)
+		typeText(ui.subtitle, "You're safe... for now. The others are still out there.", 0.03, token)
 	elseif name == "Infected" then
 		ui.card.BackgroundColor3 = Color3.fromRGB(8, 30, 18)
 		ui.fog.BackgroundTransparency = 0.6
@@ -572,7 +586,7 @@ end
 ----------------------------------------------------------------------------- banners
 
 local bannerToken = 0
-local function showBanner(name: string, _data: any)
+local function showBanner(name: string, data: any)
 	local text, color = "", C.blood
 	if name == "AlphaAwakened" then
 		text = "THE ALPHA HAS AWAKENED - it could be anyone"
@@ -582,6 +596,15 @@ local function showBanner(name: string, _data: any)
 	elseif name == "NewHunter" then
 		text = "SOMEONE PICKED UP THE GUN"
 		color = C.peach
+	elseif name == "TowerRepaired" then
+		text = `A RADIO TOWER IS ONLINE  {data.done or "?"}/{data.needed or "?"}`
+		color = C.mint
+	elseif name == "HeliIncoming" then
+		text = `HELICOPTER INCOMING - {data.seconds or 45}s`
+		color = C.butter
+	elseif name == "HeliHere" then
+		text = "THE HELICOPTER IS HERE - GET TO THE ZONE!"
+		color = C.butter
 	end
 	bannerToken += 1
 	local my = bannerToken

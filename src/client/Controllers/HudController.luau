@@ -198,6 +198,114 @@ local function build()
 		Remotes.get("Reload"):FireServer()
 	end)
 	ui.reload = reload
+
+	-- repairing: progress of the tower you're working on
+	local repairBack, repairFill = Theme.bar(gui, {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -120),
+		Size = UDim2.fromOffset(260, 18),
+		Visible = false,
+	}, C.mint)
+	ui.repairBack, ui.repairFill = repairBack, repairFill
+	ui.repairText = Theme.label(repairBack, {
+		Size = UDim2.fromScale(1, 1),
+		Text = "",
+		ZIndex = 3,
+		TextScaled = false,
+		TextSize = 13,
+	})
+
+	-- medkit count (Survivors)
+	ui.medkit = Theme.label(gui, {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 16, 1, -98),
+		Size = UDim2.fromOffset(220, 20),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextScaled = false,
+		TextSize = 15,
+		Text = "",
+		TextColor3 = C.blood,
+	})
+
+	-- hiding in a locker: dark screen with slats and a way out
+	local hiding = Instance.new("Frame")
+	hiding.Size = UDim2.fromScale(1, 1)
+	hiding.BackgroundColor3 = Color3.new(0, 0, 0)
+	hiding.BackgroundTransparency = 0.25
+	hiding.Visible = false
+	hiding.Parent = gui
+	for i = 0, 6 do -- light through the locker slats
+		local slat = Instance.new("Frame")
+		slat.BorderSizePixel = 0
+		slat.BackgroundColor3 = C.lavender
+		slat.BackgroundTransparency = 0.85
+		slat.Position = UDim2.fromScale(0.35, 0.38 + i * 0.025)
+		slat.Size = UDim2.fromScale(0.3, 0.006)
+		slat.Parent = hiding
+	end
+	Theme.label(hiding, {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.6),
+		Size = UDim2.fromOffset(500, 32),
+		Text = "HIDING... stay quiet",
+		Font = Theme.titleFont,
+		TextColor3 = C.lavender,
+	})
+	local leave = Instance.new("TextButton")
+	leave.AnchorPoint = Vector2.new(0.5, 0)
+	leave.Position = UDim2.fromScale(0.5, 0.67)
+	leave.Size = UDim2.fromOffset(170, 40)
+	leave.BackgroundColor3 = C.dusk
+	leave.Font = Theme.uiFont
+	leave.TextScaled = true
+	leave.TextColor3 = C.bone
+	leave.Text = "[E] LEAVE"
+	local lc = Instance.new("UICorner")
+	lc.CornerRadius = UDim.new(0, 10)
+	lc.Parent = leave
+	leave.Parent = hiding
+	leave.Activated:Connect(function()
+		Remotes.get("LockerLeave"):FireServer()
+	end)
+	ui.hiding = hiding
+end
+
+-- Zombies: a red ripple where a skill check just failed (it fades; no exact position kept).
+local function noisePing(position: Vector3)
+	local anchor = Instance.new("Part")
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Position = position + Vector3.new(0, 6, 0)
+	anchor.Parent = workspace
+	local tag = Instance.new("BillboardGui")
+	tag.AlwaysOnTop = true
+	tag.Size = UDim2.fromOffset(60, 60)
+	tag.Parent = anchor
+	local ring = Instance.new("Frame")
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.Position = UDim2.fromScale(0.5, 0.5)
+	ring.Size = UDim2.fromScale(0.3, 0.3)
+	ring.BackgroundTransparency = 1
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = ring
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = C.blood
+	stroke.Thickness = 3
+	stroke.Parent = ring
+	ring.Parent = tag
+	task.spawn(function()
+		for i = 1, 45 do
+			local a = i / 45
+			ring.Size = UDim2.fromScale(0.3 + a * 0.7, 0.3 + a * 0.7)
+			stroke.Transparency = a
+			task.wait(0.05)
+		end
+		anchor:Destroy()
+	end)
 end
 
 local function rebuildList()
@@ -276,6 +384,26 @@ local function updatePrompts()
 		local box = prompt.Parent
 		prompt.Enabled = role == "Hunter" and box ~= nil and not box:GetAttribute("Empty")
 	end
+	local hidden = view ~= nil and view.hidden == true
+	local canAct = human and alive and not hidden
+	local zombie = (role == "Alpha" or role == "Zombie") and alive
+	for _, prompt in CollectionService:GetTagged("RepairPrompt") do
+		prompt.Enabled = canAct == true
+	end
+	for _, prompt in CollectionService:GetTagged("LockerHidePrompt") do
+		prompt.Enabled = canAct == true
+	end
+	for _, prompt in CollectionService:GetTagged("LockerSearchPrompt") do
+		prompt.Enabled = zombie == true
+	end
+	if hidden then
+		for _, prompt in CollectionService:GetTagged("RevivePrompt") do
+			prompt.Enabled = false
+		end
+		for _, prompt in CollectionService:GetTagged("GunPrompt") do
+			prompt.Enabled = false
+		end
+	end
 end
 
 local function onState(newView: any)
@@ -329,7 +457,10 @@ local function render()
 	local left = math.max(0, view.timeLeft - (os.clock() - viewStamp))
 	local mine = me()
 	local role = mine and mine.role or "-"
-	local inRound = (phase == "HeadStart" or phase == "Active") and mine and mine.life ~= "Out"
+	local inRound = (phase == "HeadStart" or phase == "Active")
+		and mine ~= nil
+		and mine.life ~= "Out"
+		and mine.life ~= "Escaped"
 
 	-- top center
 	local shake = UDim2.fromOffset(0, 0)
@@ -353,7 +484,18 @@ local function render()
 		if left < 60 then
 			shake = UDim2.fromOffset(math.random(-2, 2), math.random(-2, 2))
 		end
-		ui.sub.Text = `HUMANS LEFT: {view.humansLeft}`
+		local line = `HUMANS LEFT: {view.humansLeft}`
+		if next(view.towers) ~= nil then
+			line ..= `   TOWERS {view.towersDone}/{view.towersNeeded}`
+		end
+		local heli = view.heli
+		local heliLeft = math.max(0, heli.timeLeft - (os.clock() - viewStamp))
+		if heli.phase == "Inbound" then
+			line = `HELICOPTER IN {Theme.timeText(heliLeft)}   ` .. line
+		elseif heli.phase == "Landed" then
+			line = `GET TO THE HELICOPTER! {math.ceil(heliLeft)}s   ` .. line
+		end
+		ui.sub.Text = line
 	elseif phase == "Results" then
 		ui.timer.Text = "ROUND OVER"
 		ui.timer.TextColor3 = C.lavender
@@ -403,6 +545,25 @@ local function render()
 		end
 	end
 
+	-- repairing a tower
+	local towerId = inRound and view.repairing
+	local tower = towerId and view.towers[tostring(towerId)]
+	ui.repairBack.Visible = tower ~= nil
+	if tower then
+		ui.repairFill.Size = UDim2.fromScale(math.clamp(tower.progress, 0, 1), 1)
+		ui.repairText.Text = `REPAIRING  {math.floor(tower.progress * 100)}%`
+	end
+
+	-- medkit
+	ui.medkit.Text = if inRound
+			and role == "Survivor"
+			and (view.medkits or 0) > 0
+		then `MEDKIT x{view.medkits}  (click to heal)`
+		else ""
+
+	-- hiding
+	ui.hiding.Visible = inRound and view.hidden == true or false
+
 	-- edge tint: zombies green-black, Alpha pulsing pink-red, nothing for humans
 	if inRound and role == "Zombie" then
 		ui.edge.Color = Color3.fromRGB(20, 60, 40)
@@ -423,7 +584,17 @@ function HudController.start()
 		ammo.mag, ammo.reserve = mag, reserve
 	end)
 	Remotes.get("ShotFired").OnClientEvent:Connect(tracer)
-	for _, tag in { "RevivePrompt", "GunPrompt", "AmmoPrompt" } do
+	Remotes.get("NoiseAlert").OnClientEvent:Connect(noisePing)
+	for _, tag in
+		{
+			"RevivePrompt",
+			"GunPrompt",
+			"AmmoPrompt",
+			"RepairPrompt",
+			"LockerHidePrompt",
+			"LockerSearchPrompt",
+		}
+	do
 		CollectionService:GetInstanceAddedSignal(tag):Connect(updatePrompts)
 	end
 	RunService.RenderStepped:Connect(render)
@@ -434,6 +605,8 @@ function HudController.start()
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not processed and input.KeyCode == Enum.KeyCode.Tab then
 			ui.list.Visible = not ui.list.Visible
+		elseif input.KeyCode == Enum.KeyCode.E and view and view.hidden then
+			Remotes.get("LockerLeave"):FireServer()
 		end
 	end)
 end

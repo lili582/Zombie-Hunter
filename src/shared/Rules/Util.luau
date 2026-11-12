@@ -8,6 +8,14 @@ function Util.isHumanRole(role: Types.Role): boolean
 	return role == "Survivor" or role == "Hunter"
 end
 
+-- A human who can act: alive, not hiding, not escaped.
+function Util.canAct(p: Types.PlayerState?): boolean
+	return p ~= nil
+		and (p.role == "Survivor" or p.role == "Hunter")
+		and p.life == "Alive"
+		and p.hiddenIn == nil
+end
+
 function Util.isZombieRole(role: Types.Role): boolean
 	return role == "Alpha" or role == "Zombie"
 end
@@ -43,6 +51,10 @@ function Util.newPlayer(id: number): Types.PlayerState
 		points = 0,
 		wasInfected = false,
 		infections = 0,
+		hiddenIn = nil,
+		repairing = nil,
+		repairCredit = 0,
+		medkits = 0,
 	}
 end
 
@@ -65,6 +77,12 @@ function Util.cloneState(s: Types.RoundState): Types.RoundState
 	copy.sinceSpecial = table.clone(s.sinceSpecial)
 	copy.lastHits = lastHits
 	copy.pendingAssists = pending
+	local towers = {}
+	for id, t in s.towers do
+		towers[id] = table.clone(t)
+	end
+	copy.towers = towers
+	copy.heli = table.clone(s.heli)
 	return copy
 end
 

@@ -12,6 +12,8 @@ return {
 		boostSpeed = 26, -- run speed right after escaping
 		boostTime = 1.5,
 		immunity = 1.2, -- seconds after an escape in which new claws miss
+		skillZoneSize = 0.18, -- tower skill checks use a slightly smaller zone
+		skillEvery = { 6, 12 }, -- seconds between skill checks while repairing
 	},
 	AmmoBox = { amount = 12, respawn = 30 },
 	health = { human = 100, basic = 100, alpha = 350 },
