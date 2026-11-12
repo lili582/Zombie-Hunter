@@ -76,7 +76,7 @@ test("secret roles: others see Alpha, Hunter and Survivors as ? for the whole ro
 	expect(RoundRules.viewFor(s, other).players[tostring(hunter)].role).toBe("?")
 	expect(RoundRules.viewFor(s, alpha).players[tostring(alpha)].role).toBe("Alpha")
 	expect(RoundRules.viewFor(s, hunter).players[tostring(hunter)].role).toBe("Hunter")
-	s = H.run(s, { H.tick(10) }) -- Alpha released: still secret
+	s = H.run(s, { H.tick(Classic.headStart) }) -- Alpha released: still secret
 	expect(s.phase).toBe("Active")
 	expect(RoundRules.viewFor(s, other).players[tostring(alpha)].role).toBe("?")
 	expect(RoundRules.viewFor(s, other).players[tostring(hunter)].role).toBe("?")
@@ -88,7 +88,7 @@ end)
 test("secret roles: no public announcement ever carries a player id", function()
 	local s, fx = H.run(fresh(), H.join(8))
 	local all = {}
-	s, fx = H.run(s, { H.tick(20), H.tick(10) })
+	s, fx = H.run(s, { H.tick(20), H.tick(Classic.headStart) })
 	for _, f in fx do
 		table.insert(all, f)
 	end
@@ -128,6 +128,22 @@ test("infected (basic) zombies are visible to everyone", function()
 	expect(RoundRules.viewFor(s, 4).players["1"].role).toBe("?")
 end)
 
+test("intro order: map, mode, someone infected, then private role cards", function()
+	local s, fx = H.run(fresh(), H.join(5))
+	s, fx = H.run(s, { H.tick(20) })
+	local order = {}
+	for _, f in fx do
+		if f.type == "Announce" and (f.toPlayerId == nil or f.toPlayerId == 1) then
+			table.insert(order, f.card)
+		end
+	end
+	expect(order).toEqual({ "Map", "Mode", "SomeoneInfected", "YourRole", "YourRules", "HunterChosen" })
+end)
+
+test("humans get 10s to run after the intro before the Alpha is released", function()
+	expect(Classic.headStart - Classic.introLength).toBe(10)
+end)
+
 test("every player gets a private role card", function()
 	local s, fx = H.run(fresh(), H.join(6))
 	s, fx = H.run(s, { H.tick(20) })
@@ -142,7 +158,7 @@ end)
 
 test("after 10s head start the round is Active with 360s and alpha revealed", function()
 	local s = H.run(fresh(), H.join(8))
-	s = H.run(s, { H.tick(20), H.tick(10) })
+	s = H.run(s, { H.tick(20), H.tick(Classic.headStart) })
 	expect(s.phase).toBe("Active")
 	expect(s.timeLeft).toBe(360)
 	expect(s.alphaRevealed).toBe(true)
@@ -150,7 +166,7 @@ end)
 
 test("dropping below 2 players mid-round ends with NoWinner", function()
 	local s = H.run(fresh(), H.join(5))
-	s = H.run(s, { H.tick(30) })
+	s = H.run(s, { H.tick(20 + Classic.headStart) })
 	s = H.run(s, { H.left(1), H.left(2), H.left(3), H.left(4) })
 	expect(s.phase).toBe("Results")
 	expect(s.winner).toBe("NoWinner")

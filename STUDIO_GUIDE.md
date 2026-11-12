@@ -91,7 +91,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 ## Playtest checklist (3 players in Studio)
 
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
-- [ ] 20s countdown → cards: map name → SOMEONE IS INFECTED (names flicker, stop on "?") → your private role → your rules → A HUNTER WALKS AMONG YOU (no name).
+- [ ] 20s countdown → everyone frozen in the dark while the intro plays (~16s): map name types in → **MODE: CLASSIC** (red flash) → **SOMEONE IS INFECTED...** with every player shown as a faceless shadow while a red light jumps between them and goes out on nobody → **your own character** in the dark, heartbeat, light flickers on in your role colour → your rules → **A HUNTER WALKS AMONG YOU** over all the shadows. Then humans get 10s to run before the Alpha is released.
 - [ ] **Secret roles:** every other player's role shows **?** in the list for the whole round (only infected zombies show ZOMBIE). No floating player names, health bars, name tags or Hunter hat over heads.
 - [ ] Alpha starts in the locked room up north; after 10s the door opens + banner **THE ALPHA HAS AWAKENED — it could be anyone** (no name).
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
