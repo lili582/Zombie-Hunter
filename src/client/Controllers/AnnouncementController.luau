@@ -32,7 +32,7 @@ local ROLE_TITLE = {
 	Zombie = "YOU ARE A ZOMBIE",
 }
 local ROLE_RULES = {
-	Survivor = "Hide  -  Revive friends  -  Survive 6:00\nOne secret Hunter has a gun. One secret Alpha is infected.",
+	Survivor = "No weapons  -  Hide  -  Revive friends  -  Survive 6:00\nZombie attack? CLICK IN TIME to escape!",
 	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
 	Alpha = "Your role is SECRET  -  Wait for release\nInfect everyone  -  2 hits downs a human",
 	Zombie = "Infect everyone  -  3 hits downs a human",

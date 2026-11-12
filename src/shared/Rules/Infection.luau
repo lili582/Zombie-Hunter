@@ -150,6 +150,11 @@ function Infection.step(s: State, event: Types.Event, fx: { Effect })
 		onPickUpGun(s, event.playerId, fx)
 	elseif event.type == "Tick" then
 		onTick(s, event.dt, fx)
+	elseif event.type == "Dodged" then
+		local p, a = s.players[event.playerId], s.players[event.attackerId]
+		if p and a and p.role == "Survivor" and p.life == "Alive" and Util.isZombieRole(a.role) then
+			table.insert(fx, { type = "Dodged", playerId = event.playerId, attackerId = event.attackerId })
+		end
 	elseif event.type == "ZombieKilled" then
 		local k, v = s.players[event.killerId], s.players[event.victimId]
 		if k and v and k.role == "Hunter" and Util.isZombieRole(v.role) then

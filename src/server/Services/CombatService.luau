@@ -1,5 +1,5 @@
 --!strict
--- Hunter revolver, human bat, zombie claws, ammo boxes. The server raycasts from the shooter's
+-- Hunter revolver + bat, zombie claws, survivor escape timing, ammo boxes. The server raycasts from the shooter's
 -- own head and never trusts a client hit position. Claw hits become rule `Hit` events.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -7,6 +7,8 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Weapons = require(Shared.Config.Weapons)
 local HitValidation = require(Shared.Rules.HitValidation)
+local Dodge = require(Shared.Rules.Dodge)
+local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
 local CharacterService = require(script.Parent.CharacterService)
 
@@ -25,6 +27,13 @@ local lastSwing: { [Player]: number } = {}
 -- character would replicate to every client and reveal the secret Hunter).
 local lastHunterHit: { [Player]: number } = {}
 local round: Round
+
+-- Survivor escape challenges (one at a time per survivor)
+type PendingDodge = { id: number, attacker: Player, challenge: Dodge.Challenge, sentAt: number }
+local pendingDodge: { [Player]: PendingDodge } = {}
+local immuneUntil: { [Player]: number } = {}
+local dodgeRng = Rng.new(os.time() + 17)
+local nextDodgeId = 0
 
 local function roleOf(player: Player): string?
 	local p = round.getState().players[player.UserId]
@@ -183,6 +192,68 @@ local function onBat(player: Player)
 	end
 end
 
+local function resolveDodge(target: Player, id: number, escaped: boolean)
+	local p = pendingDodge[target]
+	if not p or p.id ~= id then
+		return
+	end
+	pendingDodge[target] = nil
+	Remotes.get("DodgeResult"):FireClient(target, id, escaped)
+	if not isActive() then
+		return
+	end
+	if escaped then
+		immuneUntil[target] = os.clock() + Weapons.Dodge.immunity
+		local char = target.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.WalkSpeed = Weapons.Dodge.boostSpeed -- burst of speed to get away
+			task.delay(Weapons.Dodge.boostTime, function()
+				if hum.Parent and hum.WalkSpeed == Weapons.Dodge.boostSpeed then
+					hum.WalkSpeed = Weapons.speed.human
+				end
+			end)
+		end
+		round.send({ type = "Dodged", playerId = target.UserId, attackerId = p.attacker.UserId })
+	else
+		local attackerRole = roleOf(p.attacker)
+		if lifeOf(target) == "Alive" and (attackerRole == "Alpha" or attackerRole == "Zombie") then
+			round.send({ type = "Hit", attackerId = p.attacker.UserId, victimId = target.UserId })
+		end
+	end
+end
+
+-- A zombie clawed a Survivor: send them the escape challenge.
+local function startDodge(target: Player, attacker: Player)
+	if pendingDodge[target] then
+		return -- already escaping another attack
+	end
+	if (immuneUntil[target] or 0) > os.clock() then
+		return -- just escaped: this claw misses
+	end
+	nextDodgeId += 1
+	local id = nextDodgeId
+	local challenge = Dodge.newChallenge(dodgeRng)
+	pendingDodge[target] = { id = id, attacker = attacker, challenge = challenge, sentAt = os.clock() }
+	Remotes.get("DodgeChallenge")
+		:FireClient(target, id, challenge.window, challenge.zoneStart, challenge.zoneSize)
+	-- no click in time = caught
+	task.delay(challenge.window * (1 + Weapons.Dodge.tolerance) + 0.6, function()
+		resolveDodge(target, id, false)
+	end)
+end
+
+local function onDodgeAttempt(player: Player, id: any, claimed: any)
+	local p = pendingDodge[player]
+	if not p or p.id ~= id then
+		return
+	end
+	local elapsed = os.clock() - p.sentAt
+	local rtt = math.clamp(player:GetNetworkPing() * 2, 0, 0.6)
+	local escaped = Dodge.judge(p.challenge, claimed, elapsed, rtt)
+	resolveDodge(player, id, escaped)
+end
+
 local function onClaw(player: Player)
 	if not isActive() then
 		return
@@ -201,7 +272,12 @@ local function onClaw(player: Player)
 		return
 	end
 	lastSwing[player] = now
-	if target then
+	if not target then
+		return
+	end
+	if roleOf(target) == "Survivor" then
+		startDodge(target, player) -- survivors get a chance to escape with timing
+	else
 		round.send({ type = "Hit", attackerId = player.UserId, victimId = target.UserId })
 	end
 end
@@ -278,6 +354,7 @@ end
 function CombatService.start(r: Round, ammoSpots: { CFrame })
 	round = r
 	Remotes.get("FireWeapon").OnServerEvent:Connect(onFire)
+	Remotes.get("DodgeAttempt").OnServerEvent:Connect(onDodgeAttempt)
 	Remotes.get("Reload").OnServerEvent:Connect(function(player)
 		if roleOf(player) == "Hunter" then
 			reload(player)
@@ -291,6 +368,8 @@ function CombatService.start(r: Round, ammoSpots: { CFrame })
 		guns[p] = nil
 		lastSwing[p] = nil
 		lastHunterHit[p] = nil
+		pendingDodge[p] = nil
+		immuneUntil[p] = nil
 	end)
 	setupAmmoBoxes(ammoSpots)
 end

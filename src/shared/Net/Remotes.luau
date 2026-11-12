@@ -9,6 +9,7 @@ Remotes.names = {
 	-- client -> server intents
 	"FireWeapon", -- (direction: Vector3) Hunter only
 	"Reload",
+	"DodgeAttempt", -- (id, needlePos) survivor clicked during an escape challenge
 	-- (melee and claws use Tool.Activated, which already reaches the server)
 	-- server -> client
 	"RoundStateChanged", -- filtered round snapshot
@@ -16,6 +17,8 @@ Remotes.names = {
 	"PointsPopup", -- (amount, reason)
 	"AmmoChanged", -- (mag, reserve)
 	"ShotFired", -- (origin, hitPos) for tracers
+	"DodgeChallenge", -- (id, window, zoneStart, zoneSize) a zombie is attacking you: click in time!
+	"DodgeResult", -- (id, escaped: boolean)
 }
 
 local folder: Folder? = nil

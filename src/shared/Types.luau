@@ -49,6 +49,7 @@ export type Event =
 	| { type: "ReviveStop", reviverId: number }
 	| { type: "PickUpGun", playerId: number }
 	| { type: "ZombieKilled", killerId: number, victimId: number }
+	| { type: "Dodged", playerId: number, attackerId: number }
 
 export type Effect = { type: string, [string]: any }
 -- Effect types:
@@ -58,7 +59,7 @@ export type Effect = { type: string, [string]: any }
 --   ReviveStarted {reviverId, targetId}   ReviveStopped {targetId}
 --   BecameZombie {playerId, byId?}  BecameAlpha {playerId}
 --   GunDropped {fromId}             NewHunter {playerId}
---   ZombieKilled {killerId, victimId}
+--   ZombieKilled {killerId, victimId}  Dodged {playerId, attackerId}
 --   PointsAwarded {playerId, amount, reason}
 --   Announce {card, toPlayerId?, data?}
 --   RoundOver {winner}
