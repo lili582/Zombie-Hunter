@@ -48,7 +48,7 @@ local ROLE_TITLE = {
 local ROLE_RULES = {
 	Survivor = "No weapons  -  Repair 3 radio towers  -  Hide in lockers  -  Revive friends\nZombie attack? CLICK IN TIME to escape!",
 	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
-	Alpha = "Your role is SECRET  -  Wait for release\nInfect everyone  -  2 hits downs a human",
+	Alpha = "You look like them. Blend in.\nClaws wake up at release  -  every attack shows your face for 3s",
 	Zombie = "Infect everyone  -  3 hits downs a human",
 }
 local RESULT_TEXT = {

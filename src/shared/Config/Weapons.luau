@@ -15,6 +15,7 @@ return {
 		skillZoneSize = 0.18, -- tower skill checks use a slightly smaller zone
 		skillEvery = { 6, 12 }, -- seconds between skill checks while repairing
 	},
+	AlphaReveal = { seconds = 3 }, -- how long the Alpha's zombie face shows after an attack
 	AmmoBox = { amount = 12, respawn = 30 },
 	health = { human = 100, basic = 100, alpha = 350 },
 	speed = { human = 16, downed = 3, basic = 14, alpha = 18 },

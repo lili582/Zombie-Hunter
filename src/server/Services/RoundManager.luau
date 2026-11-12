@@ -142,7 +142,8 @@ local function spawnRoundCharacters()
 		if not player or p.life == "Out" then
 			continue
 		end
-		local at = if p.role == "Alpha" then map.alphaStart else map.humanStart
+		-- the Alpha starts among the survivors, disguised (claws only work after release)
+		local at = map.humanStart
 		task.spawn(function()
 			CharacterService.spawn(player, p.role, at)
 			if p.role == "Hunter" then
@@ -209,7 +210,7 @@ runEffect = function(f: any)
 		if player then
 			local role = if f.type == "BecameAlpha" then "Alpha" else "Zombie"
 			local at = if state.phase == "HeadStart"
-				then map.alphaStart
+				then map.humanStart
 				else (CharacterService.position(player) or randomZombieSpawn())
 			CombatService.clearGun(player)
 			task.spawn(CharacterService.spawn, player, role, at)

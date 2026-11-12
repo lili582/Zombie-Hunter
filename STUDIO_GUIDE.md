@@ -93,7 +93,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
 - [ ] 20s countdown → everyone frozen in the dark while the intro plays (~16s): map name types in → **MODE: CLASSIC** (red flash) → **SOMEONE IS INFECTED...** with every player shown as a faceless shadow while a red light jumps between them and goes out on nobody → **your own character** in the dark, heartbeat, light flickers on in your role colour → your rules → **A HUNTER WALKS AMONG YOU** over all the shadows. Then humans get 10s to run before the Alpha is released.
 - [ ] **Secret roles:** every other player's role shows **?** in the list for the whole round (only infected zombies show ZOMBIE). No floating player names, health bars, name tags or Hunter hat over heads.
-- [ ] Alpha starts in the locked room up north; after 10s the door opens + banner **THE ALPHA HAS AWAKENED — it could be anyone** (no name).
+- [ ] **The Alpha is disguised**: starts with the survivors, looks exactly like one (own skin, flashlight, normal speed). After the 10s run his claws wake up + banner **THE ALPHA HAS AWAKENED — it could be anyone**. Every claw swing shows his zombie face (grey-green skin, red eyes, faster) for 3s, then he blends in again.
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
 - [ ] Another human holds **E** for 4s on the downed body → revived ("Name is coming!" + bar).
 - [ ] Not revived in 20s → **YOU'VE BEEN INFECTED!** → green zombie with mint eyes, claws equipped.
@@ -125,4 +125,4 @@ Everything marked *(tune)* in the spec is in `Shared/Config`: round timers, hits
 
 ## Known Phase 1 limits (next phases)
 
-Points/coins are not saved yet (DataService, v0.4). No towers/helicopter/lockers/gadgets (v0.2). No Alpha classes or 3D safehouse/map vote (v0.3). Round-start cards cover the screen for ~11s, which is longer than the 10s head start — tune `headStart` or card times after the first playtest.
+Points/coins are not saved yet (DataService, v0.4). No Alpha classes or 3D safehouse/map vote (v0.3). `AlphaStart` / `AlphaDoor` are no longer used (the Alpha spawns disguised with the survivors) but are still built.

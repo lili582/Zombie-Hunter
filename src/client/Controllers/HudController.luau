@@ -476,7 +476,7 @@ local function render()
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.blood
 		ui.sub.Text = if role == "Alpha"
-			then `YOU WILL BE RELEASED IN {Theme.timeText(left)}`
+			then `BLEND IN... YOUR CLAWS WAKE UP IN {Theme.timeText(left)}`
 			else "SOMEONE IS INFECTED... RUN"
 	elseif phase == "Active" then
 		ui.timer.Text = Theme.timeText(left)

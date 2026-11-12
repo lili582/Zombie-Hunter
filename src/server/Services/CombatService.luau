@@ -245,6 +245,9 @@ local function onClaw(player: Player)
 		return
 	end
 	lastSwing[player] = now
+	if roleOf(player) == "Alpha" then
+		CharacterService.revealAlpha(player, Weapons.AlphaReveal.seconds) -- the mask slips
+	end
 	if not target then
 		return
 	end

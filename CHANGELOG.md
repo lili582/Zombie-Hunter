@@ -5,6 +5,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- **Disguised Alpha:** the Alpha looks, moves and lights up like any survivor (own skin, flashlight, human speed) and starts with them. Every claw swing shows his zombie face (skin, red eyes, Alpha speed) for 3s (`Weapons.AlphaReveal`), then he blends in again. Claws only work after release.
 - Survivors carry no weapons (the bat is Hunter-only).
 - The Alpha is the same height as all other players (no longer 1.3x bigger).
 
