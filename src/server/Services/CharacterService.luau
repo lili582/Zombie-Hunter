@@ -173,9 +173,7 @@ function CharacterService.applyRole(player: Player, role: string)
 	if role == "Alpha" then
 		skin(char, ALPHA_SKIN)
 		eyes(char, Color3.fromRGB(255, 40, 60), 0.35)
-		pcall(function()
-			char:ScaleTo(1.3)
-		end)
+		-- same height as everyone else (no 1.3x scale), so size never gives the Alpha away
 		setStats(hum, Weapons.health.alpha, Weapons.speed.alpha)
 	elseif role == "Zombie" then
 		skin(char, ZOMBIE_SKIN)
