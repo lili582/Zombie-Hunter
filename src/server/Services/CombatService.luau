@@ -18,7 +18,7 @@ type Round = {
 	send: (event: any) -> (),
 }
 
-type Gun = { mag: number, reserve: number, lastShot: number, reloading: boolean }
+type Gun = { weapon: string, mag: number, reserve: number, lastShot: number, reloading: boolean }
 
 local guns: { [Player]: Gun } = {}
 local lastSwing: { [Player]: number } = {}
@@ -61,23 +61,29 @@ local function sendAmmo(player: Player)
 	end
 end
 
-function CombatService.resetGun(player: Player)
-	guns[player] =
-		{ mag = Weapons.Revolver.mag, reserve = Weapons.Revolver.reserve, lastShot = 0, reloading = false }
+-- Gun stats by name ("Revolver" = Hunter, "Pistol" = Outbreak survivors).
+local function statsOf(g: Gun): typeof(Weapons.Revolver)
+	return if g.weapon == "Pistol" then Weapons.Pistol else Weapons.Revolver
+end
+
+function CombatService.resetGun(player: Player, weapon: string?)
+	local name = if weapon == "Pistol" then "Pistol" else "Revolver"
+	local w = (Weapons :: any)[name]
+	guns[player] = { weapon = name, mag = w.mag, reserve = w.reserve, lastShot = 0, reloading = false }
 	sendAmmo(player)
 end
 
 local function reload(player: Player)
 	local g = guns[player]
-	if not g or g.reloading or g.mag >= Weapons.Revolver.mag or g.reserve <= 0 then
+	if not g or g.reloading or g.mag >= statsOf(g).mag or g.reserve <= 0 then
 		return
 	end
 	g.reloading = true
-	task.delay(Weapons.Revolver.reloadTime, function()
+	task.delay(statsOf(g).reloadTime, function()
 		if guns[player] ~= g then
 			return
 		end
-		local need = math.min(Weapons.Revolver.mag - g.mag, g.reserve)
+		local need = math.min(statsOf(g).mag - g.mag, g.reserve)
 		g.mag += need
 		g.reserve -= need
 		g.reloading = false
@@ -114,7 +120,8 @@ local function damageZombie(victim: Player, amount: number, attacker: Player)
 	local char = victim.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	if hum and hum.Health > 0 then
-		if roleOf(attacker) == "Hunter" then
+		local role = roleOf(attacker)
+		if role == "Hunter" or role == "Survivor" then -- survivors only shoot in armed modes
 			lastHunterHit[victim] = attacker.UserId
 		end
 		hum:TakeDamage(amount)
@@ -128,16 +135,18 @@ local function onFire(player: Player, direction: any)
 	local char = player.Character
 	local head = char and char:FindFirstChild("Head") :: BasePart?
 	local g = guns[player]
-	if not char or not head or not g or not char:FindFirstChild("Revolver") or g.reloading then
+	if not char or not head or not g or not char:FindFirstChild(g.weapon) or g.reloading then
 		return
 	end
+	local w = statsOf(g)
 	local now = os.clock()
 	local ok = HitValidation.shot({
 		role = roleOf(player) or "",
 		distance = 0, -- the ray below is capped at the weapon range
 		sinceLastShot = now - g.lastShot,
 		ammoInMag = g.mag,
-	}, Weapons.Revolver)
+		armed = g.weapon == "Pistol",
+	}, w)
 	if not ok then
 		return
 	end
@@ -148,13 +157,13 @@ local function onFire(player: Player, direction: any)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { char }
 	local origin = head.Position
-	local result = workspace:Raycast(origin, direction.Unit * Weapons.Revolver.range, params)
-	local hitPos = if result then result.Position else origin + direction.Unit * Weapons.Revolver.range
+	local result = workspace:Raycast(origin, direction.Unit * w.range, params)
+	local hitPos = if result then result.Position else origin + direction.Unit * w.range
 	if result then
 		local victim = CharacterService.playerFromPart(result.Instance)
 		local role = victim and roleOf(victim)
 		if victim and (role == "Alpha" or role == "Zombie") then
-			damageZombie(victim, Weapons.Revolver.damage, player)
+			damageZombie(victim, w.damage, player)
 		end
 	end
 	Remotes.get("ShotFired"):FireAllClients(origin, hitPos)
@@ -343,7 +352,8 @@ local function setupAmmoBoxes(spots: { CFrame })
 		prompt.Parent = box
 		prompt.Triggered:Connect(function(player)
 			local g = guns[player]
-			if not g or roleOf(player) ~= "Hunter" or box:GetAttribute("Empty") then
+			local role = roleOf(player)
+			if not g or (role ~= "Hunter" and role ~= "Survivor") or box:GetAttribute("Empty") then
 				return
 			end
 			g.reserve += Weapons.AmmoBox.amount

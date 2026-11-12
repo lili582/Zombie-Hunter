@@ -1,5 +1,5 @@
 --!strict
--- Input -> intents. Click/tap with the Revolver sends an aim direction; R reloads.
+-- Input -> intents. Click/tap with the Revolver (or an Outbreak Pistol) sends an aim direction; R reloads.
 -- Bat and Claws need no code here: Tool.Activated already reaches the server.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -13,7 +13,8 @@ local mouse = player:GetMouse()
 local WeaponController = {}
 
 local function hookTool(tool: Instance)
-	if not tool:IsA("Tool") or tool.Name ~= "Revolver" or tool:GetAttribute("ClientHooked") then
+	local isGun = tool.Name == "Revolver" or tool.Name == "Pistol"
+	if not tool:IsA("Tool") or not isGun or tool:GetAttribute("ClientHooked") then
 		return
 	end
 	tool:SetAttribute("ClientHooked", true)

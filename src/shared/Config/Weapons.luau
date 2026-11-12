@@ -2,6 +2,8 @@
 -- Weapon and character numbers. All (tune).
 return {
 	Revolver = { damage = 35, fireInterval = 0.5, mag = 6, reserve = 36, range = 200, reloadTime = 1.5 },
+	-- Outbreak: every Survivor gets one. Weaker than the Hunter's revolver.
+	Pistol = { damage = 20, fireInterval = 0.6, mag = 8, reserve = 24, range = 150, reloadTime = 1.3 },
 	Melee = { damage = 15, interval = 0.8, range = 7 },
 	Claw = { interval = 0.9, range = 6 },
 	-- Survivor escape timing (click while the needle is in the zone)

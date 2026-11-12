@@ -10,6 +10,8 @@ local Scoring = require("./Scoring")
 local Objectives = require("./Objectives")
 local Survival = require("./Survival")
 local Abilities = require("./Abilities")
+local ModePicker = require("./ModePicker")
+local Modes = require("../Config/Modes")
 
 type State = Types.RoundState
 type Effect = Types.Effect
@@ -37,6 +39,9 @@ function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): S
 		alphaRevealed = false,
 		winner = nil,
 		alphaPrefs = {},
+		baseConfig = config,
+		nextMode = nil,
+		lastMode = nil,
 	}
 end
 
@@ -54,8 +59,28 @@ local function announceWaiting(s: State, fx: { Effect })
 	})
 end
 
+-- Mode for the next round. `baseConfig.modePool` lists the modes in play (default: Classic only).
+local function pickMode(s: State): string
+	local base = s.baseConfig
+	return ModePicker.pick(base.modePool or { "Classic" }, Util.count(s.players), s.lastMode, s.rng, {
+		ignoreMinimums = base.ignoreModeMinimums,
+		force = base.forceMode,
+	})
+end
+
+local function modeStillFits(s: State): boolean
+	local mode = Modes.get(s.nextMode)
+	return s.nextMode ~= nil
+		and (
+			s.baseConfig.ignoreModeMinimums
+			or s.baseConfig.forceMode
+			or Util.count(s.players) >= mode.minPlayers
+		)
+end
+
 local function enterWaitingOrIntermission(s: State, fx: { Effect })
 	if Util.count(s.players) >= s.config.minPlayers then
+		s.nextMode = pickMode(s)
 		setPhase(s, "Intermission", s.config.intermission, fx)
 	else
 		if s.phase ~= "Waiting" then
@@ -66,8 +91,13 @@ local function enterWaitingOrIntermission(s: State, fx: { Effect })
 end
 
 local function enterHeadStart(s: State, fx: { Effect })
+	if not modeStillFits(s) then
+		s.nextMode = pickMode(s) -- players left during the intermission
+	end
+	s.config = Modes.configFor(s.baseConfig, s.nextMode)
+	s.lastMode = s.config.modeId
 	local ids = Util.sortedIds(s.players)
-	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.specialCount)
+	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.alphaCount, s.config.hunterCount)
 	for _, id in ids do
 		local fresh = Util.newPlayer(id)
 		fresh.role = roles[id]
@@ -109,11 +139,15 @@ local function enterHeadStart(s: State, fx: { Effect })
 			type = "Announce",
 			card = "YourRules",
 			toPlayerId = id,
-			data = { role = role, alphaClass = s.players[id].alphaClass },
+			data = { role = role, alphaClass = s.players[id].alphaClass, mode = s.config.modeId },
 		})
 	end
 	-- Secret roles: public cards never name the Alpha or the Hunter.
-	table.insert(fx, { type = "Announce", card = "HunterChosen" })
+	if s.config.hunterCount(#ids) > 0 then
+		table.insert(fx, { type = "Announce", card = "HunterChosen" })
+	else
+		table.insert(fx, { type = "Announce", card = "EveryoneArmed" }) -- e.g. Outbreak: no Hunter
+	end
 end
 
 local function enterActive(s: State, fx: { Effect })
@@ -159,6 +193,7 @@ local function timerRanOut(s: State, fx: { Effect })
 		end
 		s.gunDropped = false
 		s.alphaRevealed = false
+		s.config = s.baseConfig
 		enterWaitingOrIntermission(s, fx)
 	end
 end
@@ -332,6 +367,11 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		hidden = me ~= nil and me.hiddenIn ~= nil,
 		repairing = if me then me.repairing else nil,
 		medkits = if me then me.medkits else 0,
+		-- game mode: this round's, and the next one (lobby)
+		mode = s.config.modeId or "Classic",
+		modeName = s.config.modeName,
+		nextMode = s.nextMode,
+		humanWeapon = s.config.humanWeapon,
 		-- Alpha class: your pick in the safehouse, and your ability while you are the Alpha
 		alphaPref = s.alphaPrefs[viewerId],
 		alphaClass = if me and me.role == "Alpha" then me.alphaClass else nil,

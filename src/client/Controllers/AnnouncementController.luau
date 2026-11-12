@@ -25,6 +25,7 @@ local CARD_TIME = {
 	YourRole = 3.5,
 	YourRules = 2,
 	HunterChosen = 1.5,
+	EveryoneArmed = 1.5, -- replaces HunterChosen in modes without a Hunter
 	-- round end / other
 	Result = 3,
 	YourCoins = 2,
@@ -52,6 +53,13 @@ local ROLE_RULES = {
 	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
 	Alpha = "You look like them. Blend in.\nClaws wake up at release  -  every attack shows your face for 3s",
 	Zombie = "Infect everyone  -  3 hits downs a human",
+}
+-- Rules that change in a mode (role -> text)
+local MODE_RULES = {
+	Outbreak = {
+		Survivor = "You have a PISTOL  -  [R] reload  -  Survive 4:00\nZombie attack? CLICK IN TIME to escape!",
+		Alpha = "There are more of you. Blend in.\nClaws wake up at release  -  every attack shows your face",
+	},
 }
 local RESULT_TEXT = {
 	SurvivorsSurvived = { "SURVIVORS SURVIVED!", C.baby },
@@ -480,7 +488,8 @@ local function play(name: string, data: any, token: number)
 			ui.big.Ambient = Color3.fromRGB(55, 45, 70)
 			ui.big.Visible = true
 		end
-		local rules = ROLE_RULES[role] or ""
+		local modeRules = MODE_RULES[data.mode or ""]
+		local rules = (modeRules and modeRules[role]) or ROLE_RULES[role] or ""
 		if role == "Alpha" then
 			local class = AlphaClasses.get(data.alphaClass)
 			setTitle(`ALPHA - {class.name}`, Theme.roleColor[role])
@@ -500,6 +509,11 @@ local function play(name: string, data: any, token: number)
 			vp.BackgroundColor3 = Color3.fromRGB(40, 25, 15)
 		end
 		ui.subtitle.Text = "Nobody knows who. Trust no one."
+	elseif name == "EveryoneArmed" then
+		setTitle("EVERYONE IS ARMED", C.baby)
+		slam()
+		silhouetteRow()
+		ui.subtitle.Text = "No Hunter tonight. Shoot anything that bites."
 	elseif name == "Result" then
 		local r = RESULT_TEXT[data.winner] or RESULT_TEXT.NoWinner
 		setTitle(r[1], r[2])

@@ -159,7 +159,9 @@ function Infection.step(s: State, event: Types.Event, fx: { Effect })
 		end
 	elseif event.type == "ZombieKilled" then
 		local k, v = s.players[event.killerId], s.players[event.victimId]
-		if k and v and k.role == "Hunter" and Util.isZombieRole(v.role) then
+		local armed = k ~= nil
+			and (k.role == "Hunter" or (k.role == "Survivor" and s.config.humanWeapon ~= nil))
+		if k and v and armed and Util.isZombieRole(v.role) then
 			table.insert(fx, { type = "ZombieKilled", killerId = event.killerId, victimId = event.victimId })
 		end
 	end

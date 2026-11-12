@@ -22,6 +22,11 @@ local ALPHA_SKIN = Color3.fromRGB(96, 112, 86)
 
 local diedCallback: ((Player, Model) -> ())? = nil
 
+-- Set by RoundManager: the gun every Survivor carries this round (Outbreak), or nil.
+CharacterService.humanWeapon = function(): string?
+	return nil
+end
+
 -- Set by RoundManager: which Alpha class a player has this round (nil = not an Alpha).
 CharacterService.alphaClassOf = function(_player: Player): string?
 	return nil
@@ -175,6 +180,9 @@ function CharacterService.giveTools(player: Player, role: string)
 			bar.Parent = kit
 		end
 		kit.Parent = backpack
+		if CharacterService.humanWeapon() == "Pistol" then
+			makeTool("Pistol", Vector3.new(0.35, 0.8, 1.4), Color3.fromRGB(60, 60, 70)).Parent = backpack
+		end
 	elseif role == "Hunter" then
 		makeTool("Revolver", Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44)).Parent = backpack
 		makeTool("Bat", Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50)).Parent = backpack

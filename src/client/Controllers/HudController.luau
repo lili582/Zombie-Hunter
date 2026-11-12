@@ -437,9 +437,10 @@ local function updatePrompts()
 	for _, prompt in CollectionService:GetTagged("GunPrompt") do
 		prompt.Enabled = role == "Survivor" and alive
 	end
+	local armed = role == "Hunter" or (role == "Survivor" and view ~= nil and view.humanWeapon ~= nil)
 	for _, prompt in CollectionService:GetTagged("AmmoPrompt") do
 		local box = prompt.Parent
-		prompt.Enabled = role == "Hunter" and box ~= nil and not box:GetAttribute("Empty")
+		prompt.Enabled = armed and box ~= nil and not box:GetAttribute("Empty")
 	end
 	local hidden = view ~= nil and view.hidden == true
 	local canAct = human and alive and not hidden
@@ -528,7 +529,7 @@ local function render()
 	elseif phase == "Intermission" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.bone
-		ui.sub.Text = "NEXT ROUND STARTING"
+		ui.sub.Text = `NEXT ROUND: {string.upper(view.nextMode or "Classic")}`
 	elseif phase == "HeadStart" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.blood
@@ -577,15 +578,16 @@ local function render()
 		end
 	end
 
-	-- hunter bits
-	local isHunter = inRound and role == "Hunter"
-	local holdingGun = isHunter
-		and player.Character ~= nil
-		and player.Character:FindFirstChild("Revolver") ~= nil
-	ui.ammo.Visible = isHunter == true
+	-- gun bits: the Hunter, or every Survivor in an armed mode (Outbreak)
+	local hasGun = inRound and (role == "Hunter" or (role == "Survivor" and view.humanWeapon ~= nil))
+	local char = player.Character
+	local holdingGun = hasGun
+		and char ~= nil
+		and (char:FindFirstChild("Revolver") ~= nil or char:FindFirstChild("Pistol") ~= nil)
+	ui.ammo.Visible = hasGun == true
 	ui.ammo.Text = `{ammo.mag} / {ammo.reserve}`
 	ui.crosshair.Visible = holdingGun == true
-	ui.reload.Visible = isHunter == true and UserInputService.TouchEnabled
+	ui.reload.Visible = hasGun == true and UserInputService.TouchEnabled
 
 	-- downed
 	local isDowned = inRound and mine and mine.life == "Downed"
