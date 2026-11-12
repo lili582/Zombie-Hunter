@@ -2,7 +2,7 @@
 -- Shared types for the rules core. Pure: no Roblox APIs.
 
 export type Role = "Alpha" | "Hunter" | "Survivor" | "Zombie"
-export type Life = "Alive" | "Downed" | "Out"
+export type Life = "Alive" | "Downed" | "Out" | "Escaped"
 export type Phase = "Waiting" | "Intermission" | "HeadStart" | "Active" | "Results"
 export type Winner = "SurvivorsSurvived" | "SurvivorsEscaped" | "ZombiesWin" | "NoWinner"
 
@@ -18,7 +18,16 @@ export type PlayerState = {
 	points: number,
 	wasInfected: boolean,
 	infections: number,
+	-- Phase 2
+	hiddenIn: number?, -- locker id while hiding
+	repairing: number?, -- tower id while repairing
+	repairCredit: number, -- tower progress this player added (for points)
+	medkits: number,
 }
+
+export type Tower = { progress: number, done: boolean }
+export type Heli = { phase: "None" | "Inbound" | "Landed" | "Gone", timeLeft: number, zone: number? }
+export type MapMeta = { towerSpots: { { x: number, z: number } }, heliZoneCount: number }
 
 export type Rng = {
 	int: (self: Rng, min: number, max: number) -> number,
@@ -38,6 +47,11 @@ export type RoundState = {
 	gunDropped: boolean,
 	alphaRevealed: boolean,
 	winner: Winner?,
+	-- Phase 2: objectives
+	mapMeta: MapMeta?,
+	towers: { [number]: Tower }, -- active towers this round, keyed by spot index
+	towersDone: number,
+	heli: Heli,
 }
 
 export type Event =
@@ -50,6 +64,14 @@ export type Event =
 	| { type: "PickUpGun", playerId: number }
 	| { type: "ZombieKilled", killerId: number, victimId: number }
 	| { type: "Dodged", playerId: number, attackerId: number }
+	| { type: "RepairStart", playerId: number, towerId: number }
+	| { type: "RepairStop", playerId: number }
+	| { type: "SkillCheck", playerId: number, success: boolean }
+	| { type: "EnterHeliZone", playerId: number }
+	| { type: "LockerEnter", playerId: number, lockerId: number }
+	| { type: "LockerExit", playerId: number }
+	| { type: "LockerSearch", attackerId: number, lockerId: number }
+	| { type: "UseMedkit", playerId: number, targetId: number }
 
 export type Effect = { type: string, [string]: any }
 -- Effect types:
@@ -60,6 +82,12 @@ export type Effect = { type: string, [string]: any }
 --   BecameZombie {playerId, byId?}  BecameAlpha {playerId}
 --   GunDropped {fromId}             NewHunter {playerId}
 --   ZombieKilled {killerId, victimId}  Dodged {playerId, attackerId}
+--   RepairStarted {playerId, towerId}  RepairStopped {playerId, towerId}
+--   RepairPoints {playerId, amount}  TowerRepaired {towerId, repairerIds}  SkillCheckFailed {playerId, towerId}
+--   RepairInterrupted {attackerId, victimId}  NoiseAlert {towerId}
+--   HeliCalled {zone}  HeliLanded {zone}  HeliLeft {}  Escaped {playerId}
+--   EnteredLocker {playerId, lockerId}  LeftLocker {playerId, lockerId, pulledBy?}
+--   Healed {playerId, targetId}
 --   PointsAwarded {playerId, amount, reason}
 --   Announce {card, toPlayerId?, data?}
 --   RoundOver {winner}

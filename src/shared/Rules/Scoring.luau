@@ -59,6 +59,20 @@ function Scoring.award(s: State, effects: { Effect }): { Effect }
 				end
 			end
 			s.pendingAssists[f.playerId] = nil
+		elseif f.type == "RepairPoints" then
+			give(s, f.playerId, Points.repairPer10 * f.amount, "REPAIR", out)
+		elseif f.type == "TowerRepaired" then
+			for _, id in f.repairerIds do
+				give(s, id, Points.towerDone, "TOWER REPAIRED", out)
+			end
+		elseif f.type == "Escaped" then
+			give(s, f.playerId, Points.escape, "ESCAPED THE NIGHT", out)
+		elseif f.type == "RepairInterrupted" then
+			give(s, f.attackerId, Points.interruptRepair, "STOPPED A REPAIR", out)
+		elseif f.type == "LeftLocker" and f.pulledBy then
+			give(s, f.pulledBy, Points.pullOut, "FOUND SOMEONE HIDING", out)
+		elseif f.type == "Healed" and f.playerId ~= f.targetId then
+			give(s, f.playerId, Points.heal, "HEALED A FRIEND", out)
 		elseif f.type == "Dodged" then
 			give(s, f.playerId, Points.dodge, "ESCAPED", out)
 		elseif f.type == "NewHunter" then

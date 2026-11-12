@@ -148,8 +148,27 @@ function CharacterService.giveTools(player: Player, role: string)
 			end
 		end
 	end
-	-- Survivors get nothing: no weapons, they hide, revive and escape attacks with timing.
-	if role == "Hunter" then
+	-- Survivors get no weapons: they hide, repair, revive and escape attacks with timing.
+	-- Their only item is a medkit (heals one hit).
+	if role == "Survivor" then
+		local kit = makeTool("Medkit", Vector3.new(1, 0.8, 0.5), Color3.fromRGB(240, 240, 240))
+		local handle = kit:FindFirstChild("Handle") :: BasePart
+		for _, size in { Vector3.new(0.6, 0.18, 0.55), Vector3.new(0.18, 0.6, 0.55) } do -- red cross
+			local bar = Instance.new("Part")
+			bar.Name = "Cross"
+			bar.Size = size
+			bar.Color = Color3.fromRGB(255, 80, 100)
+			bar.CanCollide = false
+			bar.Massless = true
+			bar.CFrame = handle.CFrame
+			local w = Instance.new("WeldConstraint")
+			w.Part0 = handle
+			w.Part1 = bar
+			w.Parent = bar
+			bar.Parent = kit
+		end
+		kit.Parent = backpack
+	elseif role == "Hunter" then
 		makeTool("Revolver", Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44)).Parent = backpack
 		makeTool("Bat", Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50)).Parent = backpack
 	elseif role == "Alpha" or role == "Zombie" then

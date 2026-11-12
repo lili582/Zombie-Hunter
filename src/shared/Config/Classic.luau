@@ -19,6 +19,19 @@ local Classic = {
 	reviveTime = 4,
 	hitsToDown = { Alpha = 2, Zombie = 3 } :: { [string]: number },
 	zombieRespawn = 5,
+	-- Phase 2: objectives (tune)
+	towersOnMap = 5, -- picked from the map's tower spots each round
+	towersNeeded = 3, -- repaired towers needed to call the helicopter
+	towerMinDistance = 60, -- studs between picked towers (relaxed if impossible)
+	repairTime = 60, -- seconds for one player to repair a tower
+	coopBonus = 0.6, -- each extra repairer adds 60% speed
+	repairRange = 10, -- studs: walk further away and the repair stops
+	skillBonus = 0.02, -- tower progress for a good skill check
+	skillPenalty = 0.08, -- tower progress lost on a failed skill check
+	heliInbound = 45, -- seconds from call to landing
+	heliLanded = 20, -- seconds the helicopter waits
+	heliZoneRadius = 18,
+	medkitsPerSurvivor = 1,
 	alphaRespawn = 8,
 }
 

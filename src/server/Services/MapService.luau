@@ -2,7 +2,8 @@
 -- Finds the tagged spots of the map. If there is no map yet, builds a greybox Town + a lobby,
 -- so the game is playable right away. Replace workspace.Map with a hand-built map later:
 -- it only needs parts tagged HumanStart, AlphaStart, ZombieSpawn (3+), AmmoSpawn, and an
--- optional part named "AlphaDoor".
+-- optional part named "AlphaDoor". Phase 2 adds TowerSpot (5+, ideally 8), HeliZone (1-3) and
+-- Locker (the locker parts themselves, any number).
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 
@@ -15,6 +16,9 @@ export type MapInfo = {
 	ammoSpawns: { CFrame },
 	lobbySpawn: CFrame,
 	alphaDoor: BasePart?,
+	towerSpots: { CFrame },
+	heliZones: { CFrame },
+	lockers: { BasePart },
 }
 
 local COLORS = {
@@ -267,6 +271,48 @@ local function buildTown()
 	do
 		marker(map, "ZombieSpawn", p)
 	end
+	-- radio tower spots (8, each round picks 5), helicopter zones (3)
+	for _, p in
+		{
+			Vector3.new(-140, 0.5, -140), -- behind the gas station
+			Vector3.new(-40, 0.5, -110),
+			Vector3.new(100, 0.5, -110),
+			Vector3.new(160, 0.5, 30),
+			Vector3.new(100, 0.5, 160),
+			Vector3.new(-30, 0.5, 170),
+			Vector3.new(-150, 0.5, 60),
+			Vector3.new(35, 0.5, 75),
+		}
+	do
+		marker(map, "TowerSpot", p)
+	end
+	for _, p in { Vector3.new(-160, 0.5, -15), Vector3.new(125, 0.5, -150), Vector3.new(70, 0.5, 160) } do
+		marker(map, "HeliZone", p)
+	end
+	-- lockers: tall metal boxes to hide in
+	for _, p in
+		{
+			Vector3.new(-24, 0, -15),
+			Vector3.new(24, 0, 15),
+			Vector3.new(-60, 0, -45),
+			Vector3.new(-110, 0, -45),
+			Vector3.new(-95, 0, -95),
+			Vector3.new(52, 0, 47),
+			Vector3.new(88, 0, 107),
+			Vector3.new(-90, 0, 92),
+			Vector3.new(-130, 0, 100),
+			Vector3.new(130, 0, -40),
+			Vector3.new(150, 0, -90),
+			Vector3.new(15, 0, -60),
+			Vector3.new(-15, 0, 60),
+			Vector3.new(160, 0, 100),
+		}
+	do
+		local locker = block(map, "Locker", p, Vector3.new(4, 7, 3), Color3.fromRGB(70, 78, 84))
+		locker.Material = Enum.Material.DiamondPlate
+		CollectionService:AddTag(locker, "Locker")
+	end
+
 	for _, p in
 		{
 			Vector3.new(-40, 3, -40),
@@ -310,11 +356,20 @@ function MapService.load(): MapInfo
 		alphaStart = cframesFor("AlphaStart", 1)[1],
 		zombieSpawns = cframesFor("ZombieSpawn", 3),
 		ammoSpawns = cframesFor("AmmoSpawn", 0),
+		towerSpots = cframesFor("TowerSpot", 0),
+		heliZones = cframesFor("HeliZone", 0),
+		lockers = {},
 		lobbySpawn = cframesFor("LobbySpawn", 1)[1] + Vector3.new(0, 3, 0),
 		alphaDoor = map and map:FindFirstChild("AlphaDoor", true) :: BasePart?,
 	}
+	for _, inst in CollectionService:GetTagged("Locker") do
+		if inst:IsA("BasePart") then
+			table.insert(info.lockers, inst)
+		end
+	end
 	print(
-		`MapService: HumanStart 1, AlphaStart 1, ZombieSpawn {#info.zombieSpawns}, AmmoSpawn {#info.ammoSpawns}`
+		`MapService: ZombieSpawn {#info.zombieSpawns}, AmmoSpawn {#info.ammoSpawns}, TowerSpot {#info.towerSpots}, `
+			.. `HeliZone {#info.heliZones}, Locker {#info.lockers}`
 	)
 	return info
 end

@@ -9,7 +9,8 @@ Remotes.names = {
 	-- client -> server intents
 	"FireWeapon", -- (direction: Vector3) Hunter only
 	"Reload",
-	"DodgeAttempt", -- (id, needlePos) survivor clicked during an escape challenge
+	"TimingAttempt", -- (id, needlePos) clicked during an escape / skill-check bar
+	"LockerLeave", -- leave the locker you are hiding in
 	-- (melee and claws use Tool.Activated, which already reaches the server)
 	-- server -> client
 	"RoundStateChanged", -- filtered round snapshot
@@ -17,8 +18,9 @@ Remotes.names = {
 	"PointsPopup", -- (amount, reason)
 	"AmmoChanged", -- (mag, reserve)
 	"ShotFired", -- (origin, hitPos) for tracers
-	"DodgeChallenge", -- (id, window, zoneStart, zoneSize) a zombie is attacking you: click in time!
-	"DodgeResult", -- (id, escaped: boolean)
+	"TimingChallenge", -- (id, kind "dodge"|"skill", window, zoneStart, zoneSize): click in time!
+	"TimingResult", -- (id, ok: boolean)
+	"NoiseAlert", -- (position) zombies only: a skill check failed at this tower
 }
 
 local folder: Folder? = nil

@@ -7,6 +7,8 @@ local RolePicker = require("./RolePicker")
 local Infection = require("./Infection")
 local WinCheck = require("./WinCheck")
 local Scoring = require("./Scoring")
+local Objectives = require("./Objectives")
+local Survival = require("./Survival")
 
 type State = Types.RoundState
 type Effect = Types.Effect
@@ -15,8 +17,12 @@ local RoundRules = {}
 
 local EPS = 1e-9
 
-function RoundRules.new(config: any, rng: Types.Rng): State
+function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): State
 	return {
+		mapMeta = mapMeta,
+		towers = {},
+		towersDone = 0,
+		heli = { phase = "None", timeLeft = 0, zone = nil },
 		phase = "Waiting",
 		timeLeft = 0,
 		clock = 0,
@@ -63,6 +69,9 @@ local function enterHeadStart(s: State, fx: { Effect })
 	for _, id in ids do
 		local fresh = Util.newPlayer(id)
 		fresh.role = roles[id]
+		if fresh.role == "Survivor" then
+			fresh.medkits = s.config.medkitsPerSurvivor or 0
+		end
 		s.players[id] = fresh
 		if fresh.role == "Survivor" then
 			s.sinceSpecial[id] = (s.sinceSpecial[id] or 0) + 1
@@ -76,6 +85,7 @@ local function enterHeadStart(s: State, fx: { Effect })
 	s.clock = 0
 	s.lastHits = {}
 	s.pendingAssists = {}
+	Objectives.setup(s)
 
 	setPhase(s, "HeadStart", s.config.headStart, fx)
 	table.insert(fx, { type = "RolesAssigned" })
@@ -155,6 +165,7 @@ local function onTick(s: State, dt: number, fx: { Effect })
 		if s.phase == "Active" then
 			s.clock += step
 			Infection.step(s, { type = "Tick", dt = step }, fx)
+			Objectives.step(s, { type = "Tick", dt = step }, fx)
 			checkWin(s, fx)
 			if s.phase ~= "Active" then
 				continue
@@ -218,7 +229,16 @@ function RoundRules.apply(state: State, event: Types.Event): (State, { Effect })
 	elseif event.type == "PlayerLeft" then
 		onLeft(s, event.playerId, fx)
 	else
+		local before = #fx
 		Infection.step(s, event, fx)
+		Objectives.step(s, event, fx)
+		Survival.step(s, event, fx)
+		for i = before + 1, #fx do
+			local f = fx[i]
+			if f.type == "HitLanded" then
+				Objectives.onHitLanded(s, f.attackerId, f.victimId, fx)
+			end
+		end
 		checkWin(s, fx)
 	end
 
@@ -271,10 +291,15 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 	end
 	local humansLeft = 0
 	for _, p in s.players do
-		if p.life ~= "Out" and Util.isHumanRole(p.role) then
+		if (p.life == "Alive" or p.life == "Downed") and Util.isHumanRole(p.role) then
 			humansLeft += 1
 		end
 	end
+	local towers = {}
+	for id, t in s.towers do
+		towers[tostring(id)] = { progress = t.progress, done = t.done }
+	end
+	local me = s.players[viewerId]
 	return {
 		phase = s.phase,
 		timeLeft = s.timeLeft,
@@ -288,6 +313,15 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		reviveTime = s.config.reviveTime,
 		players = players,
 		you = viewerId,
+		-- objectives
+		towers = towers,
+		towersDone = s.towersDone,
+		towersNeeded = s.config.towersNeeded,
+		heli = { phase = s.heli.phase, timeLeft = s.heli.timeLeft, zone = s.heli.zone },
+		-- only about you (hiding is secret)
+		hidden = me ~= nil and me.hiddenIn ~= nil,
+		repairing = if me then me.repairing else nil,
+		medkits = if me then me.medkits else 0,
 	}
 end
 

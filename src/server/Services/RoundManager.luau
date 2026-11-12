@@ -16,6 +16,8 @@ local CharacterService = require(Services.CharacterService)
 local CombatService = require(Services.CombatService)
 local AnnouncementService = require(Services.AnnouncementService)
 local MapService = require(Services.MapService)
+local TimingService = require(Services.TimingService)
+local ObjectiveService = require(Services.ObjectiveService)
 
 local RoundManager = {}
 
@@ -27,7 +29,7 @@ local config = table.clone(Classic)
 if RunService:IsStudio() then
 	config.minPlayers = Classic.studioMinPlayers
 end
-local state = RoundRules.new(config, Rng.new(os.time()))
+local state = RoundRules.new(config, Rng.new(os.time())) -- replaced in start() once the map is loaded
 local map: MapService.MapInfo
 local lastPositions: { [number]: CFrame } = {}
 local droppedGun: Model? = nil
@@ -163,10 +165,35 @@ runEffect = function(f: any)
 		elseif f.phase == "Active" then
 			MapService.setAlphaDoor(map, true)
 		elseif (f.phase == "Intermission" or f.phase == "Waiting") and from == "Results" then
+			ObjectiveService.cleanup()
 			sendEveryoneToLobby()
 		end
 	elseif f.type == "RolesAssigned" then
+		ObjectiveService.setupRound(state)
 		spawnRoundCharacters()
+	elseif f.type == "Healed" then
+		local user = playerById(f.playerId)
+		local p = state.players[f.playerId]
+		if user and p and p.medkits <= 0 then
+			for _, container in { user:FindFirstChildOfClass("Backpack"), user.Character } do
+				local kit = container and container:FindFirstChild("Medkit")
+				if kit then
+					kit:Destroy()
+				end
+			end
+		end
+	elseif
+		f.type == "RepairStarted"
+		or f.type == "RepairStopped"
+		or f.type == "TowerRepaired"
+		or f.type == "NoiseAlert"
+		or f.type == "HeliCalled"
+		or f.type == "HeliLeft"
+		or f.type == "EnteredLocker"
+		or f.type == "LeftLocker"
+		or f.type == "Escaped"
+	then
+		ObjectiveService.onEffect(f)
 	elseif f.type == "Downed" then
 		local player = playerById(f.playerId)
 		if player then
@@ -218,7 +245,7 @@ end
 -- A character died (fell off the map, or a zombie was killed by the Hunter).
 local function onDied(player: Player, char: Model)
 	local p = state.players[player.UserId]
-	if not p or not inRound() or p.life == "Out" then
+	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" then
 		task.delay(2, function()
 			if player.Character == char then
 				CharacterService.spawn(player, nil, map.lobbySpawn)
@@ -259,6 +286,17 @@ function RoundManager.start()
 	Players.CharacterAutoLoads = false
 	map = MapService.load()
 	MapService.startFlicker()
+	-- the rules get the map's tower spots and helicopter zones (positions only, no Roblox objects)
+	local towerSpots = {}
+	for _, cf in map.towerSpots do
+		table.insert(towerSpots, { x = cf.Position.X, z = cf.Position.Z })
+	end
+	state = RoundRules.new(config, Rng.new(os.time()), {
+		towerSpots = towerSpots,
+		heliZoneCount = #map.heliZones,
+	})
+	TimingService.init()
+	ObjectiveService.start(RoundManager, map)
 	CharacterService.onDied(onDied)
 	CombatService.start(RoundManager, map.ammoSpawns)
 
@@ -288,6 +326,7 @@ function RoundManager.start()
 				end
 			end
 			RoundManager.send({ type = "Tick", dt = acc })
+			ObjectiveService.tick()
 			acc = 0
 		end
 		if dirty or sinceBroadcast >= BROADCAST_EVERY then

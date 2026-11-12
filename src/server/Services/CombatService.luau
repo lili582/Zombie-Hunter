@@ -7,10 +7,9 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Weapons = require(Shared.Config.Weapons)
 local HitValidation = require(Shared.Rules.HitValidation)
-local Dodge = require(Shared.Rules.Dodge)
-local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
 local CharacterService = require(script.Parent.CharacterService)
+local TimingService = require(script.Parent.TimingService)
 
 local CombatService = {}
 
@@ -28,12 +27,8 @@ local lastSwing: { [Player]: number } = {}
 local lastHunterHit: { [Player]: number } = {}
 local round: Round
 
--- Survivor escape challenges (one at a time per survivor)
-type PendingDodge = { id: number, attacker: Player, challenge: Dodge.Challenge, sentAt: number }
-local pendingDodge: { [Player]: PendingDodge } = {}
+-- After a good escape, claws miss this survivor for a moment
 local immuneUntil: { [Player]: number } = {}
-local dodgeRng = Rng.new(os.time() + 17)
-local nextDodgeId = 0
 
 local function roleOf(player: Player): string?
 	local p = round.getState().players[player.UserId]
@@ -43,6 +38,11 @@ end
 local function lifeOf(player: Player): string?
 	local p = round.getState().players[player.UserId]
 	return if p then p.life else nil
+end
+
+local function hiddenOf(player: Player): boolean
+	local p = round.getState().players[player.UserId]
+	return p ~= nil and p.hiddenIn ~= nil
 end
 
 local function isActive(): boolean
@@ -192,13 +192,7 @@ local function onBat(player: Player)
 	end
 end
 
-local function resolveDodge(target: Player, id: number, escaped: boolean)
-	local p = pendingDodge[target]
-	if not p or p.id ~= id then
-		return
-	end
-	pendingDodge[target] = nil
-	Remotes.get("DodgeResult"):FireClient(target, id, escaped)
+local function onDodged(target: Player, attacker: Player, escaped: boolean)
 	if not isActive() then
 		return
 	end
@@ -214,44 +208,23 @@ local function resolveDodge(target: Player, id: number, escaped: boolean)
 				end
 			end)
 		end
-		round.send({ type = "Dodged", playerId = target.UserId, attackerId = p.attacker.UserId })
+		round.send({ type = "Dodged", playerId = target.UserId, attackerId = attacker.UserId })
 	else
-		local attackerRole = roleOf(p.attacker)
+		local attackerRole = roleOf(attacker)
 		if lifeOf(target) == "Alive" and (attackerRole == "Alpha" or attackerRole == "Zombie") then
-			round.send({ type = "Hit", attackerId = p.attacker.UserId, victimId = target.UserId })
+			round.send({ type = "Hit", attackerId = attacker.UserId, victimId = target.UserId })
 		end
 	end
 end
 
--- A zombie clawed a Survivor: send them the escape challenge.
+-- A zombie clawed a Survivor: give them the escape bar.
 local function startDodge(target: Player, attacker: Player)
-	if pendingDodge[target] then
-		return -- already escaping another attack
-	end
 	if (immuneUntil[target] or 0) > os.clock() then
 		return -- just escaped: this claw misses
 	end
-	nextDodgeId += 1
-	local id = nextDodgeId
-	local challenge = Dodge.newChallenge(dodgeRng)
-	pendingDodge[target] = { id = id, attacker = attacker, challenge = challenge, sentAt = os.clock() }
-	Remotes.get("DodgeChallenge")
-		:FireClient(target, id, challenge.window, challenge.zoneStart, challenge.zoneSize)
-	-- no click in time = caught
-	task.delay(challenge.window * (1 + Weapons.Dodge.tolerance) + 0.6, function()
-		resolveDodge(target, id, false)
+	TimingService.start(target, "dodge", function(escaped)
+		onDodged(target, attacker, escaped)
 	end)
-end
-
-local function onDodgeAttempt(player: Player, id: any, claimed: any)
-	local p = pendingDodge[player]
-	if not p or p.id ~= id then
-		return
-	end
-	local elapsed = os.clock() - p.sentAt
-	local rtt = math.clamp(player:GetNetworkPing() * 2, 0, 0.6)
-	local escaped = Dodge.judge(p.challenge, claimed, elapsed, rtt)
-	resolveDodge(player, id, escaped)
 end
 
 local function onClaw(player: Player)
@@ -261,7 +234,7 @@ local function onClaw(player: Player)
 	local now = os.clock()
 	local target, dist = nearestInFront(player, Weapons.Claw.range, function(other)
 		local r = roleOf(other)
-		return (r == "Survivor" or r == "Hunter") and lifeOf(other) == "Alive"
+		return (r == "Survivor" or r == "Hunter") and lifeOf(other) == "Alive" and not hiddenOf(other)
 	end)
 	local ok = HitValidation.claw({
 		role = roleOf(player) or "",
@@ -282,6 +255,35 @@ local function onClaw(player: Player)
 	end
 end
 
+-- Medkit: heals the nearest hurt teammate within reach, otherwise yourself.
+local MEDKIT_RANGE = 7
+local function onMedkit(player: Player)
+	if not isActive() then
+		return
+	end
+	local players = round.getState().players
+	local me = players[player.UserId]
+	if not me then
+		return
+	end
+	local myRoot = rootOf(player)
+	local best, bestDist = nil, math.huge
+	for _, other in Players:GetPlayers() do
+		local p = players[other.UserId]
+		local r = rootOf(other)
+		if other ~= player and p and p.hitsTaken > 0 and p.life == "Alive" and r and myRoot then
+			local d = (r.Position - myRoot.Position).Magnitude
+			if d <= MEDKIT_RANGE and d < bestDist then
+				best, bestDist = other, d
+			end
+		end
+	end
+	local targetId = if best then best.UserId elseif me.hitsTaken > 0 then player.UserId else nil
+	if targetId then
+		round.send({ type = "UseMedkit", playerId = player.UserId, targetId = targetId })
+	end
+end
+
 local function hookTool(player: Player, tool: Instance)
 	if not tool:IsA("Tool") or tool:GetAttribute("Hooked") then
 		return
@@ -294,6 +296,10 @@ local function hookTool(player: Player, tool: Instance)
 	elseif tool.Name == "Claws" then
 		tool.Activated:Connect(function()
 			onClaw(player)
+		end)
+	elseif tool.Name == "Medkit" then
+		tool.Activated:Connect(function()
+			onMedkit(player)
 		end)
 	end
 end
@@ -354,7 +360,6 @@ end
 function CombatService.start(r: Round, ammoSpots: { CFrame })
 	round = r
 	Remotes.get("FireWeapon").OnServerEvent:Connect(onFire)
-	Remotes.get("DodgeAttempt").OnServerEvent:Connect(onDodgeAttempt)
 	Remotes.get("Reload").OnServerEvent:Connect(function(player)
 		if roleOf(player) == "Hunter" then
 			reload(player)
@@ -368,7 +373,6 @@ function CombatService.start(r: Round, ammoSpots: { CFrame })
 		guns[p] = nil
 		lastSwing[p] = nil
 		lastHunterHit[p] = nil
-		pendingDodge[p] = nil
 		immuneUntil[p] = nil
 	end)
 	setupAmmoBoxes(ammoSpots)

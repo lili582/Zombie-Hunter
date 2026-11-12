@@ -8,9 +8,9 @@ export type Challenge = { zoneStart: number, zoneSize: number, window: number }
 
 local Dodge = {}
 
-function Dodge.newChallenge(rng: { float: (any) -> number }): Challenge
+function Dodge.newChallenge(rng: { float: (any) -> number }, zoneSize: number?): Challenge
 	local cfg = Weapons.Dodge
-	local size = cfg.zoneSize
+	local size = zoneSize or cfg.zoneSize
 	-- zone somewhere in the middle/late part of the bar, never right at the start
 	local start = 0.3 + rng:float() * (0.95 - size - 0.3)
 	return { zoneStart = start, zoneSize = size, window = cfg.window }
