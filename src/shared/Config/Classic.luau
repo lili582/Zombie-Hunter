@@ -5,6 +5,7 @@ local Classic = {
 	mapLine = "the lights went out at midnight",
 	minPlayers = 5,
 	studioMinPlayers = 2, -- used automatically when testing in Roblox Studio
+	nameTagDistance = 0, -- studs; 0 = no floating player names or health bars at all
 	intermission = 20,
 	headStart = 10,
 	roundLength = 360,

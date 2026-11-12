@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Weapons = require(Shared.Config.Weapons)
+local Classic = require(Shared.Config.Classic)
 
 local CharacterService = {}
 
@@ -113,6 +114,19 @@ local function flashlight(char: Model)
 	end
 end
 
+-- No floating names or health bars over heads: you can't spot or identify players from far away.
+local function hideNameTag(hum: Humanoid)
+	local distance = Classic.nameTagDistance
+	if distance <= 0 then
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	else
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Subject
+		hum.NameDisplayDistance = distance
+		hum.HealthDisplayDistance = distance
+	end
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+end
+
 local function setStats(hum: Humanoid, health: number, speed: number)
 	hum.MaxHealth = health
 	hum.Health = health
@@ -195,6 +209,7 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 	while not player:HasAppearanceLoaded() and waited < 3 do
 		waited += task.wait(0.1)
 	end
+	hideNameTag(hum)
 	hum.Died:Connect(function()
 		if diedCallback then
 			diedCallback(player, char)
