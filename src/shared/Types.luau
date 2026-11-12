@@ -57,6 +57,9 @@ export type RoundState = {
 	heli: Heli,
 	-- v0.3
 	alphaPrefs: { [number]: string }, -- Alpha class each player picked in the safehouse
+	baseConfig: any, -- config between rounds; `config` is this + the round's mode
+	nextMode: string?, -- mode picked for the next round (shown in the lobby)
+	lastMode: string?, -- mode of the last round (a special mode never repeats)
 }
 
 export type Event =

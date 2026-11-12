@@ -16,8 +16,8 @@ function Objectives.setup(s: State)
 	s.towersDone = 0
 	s.heli = { phase = "None", timeLeft = 0, zone = nil }
 	local meta = s.mapMeta
-	if not meta or #meta.towerSpots == 0 then
-		return
+	if not meta or #meta.towerSpots == 0 or (s.config.towersOnMap or 0) <= 0 then
+		return -- no towers this round (map without spots, or a mode like Outbreak)
 	end
 	local picked = SpotPicker.pick(meta.towerSpots, s.config.towersOnMap, s.config.towerMinDistance, s.rng)
 	for _, idx in picked do

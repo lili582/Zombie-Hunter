@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local RoundRules = require(Shared.Rules.RoundRules)
 local Classic = require(Shared.Config.Classic)
+local Modes = require(Shared.Config.Modes)
 local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
 
@@ -28,8 +29,15 @@ local BROADCAST_EVERY = 0.5
 
 -- In Studio playtests a round starts with fewer players, so you can test alone or with 2-3.
 local config = table.clone(Classic)
+config.modePool = Modes.all
 if RunService:IsStudio() then
 	config.minPlayers = Classic.studioMinPlayers
+	config.ignoreModeMinimums = true -- every mode can come up in a small playtest
+end
+-- Testing a mode: set a string attribute ForceMode = "Outbreak" on Workspace before pressing Play.
+local forced = workspace:GetAttribute("ForceMode")
+if type(forced) == "string" and forced ~= "" then
+	config.forceMode = forced
 end
 local state = RoundRules.new(config, Rng.new(os.time())) -- replaced in start() once the map is loaded
 local map: MapService.MapInfo
@@ -127,6 +135,15 @@ local function spawnDroppedGun(at: CFrame)
 	end)
 end
 
+-- Hunters get the revolver; in armed modes (Outbreak) Survivors get the mode's gun.
+local function giveGun(player: Player, role: string)
+	if role == "Hunter" then
+		CombatService.resetGun(player, "Revolver")
+	elseif role == "Survivor" and state.config.humanWeapon then
+		CombatService.resetGun(player, state.config.humanWeapon)
+	end
+end
+
 local function sendEveryoneToLobby()
 	removeDroppedGun()
 	MapService.setAlphaDoor(map, false)
@@ -148,9 +165,7 @@ local function spawnRoundCharacters()
 		local at = map.humanStart
 		task.spawn(function()
 			CharacterService.spawn(player, p.role, at)
-			if p.role == "Hunter" then
-				CombatService.resetGun(player)
-			end
+			giveGun(player, p.role)
 			CharacterService.freeze(player, introEnds - os.clock())
 		end)
 	end
@@ -225,7 +240,7 @@ runEffect = function(f: any)
 		local player = playerById(f.playerId)
 		if player then
 			CharacterService.applyRole(player, "Hunter")
-			CombatService.resetGun(player)
+			CombatService.resetGun(player, "Revolver")
 		end
 	elseif f.type == "AbilityUsed" then
 		AbilityService.onUsed(f)
@@ -276,9 +291,7 @@ local function onDied(player: Player, char: Model)
 			local now = state.players[player.UserId]
 			if now and inRound() and player.Character == char then
 				CharacterService.spawn(player, now.role, map.humanStart)
-				if now.role == "Hunter" then
-					CombatService.resetGun(player)
-				end
+				giveGun(player, now.role)
 				if now.life == "Downed" then
 					CharacterService.setDowned(player, true, hookRevivePrompt)
 				end
@@ -301,6 +314,9 @@ function RoundManager.start()
 		heliZoneCount = #map.heliZones,
 	})
 	TimingService.init()
+	CharacterService.humanWeapon = function(): string?
+		return state.config.humanWeapon
+	end
 	CharacterService.alphaClassOf = function(player: Player): string?
 		local p = state.players[player.UserId]
 		return if p and p.role == "Alpha" then p.alphaClass else nil

@@ -4,12 +4,19 @@ local Weapons = require("../Config/Weapons")
 
 local HitValidation = {}
 
-export type ShotInput = { role: string, distance: number, sinceLastShot: number, ammoInMag: number }
+-- `armed`: a Survivor carrying the mode's gun (Outbreak gives everyone a pistol)
+export type ShotInput = {
+	role: string,
+	distance: number,
+	sinceLastShot: number,
+	ammoInMag: number,
+	armed: boolean?,
+}
 export type SwingInput = { role: string, distance: number, sinceLast: number }
 
 function HitValidation.shot(input: ShotInput, weapon: typeof(Weapons.Revolver)?): (boolean, string?)
 	local w = weapon or Weapons.Revolver
-	if input.role ~= "Hunter" then
+	if input.role ~= "Hunter" and not (input.role == "Survivor" and input.armed) then
 		return false, "not_hunter"
 	end
 	if input.ammoInMag <= 0 then

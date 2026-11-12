@@ -121,6 +121,8 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Runner DASH: face shows, very fast for 2.5s. Tank SLAM: humans within 14 studs fly back and are slow for 1.5s. Screamer SCREAM: every zombie sees nearby humans glow red through walls for 5s (humans hiding in lockers don't glow).
 - [ ] Tank has 600 HP, Runner 300, Screamer 350 (zombie HP bar).
 
+- [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. Lobby countdown shows **NEXT ROUND: OUTBREAK**; the MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:

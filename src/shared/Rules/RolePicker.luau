@@ -31,7 +31,8 @@ function RolePicker.pick(
 	playerIds: { number },
 	roundsSinceSpecial: { [number]: number },
 	rng: Rng,
-	specialCount: ((number) -> number)?
+	alphaCount: ((number) -> number)?,
+	hunterCount: ((number) -> number)?
 ): { [number]: Role }
 	local pool = table.clone(playerIds)
 	table.sort(pool) -- deterministic order for a given seed
@@ -45,13 +46,13 @@ function RolePicker.pick(
 		roles[id] = "Survivor"
 	end
 
-	local n = (specialCount or Classic.specialCount)(#pool)
-	for _ = 1, n do
+	local total = #pool
+	for _ = 1, (alphaCount or Classic.specialCount)(total) do
 		if #pool > 1 then
 			roles[weightedTake(pool, weights, rng)] = "Alpha"
 		end
 	end
-	for _ = 1, n do
+	for _ = 1, (hunterCount or Classic.specialCount)(total) do
 		if #pool > 1 then
 			roles[weightedTake(pool, weights, rng)] = "Hunter"
 		end
