@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.1.2
+      - name: Format check
+        run: stylua --check src tests
+      - name: Lint
+        run: selene src
+      - name: Tests
+        run: lune run tests/run
+      - name: Build place
+        run: rojo build -o ZombieHunter.rbxl
