@@ -92,7 +92,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
 - [ ] 20s countdown → everyone frozen in the dark while the intro plays (~16s): map name types in → **MODE: CLASSIC** (red flash) → **SOMEONE IS INFECTED...** with every player shown as a faceless shadow while a red light jumps between them and goes out on nobody → **your own character** in the dark, heartbeat, light flickers on in your role colour → your rules → **A HUNTER WALKS AMONG YOU** over all the shadows. Then humans get 10s to run before the Alpha is released.
-- [ ] **Secret roles:** every other player's role shows **?** in the list for the whole round (only infected zombies show ZOMBIE). No floating player names, health bars, name tags or Hunter hat over heads.
+- [ ] **Secret roles:** the player list shows no role for any other player for the whole round, not even ZOMBIE or DOWN (only WAITING for people sitting out). Your own row shows your role. No floating player names, health bars, name tags or Hunter hat over heads.
 - [ ] **The Alpha is disguised**: starts with the survivors, looks exactly like one (own skin, flashlight, normal speed). After the 10s run his claws wake up + banner **THE ALPHA HAS AWAKENED — it could be anyone**. Every claw swing shows his zombie face (grey-green skin, red eyes, faster) for 3s, then he blends in again.
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
 - [ ] Another human holds **E** for 4s on the downed body → revived ("Name is coming!" + bar).

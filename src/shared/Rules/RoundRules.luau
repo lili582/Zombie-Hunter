@@ -354,24 +354,23 @@ end
 function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 	local players = {}
 	for id, p in s.players do
-		local role: string = p.role
-		-- Secret roles: you only see your own role. Infected (basic) zombies are shown,
-		-- everyone else (Alpha, Hunter, Survivors) is "?" for the whole round.
-		if id ~= viewerId and p.role ~= "Zombie" then
-			role = "?"
-		end
+		-- Secret roles: you only see your own role and state. Everyone else is "?" for the whole
+		-- round (even infected zombies), and nobody learns who is downed, hurt or escaped.
+		-- Only "Out" (waiting in the lobby for the next round) is shown for others.
+		local isMe = id == viewerId
+		local role: string = if isMe then p.role else "?"
 		if s.phase ~= "HeadStart" and s.phase ~= "Active" and s.phase ~= "Results" then
 			role = "-"
 		end
 		players[tostring(id)] = {
 			id = id,
 			role = role,
-			life = p.life,
+			life = if isMe or p.life == "Out" then p.life else "?",
 			points = p.points,
-			hitsTaken = p.hitsTaken,
-			bleedLeft = p.bleedLeft,
-			reviverId = p.reviverId,
-			reviveProgress = p.reviveProgress,
+			hitsTaken = if isMe then p.hitsTaken else 0,
+			bleedLeft = if isMe then p.bleedLeft else nil,
+			reviverId = if isMe then p.reviverId else nil,
+			reviveProgress = if isMe then p.reviveProgress else 0,
 		}
 	end
 	local humansLeft = 0

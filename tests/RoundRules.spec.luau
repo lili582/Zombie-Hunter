@@ -122,10 +122,18 @@ test("secret roles: no public announcement ever carries a player id", function()
 	end)).toBe(1)
 end)
 
-test("infected (basic) zombies are visible to everyone", function()
+test("no roles in the player list: even infected zombies and downed players are ? to others", function()
 	local s = H.run(H.activeRound(6), { H.hit(1, 3), H.hit(1, 3), H.tick(20) })
-	expect(RoundRules.viewFor(s, 4).players["3"].role).toBe("Zombie")
+	expect(s.players[3].role).toBe("Zombie")
+	expect(RoundRules.viewFor(s, 4).players["3"].role).toBe("?")
 	expect(RoundRules.viewFor(s, 4).players["1"].role).toBe("?")
+	expect(RoundRules.viewFor(s, 3).players["3"].role).toBe("Zombie") -- you still see your own
+	s = H.run(s, { H.hit(1, 5), H.hit(1, 5) })
+	expect(s.players[5].life).toBe("Downed")
+	local other = RoundRules.viewFor(s, 4).players["5"]
+	expect(other.life).toBe("?")
+	expect(other.bleedLeft).toBeNil()
+	expect(RoundRules.viewFor(s, 5).players["5"].life).toBe("Downed")
 end)
 
 test("intro order: map, mode, someone infected, then private role cards", function()

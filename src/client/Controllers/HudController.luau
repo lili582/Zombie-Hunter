@@ -381,11 +381,13 @@ local function rebuildList()
 	for i, p in rows do
 		local other = Players:GetPlayerByUserId(p.id)
 		local name = if other then other.DisplayName else "?"
-		local roleText = Theme.roleText[p.role] or p.role
-		if p.life == "Downed" then
-			roleText = "DOWN"
-		elseif p.life == "Out" then
+		-- No roles in the list: only your own row says what you are.
+		local isMe = p.id == player.UserId
+		local roleText = if isMe then (Theme.roleText[p.role] or "") else ""
+		if p.life == "Out" then
 			roleText = "WAITING"
+		elseif isMe and p.life == "Downed" then
+			roleText = "DOWN"
 		end
 		-- one compact row: name (cut if long) | role | points
 		local row = Instance.new("Frame")
