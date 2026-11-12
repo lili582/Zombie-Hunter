@@ -4,6 +4,7 @@ local Classic = {
 	mapName = "ABANDONED TOWN",
 	mapLine = "the lights went out at midnight",
 	minPlayers = 5,
+	studioMinPlayers = 2, -- used automatically when testing in Roblox Studio
 	intermission = 20,
 	headStart = 10,
 	roundLength = 360,

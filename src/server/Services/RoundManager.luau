@@ -22,7 +22,12 @@ local RoundManager = {}
 local TICK = 0.1
 local BROADCAST_EVERY = 0.5
 
-local state = RoundRules.new(Classic, Rng.new(os.time()))
+-- In Studio playtests a round starts with fewer players, so you can test alone or with 2-3.
+local config = table.clone(Classic)
+if RunService:IsStudio() then
+	config.minPlayers = Classic.studioMinPlayers
+end
+local state = RoundRules.new(config, Rng.new(os.time()))
 local map: MapService.MapInfo
 local lastPositions: { [number]: CFrame } = {}
 local droppedGun: Model? = nil

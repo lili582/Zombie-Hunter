@@ -5,6 +5,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Added
+- Studio playtests start a round with 2+ players automatically (`Classic.studioMinPlayers`); live servers still need 5.
 - Phase 1 playable Classic round (target v0.1.0):
   - Pure rules core (`src/shared/Rules`): role picker with anti-repeat, round phases and timers,
     hidden Alpha until release, hits → downed → revive or turn into a basic zombie, Hunter gun
