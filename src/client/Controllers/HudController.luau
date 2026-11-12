@@ -3,6 +3,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
@@ -13,6 +14,9 @@ local C = Theme.colors
 local player = Players.LocalPlayer
 
 local HudController = {}
+
+local LIST_WIDTH = 165 -- compact player list (was 250)
+local ROW_HEIGHT = 15
 
 local view: any = nil
 local viewStamp = 0
@@ -67,21 +71,42 @@ local function build()
 	local list = Theme.panel(gui, {
 		Name = "PlayerList",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, 50),
-		Size = UDim2.fromOffset(250, 40),
+		Position = UDim2.new(1, -8, 0, 64),
+		Size = UDim2.fromOffset(LIST_WIDTH, 10),
 		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 0.35,
+		Visible = not UserInputService.TouchEnabled, -- phones start with it closed
 	})
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, 2)
+	layout.Padding = UDim.new(0, 1)
 	layout.Parent = list
 	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 6)
-	pad.PaddingBottom = UDim.new(0, 6)
-	pad.PaddingLeft = UDim.new(0, 8)
-	pad.PaddingRight = UDim.new(0, 8)
+	pad.PaddingTop = UDim.new(0, 3)
+	pad.PaddingBottom = UDim.new(0, 3)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
 	pad.Parent = list
 	ui.list = list
+
+	-- small toggle button (and Tab on a keyboard) to show / hide the list
+	local toggle = Instance.new("TextButton")
+	toggle.AnchorPoint = Vector2.new(1, 0)
+	toggle.Position = UDim2.new(1, -8, 0, 40)
+	toggle.Size = UDim2.fromOffset(64, 20)
+	toggle.BackgroundColor3 = C.plum
+	toggle.BackgroundTransparency = 0.3
+	toggle.Font = Theme.uiFont
+	toggle.TextSize = 13
+	toggle.TextColor3 = C.lavender
+	toggle.Text = "PLAYERS"
+	local tc = Instance.new("UICorner")
+	tc.CornerRadius = UDim.new(0, 6)
+	tc.Parent = toggle
+	toggle.Parent = gui
+	toggle.Activated:Connect(function()
+		list.Visible = not list.Visible
+	end)
 
 	-- bottom left: health / wounds
 	local healthBack, healthFill = Theme.bar(gui, {
@@ -177,7 +202,7 @@ end
 
 local function rebuildList()
 	for _, child in ui.list:GetChildren() do
-		if child:IsA("TextLabel") then
+		if child:IsA("Frame") then
 			child:Destroy()
 		end
 	end
@@ -197,19 +222,40 @@ local function rebuildList()
 		elseif p.life == "Out" then
 			roleText = "WAITING"
 		end
-		Theme.label(ui.list, {
-			LayoutOrder = i,
-			Size = UDim2.new(1, 0, 0, 22),
+		-- one compact row: name (cut if long) | role | points
+		local row = Instance.new("Frame")
+		row.Name = "Row"
+		row.LayoutOrder = i
+		row.BackgroundTransparency = 1
+		row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
+		row.Parent = ui.list
+		local small = { TextScaled = false, TextSize = 12, TextStrokeTransparency = 0.4 }
+		local function cell(props)
+			for k, v in small do
+				props[k] = props[k] or v
+			end
+			return Theme.label(row, props)
+		end
+		cell({
+			Size = UDim2.new(0.5, 0, 1, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			RichText = true,
-			Text = string.format(
-				'%s  <font color="#%s">%s</font>  <font color="#%s">%d</font>',
-				name,
-				(Theme.roleColor[p.role] or C.lavender):ToHex(),
-				roleText,
-				C.butter:ToHex(),
-				p.points
-			),
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Text = name,
+		})
+		cell({
+			Position = UDim2.fromScale(0.5, 0),
+			Size = UDim2.new(0.34, 0, 1, 0),
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Theme.roleColor[p.role] or C.lavender,
+			Text = roleText,
+		})
+		cell({
+			Position = UDim2.fromScale(0.84, 0),
+			Size = UDim2.new(0.16, 0, 1, 0),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextColor3 = C.butter,
+			Text = tostring(p.points),
 		})
 	end
 end
@@ -381,6 +427,15 @@ function HudController.start()
 		CollectionService:GetInstanceAddedSignal(tag):Connect(updatePrompts)
 	end
 	RunService.RenderStepped:Connect(render)
+	-- Tab shows / hides our player list. Roblox's own big player list is turned off.
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+	end)
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.Tab then
+			ui.list.Visible = not ui.list.Visible
+		end
+	end)
 end
 
 return HudController
