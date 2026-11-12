@@ -4,6 +4,7 @@
 local Types = require("../Types")
 local Util = require("./Util")
 local RolePicker = require("./RolePicker")
+local Abilities = require("./Abilities")
 
 type State = Types.RoundState
 type Effect = Types.Effect
@@ -199,10 +200,16 @@ function Infection.onPlayerLeft(s: State, leaver: Types.PlayerState, fx: { Effec
 		return
 	end
 	s.players[newId].role = "Alpha"
+	Abilities.makeAlpha(s, s.players[newId])
 	s.sinceSpecial[newId] = 0
 	table.insert(fx, { type = "BecameAlpha", playerId = newId })
 	table.insert(fx, { type = "Announce", card = "YourRole", toPlayerId = newId, data = { role = "Alpha" } })
-	table.insert(fx, { type = "Announce", card = "YourRules", toPlayerId = newId, data = { role = "Alpha" } })
+	table.insert(fx, {
+		type = "Announce",
+		card = "YourRules",
+		toPlayerId = newId,
+		data = { role = "Alpha", alphaClass = s.players[newId].alphaClass },
+	})
 	if s.phase == "Active" then
 		table.insert(fx, { type = "Announce", card = "AlphaAwakened" }) -- secret: no name
 	end

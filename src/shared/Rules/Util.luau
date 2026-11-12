@@ -55,6 +55,8 @@ function Util.newPlayer(id: number): Types.PlayerState
 		repairing = nil,
 		repairCredit = 0,
 		medkits = 0,
+		alphaClass = nil,
+		abilityReadyAt = 0,
 	}
 end
 
@@ -83,6 +85,7 @@ function Util.cloneState(s: Types.RoundState): Types.RoundState
 	end
 	copy.towers = towers
 	copy.heli = table.clone(s.heli)
+	copy.alphaPrefs = table.clone(s.alphaPrefs)
 	return copy
 end
 

@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
+local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Theme = require(script.Parent.Theme)
 
 local C = Theme.colors
@@ -199,6 +200,42 @@ local function build()
 	end)
 	ui.reload = reload
 
+	-- Alpha: class ability button ([Q] on a keyboard), shows the cooldown
+	local ability = Instance.new("TextButton")
+	ability.AnchorPoint = Vector2.new(1, 1)
+	ability.Position = UDim2.new(1, -30, 1, -230)
+	ability.Size = UDim2.fromOffset(110, 56)
+	ability.BackgroundColor3 = C.blood
+	ability.Font = Theme.uiFont
+	ability.Text = ""
+	ability.TextColor3 = C.ink
+	ability.TextScaled = true
+	ability.Visible = false
+	local ac = Instance.new("UICorner")
+	ac.CornerRadius = UDim.new(0, 14)
+	ac.Parent = ability
+	local astroke = Instance.new("UIStroke")
+	astroke.Color = C.ink
+	astroke.Thickness = 3
+	astroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	astroke.Parent = ability
+	ability.Parent = gui
+	ability.Activated:Connect(function()
+		Remotes.get("UseAbility"):FireServer()
+	end)
+	ui.ability = ability
+
+	-- lobby: which Alpha class you will play if you are picked
+	ui.alphaPref = Theme.label(gui, {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -24),
+		Size = UDim2.fromOffset(520, 22),
+		TextScaled = false,
+		TextSize = 16,
+		Text = "",
+		TextColor3 = C.blood,
+	})
+
 	-- repairing: progress of the tower you're working on
 	local repairBack, repairFill = Theme.bar(gui, {
 		AnchorPoint = Vector2.new(0.5, 1),
@@ -306,6 +343,26 @@ local function noisePing(position: Vector3)
 		end
 		anchor:Destroy()
 	end)
+end
+
+-- Zombies: a Screamer screamed. These humans glow through walls for a few seconds.
+local function revealHumans(chars: { Model }, seconds: number)
+	for _, char in chars do
+		if typeof(char) ~= "Instance" or not char:IsA("Model") or not char.Parent then
+			continue
+		end
+		local glow = Instance.new("Highlight")
+		glow.Name = "ScreamReveal"
+		glow.FillColor = C.blood
+		glow.FillTransparency = 0.6
+		glow.OutlineColor = C.blood
+		glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		glow.Adornee = char
+		glow.Parent = char
+		task.delay(seconds, function()
+			glow:Destroy()
+		end)
+	end
 end
 
 local function rebuildList()
@@ -561,6 +618,27 @@ local function render()
 		then `MEDKIT x{view.medkits}  (click to heal)`
 		else ""
 
+	-- Alpha ability
+	local showAbility = inRound and phase == "Active" and role == "Alpha" and view.alphaClass ~= nil
+	ui.ability.Visible = showAbility == true
+	if showAbility then
+		local class = AlphaClasses.get(view.alphaClass)
+		local wait = math.max(0, (view.abilityIn or 0) - (os.clock() - viewStamp))
+		local key = if UserInputService.TouchEnabled then "" else " [Q]"
+		ui.ability.Text = if wait > 0
+			then `{string.upper(class.ability)} {math.ceil(wait)}s`
+			else string.upper(class.ability) .. key
+		ui.ability.BackgroundColor3 = if wait > 0 then C.dusk else C.blood
+		ui.ability.TextColor3 = if wait > 0 then C.lavender else C.ink
+	end
+
+	-- lobby: your Alpha class
+	local lobby = not inRound
+		and (phase == "Waiting" or phase == "Intermission" or (mine and mine.life == "Out"))
+	ui.alphaPref.Text = if lobby
+		then `IF YOU ARE THE ALPHA: {AlphaClasses.get(view.alphaPref).name}  (change it at the pedestals)`
+		else ""
+
 	-- hiding
 	ui.hiding.Visible = inRound and view.hidden == true or false
 
@@ -585,6 +663,7 @@ function HudController.start()
 	end)
 	Remotes.get("ShotFired").OnClientEvent:Connect(tracer)
 	Remotes.get("NoiseAlert").OnClientEvent:Connect(noisePing)
+	Remotes.get("RevealHumans").OnClientEvent:Connect(revealHumans)
 	for _, tag in
 		{
 			"RevivePrompt",
@@ -607,6 +686,8 @@ function HudController.start()
 			ui.list.Visible = not ui.list.Visible
 		elseif input.KeyCode == Enum.KeyCode.E and view and view.hidden then
 			Remotes.get("LockerLeave"):FireServer()
+		elseif not processed and input.KeyCode == Enum.KeyCode.Q and ui.ability.Visible then
+			Remotes.get("UseAbility"):FireServer()
 		end
 	end)
 end

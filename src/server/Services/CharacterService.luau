@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Weapons = require(Shared.Config.Weapons)
 local Classic = require(Shared.Config.Classic)
+local AlphaClasses = require(Shared.Config.AlphaClasses)
 
 local CharacterService = {}
 
@@ -20,6 +21,11 @@ local ZOMBIE_SKIN = Color3.fromRGB(118, 156, 96)
 local ALPHA_SKIN = Color3.fromRGB(96, 112, 86)
 
 local diedCallback: ((Player, Model) -> ())? = nil
+
+-- Set by RoundManager: which Alpha class a player has this round (nil = not an Alpha).
+CharacterService.alphaClassOf = function(_player: Player): string?
+	return nil
+end
 
 function CharacterService.onDied(callback: (Player, Model) -> ())
 	diedCallback = callback
@@ -192,7 +198,8 @@ function CharacterService.applyRole(player: Player, role: string)
 	if role == "Alpha" then
 		-- Disguised: looks, moves and lights up exactly like a survivor (own skin, flashlight,
 		-- human speed). Only an attack shows the zombie face, for a moment (revealAlpha).
-		setStats(hum, Weapons.health.alpha, Weapons.speed.human)
+		local class = AlphaClasses.get(CharacterService.alphaClassOf(player))
+		setStats(hum, class.health, Weapons.speed.human)
 		flashlight(char)
 	elseif role == "Zombie" then
 		skin(char, ZOMBIE_SKIN)
@@ -206,15 +213,16 @@ function CharacterService.applyRole(player: Player, role: string)
 	CharacterService.giveTools(player, role)
 end
 
--- The Alpha's true face, shown for `seconds` when he attacks, then hidden again.
--- Attacking again while revealed keeps the face on longer.
+-- The Alpha's true face, shown for `seconds` when he attacks or uses his ability, then hidden
+-- again. Attacking again while revealed keeps the face on longer. `speed` (a dash) overrides the
+-- class speed while revealed.
 local revealToken: { [Model]: number } = {}
 local savedLook: { [Model]: { [Instance]: { [string]: any } } } = {}
 local LIMBS = { "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
 local BODY_COLOR_PROPS =
 	{ "HeadColor3", "TorsoColor3", "LeftArmColor3", "RightArmColor3", "LeftLegColor3", "RightLegColor3" }
 
-function CharacterService.revealAlpha(player: Player, seconds: number)
+function CharacterService.revealAlpha(player: Player, seconds: number, speed: number?)
 	local char = player.Character
 	local hum = humanoidOf(player)
 	if not char or not hum then
@@ -245,7 +253,10 @@ function CharacterService.revealAlpha(player: Player, seconds: number)
 		if light then
 			light.Enabled = false
 		end
-		hum.WalkSpeed = Weapons.speed.alpha -- faster while the mask is off
+		hum.WalkSpeed = AlphaClasses.get(CharacterService.alphaClassOf(player)).speed -- faster unmasked
+	end
+	if speed then
+		hum.WalkSpeed = speed
 	end
 	task.delay(seconds, function()
 		if revealToken[char] ~= my or not char.Parent then
@@ -277,8 +288,8 @@ function CharacterService.revealAlpha(player: Player, seconds: number)
 				light.Enabled = true
 			end
 		end
-		if hum.Parent and hum.WalkSpeed == Weapons.speed.alpha then
-			hum.WalkSpeed = Weapons.speed.human
+		if hum.Parent and hum.WalkSpeed > 0 then
+			hum.WalkSpeed = Weapons.speed.human -- the mask is back on
 		end
 	end)
 end

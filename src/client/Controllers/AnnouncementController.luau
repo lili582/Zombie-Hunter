@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
+local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Theme = require(script.Parent.Theme)
 
 local C = Theme.colors
@@ -37,6 +38,7 @@ local BANNERS = {
 	TowerRepaired = true,
 	HeliIncoming = true,
 	HeliHere = true,
+	AlphaPicked = true,
 }
 
 local ROLE_TITLE = {
@@ -478,8 +480,15 @@ local function play(name: string, data: any, token: number)
 			ui.big.Ambient = Color3.fromRGB(55, 45, 70)
 			ui.big.Visible = true
 		end
-		setTitle(Theme.roleText[role] or "", Theme.roleColor[role] or C.bone)
-		typeText(ui.subtitle, ROLE_RULES[role] or "", 0.015, token)
+		local rules = ROLE_RULES[role] or ""
+		if role == "Alpha" then
+			local class = AlphaClasses.get(data.alphaClass)
+			setTitle(`ALPHA - {class.name}`, Theme.roleColor[role])
+			rules ..= "\n" .. class.line
+		else
+			setTitle(Theme.roleText[role] or "", Theme.roleColor[role] or C.bone)
+		end
+		typeText(ui.subtitle, rules, 0.015, token)
 	elseif name == "HunterChosen" then
 		setTitle("A HUNTER WALKS AMONG YOU", C.peach)
 		slam()
@@ -605,6 +614,9 @@ local function showBanner(name: string, data: any)
 	elseif name == "HeliHere" then
 		text = "THE HELICOPTER IS HERE - GET TO THE ZONE!"
 		color = C.butter
+	elseif name == "AlphaPicked" then
+		local class = AlphaClasses.get(data.class)
+		text = `IF YOU ARE THE ALPHA: {class.name}`
 	end
 	bannerToken += 1
 	local my = bannerToken
