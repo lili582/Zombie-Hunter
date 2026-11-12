@@ -91,15 +91,15 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 ## Playtest checklist (3 players in Studio)
 
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
-- [ ] 20s countdown → cards: map name → SOMEONE IS INFECTED (names flicker, stop on "?") → your private role → your rules → THE HUNTER IS ….
-- [ ] Other players' list shows **?** for the Alpha and Survivors until release; the Hunter shows to all.
-- [ ] Alpha starts in the locked room up north; after 10s the door opens + banner **THE ALPHA HAS AWAKENED — it's …**.
+- [ ] 20s countdown → cards: map name → SOMEONE IS INFECTED (names flicker, stop on "?") → your private role → your rules → A HUNTER WALKS AMONG YOU (no name).
+- [ ] **Secret roles:** every other player's role shows **?** in the list for the whole round (only infected zombies show ZOMBIE). No name tags or Hunter hat over heads.
+- [ ] Alpha starts in the locked room up north; after 10s the door opens + banner **THE ALPHA HAS AWAKENED — it could be anyone** (no name).
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
 - [ ] Another human holds **E** for 4s on the downed body → revived ("Name is coming!" + bar).
 - [ ] Not revived in 20s → **YOU'VE BEEN INFECTED!** → green zombie with mint eyes, claws equipped.
 - [ ] Hunter: click shoots (yellow tracer), ammo `6 / 36`, R reloads; 3 shots kill a basic zombie → respawns in 5s at a corner; +10 for the Hunter.
 - [ ] Survivors' click does nothing to shoot (they only have the bat; bat knocks zombies back).
-- [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter; nobody else can.
+- [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter (banner: SOMEONE PICKED UP THE GUN, no name); nobody else can.
 - [ ] Last human turns → ZOMBIES WIN! → +coins card → back to the lobby → next round.
 - [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; timer turns pink and shakes under 1:00.
 - [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat; prompts show a tap button.

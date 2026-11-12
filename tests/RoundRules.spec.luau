@@ -59,21 +59,73 @@ test("Alpha id never appears in a public announce before Active", function()
 	end
 end)
 
-test("player list view hides the Alpha until release", function()
+test("secret roles: others see Alpha, Hunter and Survivors as ? for the whole round", function()
 	local s = H.run(fresh(), H.join(8))
 	s = H.run(s, { H.tick(20) })
-	local alpha, other
+	local alpha, hunter, other
 	for id, p in s.players do
 		if p.role == "Alpha" then
 			alpha = id
-		elseif p.role == "Survivor" then
+		elseif p.role == "Hunter" then
+			hunter = id
+		else
 			other = id
 		end
 	end
 	expect(RoundRules.viewFor(s, other).players[tostring(alpha)].role).toBe("?")
+	expect(RoundRules.viewFor(s, other).players[tostring(hunter)].role).toBe("?")
 	expect(RoundRules.viewFor(s, alpha).players[tostring(alpha)].role).toBe("Alpha")
-	s = H.run(s, { H.tick(10) })
-	expect(RoundRules.viewFor(s, other).players[tostring(alpha)].role).toBe("Alpha")
+	expect(RoundRules.viewFor(s, hunter).players[tostring(hunter)].role).toBe("Hunter")
+	s = H.run(s, { H.tick(10) }) -- Alpha released: still secret
+	expect(s.phase).toBe("Active")
+	expect(RoundRules.viewFor(s, other).players[tostring(alpha)].role).toBe("?")
+	expect(RoundRules.viewFor(s, other).players[tostring(hunter)].role).toBe("?")
+	s = H.run(s, { H.tick(360) }) -- results: still secret
+	expect(s.phase).toBe("Results")
+	expect(RoundRules.viewFor(s, other).players[tostring(alpha)].role).toBe("?")
+end)
+
+test("secret roles: no public announcement ever carries a player id", function()
+	local s, fx = H.run(fresh(), H.join(8))
+	local all = {}
+	s, fx = H.run(s, { H.tick(20), H.tick(10) })
+	for _, f in fx do
+		table.insert(all, f)
+	end
+	-- Hunter turns, gun picked up, last zombie leaves -> replacement Alpha
+	local alpha, hunter, survivor
+	for id, p in s.players do
+		if p.role == "Alpha" then
+			alpha = id
+		elseif p.role == "Hunter" then
+			hunter = id
+		else
+			survivor = survivor or id
+		end
+	end
+	s, fx = H.run(s, { H.hit(alpha, hunter), H.hit(alpha, hunter), H.tick(20), H.pickUp(survivor) })
+	for _, f in fx do
+		table.insert(all, f)
+	end
+	for _, f in all do
+		if f.type == "Announce" and f.toPlayerId == nil then
+			for _, v in f.data or {} do
+				expect(s.players[v] == nil).toBeTruthy()
+			end
+		end
+	end
+	expect(#H.find(all, function(f)
+		return f.card == "HunterChosen"
+	end)).toBe(1)
+	expect(#H.find(all, function(f)
+		return f.card == "NewHunter"
+	end)).toBe(1)
+end)
+
+test("infected (basic) zombies are visible to everyone", function()
+	local s = H.run(H.activeRound(6), { H.hit(1, 3), H.hit(1, 3), H.tick(20) })
+	expect(RoundRules.viewFor(s, 4).players["3"].role).toBe("Zombie")
+	expect(RoundRules.viewFor(s, 4).players["1"].role).toBe("?")
 end)
 
 test("every player gets a private role card", function()

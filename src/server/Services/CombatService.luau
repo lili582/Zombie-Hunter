@@ -21,6 +21,9 @@ type Gun = { mag: number, reserve: number, lastShot: number, reloading: boolean 
 
 local guns: { [Player]: Gun } = {}
 local lastSwing: { [Player]: number } = {}
+-- Who last hurt each zombie with a Hunter weapon. Kept on the server only (an attribute on the
+-- character would replicate to every client and reveal the secret Hunter).
+local lastHunterHit: { [Player]: number } = {}
 local round: Round
 
 local function roleOf(player: Player): string?
@@ -103,7 +106,7 @@ local function damageZombie(victim: Player, amount: number, attacker: Player)
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	if hum and hum.Health > 0 then
 		if roleOf(attacker) == "Hunter" then
-			char:SetAttribute("LastHunter", attacker.UserId)
+			lastHunterHit[victim] = attacker.UserId
 		end
 		hum:TakeDamage(amount)
 	end
@@ -287,8 +290,16 @@ function CombatService.start(r: Round, ammoSpots: { CFrame })
 	Players.PlayerRemoving:Connect(function(p)
 		guns[p] = nil
 		lastSwing[p] = nil
+		lastHunterHit[p] = nil
 	end)
 	setupAmmoBoxes(ammoSpots)
+end
+
+-- Returns (and forgets) the Hunter who last damaged this zombie.
+function CombatService.takeLastHunter(victim: Player): number?
+	local id = lastHunterHit[victim]
+	lastHunterHit[victim] = nil
+	return id
 end
 
 function CombatService.clearGun(player: Player)
