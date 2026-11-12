@@ -93,6 +93,7 @@ local function eyes(char: Model, color: Color3, size: number)
 		e.Parent = char
 	end
 	local glow = Instance.new("PointLight")
+	glow.Name = "EyeGlow"
 	glow.Color = color
 	glow.Range = 6
 	glow.Brightness = 2
@@ -189,10 +190,10 @@ function CharacterService.applyRole(player: Player, role: string)
 		return
 	end
 	if role == "Alpha" then
-		skin(char, ALPHA_SKIN)
-		eyes(char, Color3.fromRGB(255, 40, 60), 0.35)
-		-- same height as everyone else (no 1.3x scale), so size never gives the Alpha away
-		setStats(hum, Weapons.health.alpha, Weapons.speed.alpha)
+		-- Disguised: looks, moves and lights up exactly like a survivor (own skin, flashlight,
+		-- human speed). Only an attack shows the zombie face, for a moment (revealAlpha).
+		setStats(hum, Weapons.health.alpha, Weapons.speed.human)
+		flashlight(char)
 	elseif role == "Zombie" then
 		skin(char, ZOMBIE_SKIN)
 		eyes(char, ROLE_COLORS.Zombie, 0.25)
@@ -203,6 +204,83 @@ function CharacterService.applyRole(player: Player, role: string)
 		-- secret roles: the Hunter looks like everyone else (no hat, no name tag)
 	end
 	CharacterService.giveTools(player, role)
+end
+
+-- The Alpha's true face, shown for `seconds` when he attacks, then hidden again.
+-- Attacking again while revealed keeps the face on longer.
+local revealToken: { [Model]: number } = {}
+local savedLook: { [Model]: { [Instance]: { [string]: any } } } = {}
+local LIMBS = { "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
+local BODY_COLOR_PROPS =
+	{ "HeadColor3", "TorsoColor3", "LeftArmColor3", "RightArmColor3", "LeftLegColor3", "RightLegColor3" }
+
+function CharacterService.revealAlpha(player: Player, seconds: number)
+	local char = player.Character
+	local hum = humanoidOf(player)
+	if not char or not hum then
+		return
+	end
+	revealToken[char] = (revealToken[char] or 0) + 1
+	local my = revealToken[char]
+	if not savedLook[char] then
+		local saved = {}
+		local bc = char:FindFirstChildOfClass("BodyColors")
+		if bc then
+			saved[bc] = {}
+			for _, prop in BODY_COLOR_PROPS do
+				saved[bc][prop] = (bc :: any)[prop]
+			end
+		end
+		for _, name in LIMBS do
+			local p = char:FindFirstChild(name)
+			if p and p:IsA("BasePart") then
+				saved[p] = { Color = p.Color }
+			end
+		end
+		savedLook[char] = saved
+		skin(char, ALPHA_SKIN)
+		eyes(char, Color3.fromRGB(255, 40, 60), 0.35)
+		local head = char:FindFirstChild("Head")
+		local light = head and head:FindFirstChild("Flashlight") :: SpotLight?
+		if light then
+			light.Enabled = false
+		end
+		hum.WalkSpeed = Weapons.speed.alpha -- faster while the mask is off
+	end
+	task.delay(seconds, function()
+		if revealToken[char] ~= my or not char.Parent then
+			return
+		end
+		local saved = savedLook[char]
+		savedLook[char] = nil
+		revealToken[char] = nil
+		if saved then
+			for inst, props in saved do
+				for prop, value in props do
+					(inst :: any)[prop] = value
+				end
+			end
+		end
+		for _, d in char:GetChildren() do
+			if d.Name == "Eye" then
+				d:Destroy()
+			end
+		end
+		local head = char:FindFirstChild("Head")
+		if head then
+			local glow = head:FindFirstChild("EyeGlow")
+			if glow then
+				glow:Destroy()
+			end
+			local light = head:FindFirstChild("Flashlight") :: SpotLight?
+			if light then
+				light.Enabled = true
+			end
+		end
+		if hum.Parent and hum.WalkSpeed == Weapons.speed.alpha then
+			hum.WalkSpeed = Weapons.speed.human
+		end
+	end)
 end
 
 -- Loads a fresh character, applies the role and moves it to `at`. Yields.
