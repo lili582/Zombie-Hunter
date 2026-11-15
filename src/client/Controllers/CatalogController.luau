@@ -1,6 +1,7 @@
 --!strict
--- The character catalog window (VH2-style): open it at the dressing mirror in the safehouse or
--- with the CATALOG button in the lobby. Browse the real Roblox catalog, try anything on for free
+-- The DRESSING ROOM (VH2-style catalog): a full screen with your character on the right. Open it
+-- at the dressing mirror in the safehouse or with the CATALOG button in the lobby. While it is
+-- open you sit the next round out (a round never pulls you out of the dressing room). Browse the real Roblox catalog, try anything on for free
 -- (the server checks and saves it), pick body colours, see what you wear, reset to the default
 -- character or copy your Roblox avatar. BUY opens Roblox's own purchase prompt (optional).
 local AvatarEditorService = game:GetService("AvatarEditorService")
@@ -14,6 +15,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local Outfit = require(Shared.Data.Outfit)
 local Theme = require(script.Parent.Theme)
+local Room = require(script.Parent.Room)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -34,6 +36,7 @@ local TABS = {
 	{ id = "Pants", name = "PANTS", types = { "Pants" } },
 	{ id = "TShirts", name = "T-SHIRTS", types = { "TShirt" } },
 	{ id = "Faces", name = "FACES", types = { "Face" } },
+	{ id = "Starter", name = "STARTER" },
 	{ id = "Colors", name = "BODY" },
 	{ id = "Worn", name = "WEARING" },
 }
@@ -50,7 +53,7 @@ local REASONS = {
 }
 
 local ui: { [string]: any } = {}
-local outfit: any = Outfit.default()
+local outfit: any = Outfit.starter(Outfit.starterFor(player.UserId))
 local view: any = nil
 local tab = "Hats"
 local search = ""
@@ -229,6 +232,51 @@ local function showColors()
 	end
 end
 
+-- The two starter looks: an ordinary boy or girl.
+local function showStarters()
+	clearGrid()
+	ui.more.Visible = false
+	ui.status.Text = ""
+	for i, kind in Outfit.STARTER_ORDER do
+		local look = Outfit.STARTERS[kind]
+		local b = Instance.new("TextButton")
+		b.LayoutOrder = i
+		b.Text = ""
+		b.AutoButtonColor = true
+		Theme.glass(b)
+		b.Parent = ui.grid
+		-- a little figure in the starter's colours: head, top, legs
+		for _, part in
+			{
+				{ look.skin, UDim2.fromScale(0.36, 0.08), UDim2.fromScale(0.28, 0.2) },
+				{ look.torso, UDim2.fromScale(0.26, 0.3), UDim2.fromScale(0.48, 0.28) },
+				{ look.legs, UDim2.fromScale(0.3, 0.58), UDim2.fromScale(0.4, 0.22) },
+			}
+		do
+			local f = Instance.new("Frame")
+			f.BorderSizePixel = 0
+			f.BackgroundColor3 = Color3.fromRGB(part[1][1], part[1][2], part[1][3])
+			f.Position = part[2]
+			f.Size = part[3]
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 6)
+			corner.Parent = f
+			f.Parent = b
+		end
+		Theme.label(b, {
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -6),
+			Size = UDim2.new(1, 0, 0, 18),
+			TextScaled = false,
+			TextSize = 15,
+			Text = string.upper(kind),
+		})
+		b.Activated:Connect(function()
+			Remotes.get("CatalogStarter"):FireServer(kind)
+		end)
+	end
+end
+
 local function showWorn()
 	clearGrid()
 	ui.more.Visible = false
@@ -244,11 +292,11 @@ local function showWorn()
 		order += 1
 		card(order, a.id, string.upper(a.slot), false)
 	end
-	ui.status.Text = if order == 0 then "NOTHING ON YET - THIS IS THE DEFAULT CHARACTER" else ""
+	ui.status.Text = if order == 0 then "NOTHING ON YET - JUST YOUR STARTER LOOK" else ""
 end
 
 local function refresh()
-	if not ui.window or not ui.window.Visible then
+	if not ui.room or not ui.room:isOpen() then
 		return
 	end
 	for id, b in ui.tabs do
@@ -256,8 +304,10 @@ local function refresh()
 		b.BackgroundTransparency = if id == tab then 0.05 else 0.3
 	end
 	ui.colorBar.Visible = tab == "Colors"
-	ui.searchRow.Visible = tab ~= "Colors" and tab ~= "Worn"
-	if tab == "Colors" then
+	ui.searchRow.Visible = tab ~= "Colors" and tab ~= "Worn" and tab ~= "Starter"
+	if tab == "Starter" then
+		showStarters()
+	elseif tab == "Colors" then
 		showColors()
 	elseif tab == "Worn" then
 		showWorn()
@@ -271,9 +321,11 @@ local function setOpen(open: boolean)
 		toast(REASONS.in_round, C.blood)
 		return
 	end
-	ui.window.Visible = open
 	if open then
+		ui.room:open()
 		refresh()
+	else
+		ui.room:close()
 	end
 end
 
@@ -282,7 +334,7 @@ local function build()
 	gui.Name = "Catalog"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 6
+	gui.DisplayOrder = 8 -- above the room (toasts)
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- CATALOG button (lobby only), next to SHOP
@@ -294,44 +346,18 @@ local function build()
 		Text = "CATALOG",
 	})
 	ui.open.Activated:Connect(function()
-		setOpen(not ui.window.Visible)
+		setOpen(not ui.room:isOpen())
 	end)
 
-	-- the window sits on the left so you can see your character on the right
-	local window = Theme.panel(gui, {
-		Name = "Window",
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = UDim2.new(0, 16, 0.5, 0),
-		Size = UDim2.fromScale(0.55, 0.82),
-		Visible = false,
-	})
-	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(600, 520)
-	limit.Parent = window
+	-- the dressing room: a full screen, the catalog on the left, your character on the right
+	ui.room = Room.new("Catalog", "DRESSING ROOM", C.blood, 7)
+	local window = ui.room.left
 	ui.window = window
-	Theme.label(window, {
-		Position = UDim2.fromOffset(14, 8),
-		Size = UDim2.new(0.5, 0, 0, 32),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Font = Theme.titleFont,
-		TextColor3 = C.blood,
-		Text = "CATALOG",
-	})
-	local close = Theme.button(window, {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 10),
-		Size = UDim2.fromOffset(30, 26),
-		Text = "X",
-		TextColor3 = C.blood,
-	})
-	close.Activated:Connect(function()
-		setOpen(false)
-	end)
 
 	-- tabs (two rows of small pills)
 	local tabRow = Instance.new("Frame")
 	tabRow.BackgroundTransparency = 1
-	tabRow.Position = UDim2.fromOffset(12, 44)
+	tabRow.Position = UDim2.fromOffset(12, 12)
 	tabRow.Size = UDim2.new(1, -24, 0, 58)
 	tabRow.Parent = window
 	local tabLayout = Instance.new("UIGridLayout")
@@ -352,7 +378,7 @@ local function build()
 	-- search box (catalog tabs)
 	local searchRow = Instance.new("Frame")
 	searchRow.BackgroundTransparency = 1
-	searchRow.Position = UDim2.fromOffset(12, 108)
+	searchRow.Position = UDim2.fromOffset(12, 76)
 	searchRow.Size = UDim2.new(1, -24, 0, 28)
 	searchRow.Parent = window
 	ui.searchRow = searchRow
@@ -392,7 +418,7 @@ local function build()
 	-- body colour target (BODY tab)
 	local colorBar = Instance.new("Frame")
 	colorBar.BackgroundTransparency = 1
-	colorBar.Position = UDim2.fromOffset(12, 108)
+	colorBar.Position = UDim2.fromOffset(12, 76)
 	colorBar.Size = UDim2.new(1, -24, 0, 28)
 	colorBar.Visible = false
 	colorBar.Parent = window
@@ -419,8 +445,8 @@ local function build()
 
 	-- the grid of items / swatches
 	local grid = Instance.new("ScrollingFrame")
-	grid.Position = UDim2.fromOffset(12, 144)
-	grid.Size = UDim2.new(1, -24, 1, -226)
+	grid.Position = UDim2.fromOffset(12, 112)
+	grid.Size = UDim2.new(1, -24, 1, -194)
 	grid.BackgroundTransparency = 1
 	grid.BorderSizePixel = 0
 	grid.ScrollBarThickness = 5
@@ -435,7 +461,7 @@ local function build()
 	ui.grid = grid
 	ui.status = Theme.label(window, {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 150),
+		Position = UDim2.new(0.5, 0, 0, 118),
 		Size = UDim2.new(1, -24, 0, 20),
 		TextScaled = false,
 		TextSize = 13,
@@ -459,7 +485,7 @@ local function build()
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 12, 1, -10),
 		Size = UDim2.fromOffset(170, 28),
-		Text = "RESET TO DEFAULT",
+		Text = "RESET TO STARTER",
 		TextColor3 = C.blood,
 	})
 	reset.Activated:Connect(function()
@@ -491,21 +517,27 @@ function CatalogController.start()
 	build()
 	Remotes.get("ProfileChanged").OnClientEvent:Connect(function(snapshot)
 		if snapshot.outfit then
-			outfit = snapshot.outfit
+			-- what you actually wear: your own look, or your starter until you change it
+			outfit = if snapshot.outfitPicked
+				then snapshot.outfit
+				else Outfit.starter(Outfit.starterFor(player.UserId))
 			-- redraw WEAR / REMOVE buttons without searching again
-			if ui.window.Visible and (tab == "Worn") then
+			if ui.room:isOpen() and (tab == "Worn") then
 				showWorn()
 			end
+			ui.room:refreshSoon()
 		end
 	end)
 	Remotes.get("CatalogResult").OnClientEvent:Connect(function(ok, reason)
 		if ok then
 			if reason == "reset" then
-				toast("BACK TO THE DEFAULT CHARACTER", C.mint)
+				toast("BACK TO YOUR STARTER LOOK", C.mint)
+			elseif reason == "starter" then
+				toast("NEW LOOK", C.mint)
 			elseif reason == "avatar_ok" then
 				toast("YOU'RE WEARING YOUR ROBLOX AVATAR", C.mint)
 			end
-			if ui.window.Visible and tab ~= "Colors" and tab ~= "Worn" then
+			if ui.room:isOpen() and tab ~= "Colors" and tab ~= "Worn" and tab ~= "Starter" then
 				-- flip the button on the card that changed
 				for _, child in ui.grid:GetChildren() do
 					local wear = child:FindFirstChildWhichIsA("TextButton")
@@ -526,8 +558,8 @@ function CatalogController.start()
 		view = newView
 		local lobby = inLobby()
 		ui.open.Visible = lobby
-		if not lobby and ui.window.Visible then
-			ui.window.Visible = false -- the catalog is locked during your round
+		if not lobby and ui.room:isOpen() then
+			ui.room:close() -- (can't happen while busy: the round leaves you out)
 		end
 	end)
 	ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
@@ -536,7 +568,7 @@ function CatalogController.start()
 		end
 	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.Escape and ui.window.Visible then
+		if not processed and input.KeyCode == Enum.KeyCode.Escape and ui.room:isOpen() then
 			setOpen(false)
 		end
 	end)

@@ -14,6 +14,7 @@ local Remotes = require(Shared.Net.Remotes)
 local Rewards = require(Shared.Rules.Rewards)
 local Profile = require(Shared.Data.Profile)
 local SpawnGroups = require(Shared.Rules.SpawnGroups)
+local Outfit = require(Shared.Data.Outfit)
 
 local Services = script.Parent
 local CharacterService = require(Services.CharacterService)
@@ -394,9 +395,19 @@ function RoundManager.start()
 	ShopService.start(RoundManager)
 	CatalogService.start(ShopService.canShop) -- same rule: in the lobby, not while playing
 	CharacterService.outfitOf = function(player: Player): any
+		-- your own look once you've changed anything; until then your boy / girl starter
 		local profile = DataService.get(player)
-		return profile and profile.outfit
+		if profile and profile.outfitPicked then
+			return profile.outfit
+		end
+		return Outfit.starter(Outfit.starterFor(player.UserId))
 	end
+	-- dressing room / shop open: leave this player out of the next round
+	Remotes.get("SetBusy").OnServerEvent:Connect(function(player, busy)
+		if type(busy) == "boolean" then
+			RoundManager.send({ type = "SetBusy", playerId = player.UserId, busy = busy })
+		end
+	end)
 	CharacterService.equippedOf = ShopService.equipped
 	DataService.onLoaded(function(player, profile)
 		-- the save arrived: dress the character in their outfit (unless they're in a round)

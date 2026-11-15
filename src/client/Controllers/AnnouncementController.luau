@@ -925,7 +925,15 @@ local function showBanner(name: string, data: any)
 	end)
 end
 
+-- In the dressing room / shop you sit the round out: its intro cards don't play over you.
+local amBusy = false
+local INTRO_CARDS =
+	{ Map = true, Mode = true, SomeoneInfected = true, HunterChosen = true, EveryoneArmed = true }
+
 local function onAnnounce(name: string, data: any)
+	if amBusy and INTRO_CARDS[name] then
+		return
+	end
 	if BANNERS[name] then
 		showBanner(name, data or {})
 	elseif CARD_TIME[name] then
@@ -937,6 +945,7 @@ end
 -- The "infected moment": my role flips from human to zombie during a round.
 local lastRole: string? = nil
 local function onState(view: any)
+	amBusy = view.busy == true
 	local mine = view.players[tostring(player.UserId)]
 	local role = mine and mine.role
 	if view.phase == "Active" and role == "Zombie" and (lastRole == "Survivor" or lastRole == "Hunter") then

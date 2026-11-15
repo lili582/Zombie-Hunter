@@ -4,7 +4,8 @@
 -- HumanoidDescription by the server. Pure: the server checks each asset's type with Roblox,
 -- these rules decide what may be worn and where.
 --
--- New players get the DEFAULT character (classic 2014 look) until they change it.
+-- New players get a STARTER: a basic horror-game boy or girl (picked by user id), until they
+-- change something in the dressing room. They can switch between the two starters any time.
 local Outfit = {}
 
 export type Rgb = { number }
@@ -78,21 +79,61 @@ Outfit.PALETTE = {
 	{ 107, 50, 124 },
 }
 
-local DEFAULT_COLORS = {
-	head = { 245, 205, 48 },
-	torso = { 13, 105, 172 },
-	leftArm = { 245, 205, 48 },
-	rightArm = { 245, 205, 48 },
-	leftLeg = { 164, 189, 71 },
-	rightLeg = { 164, 189, 71 },
+-- The two starter looks: an ordinary kid in a horror movie. Colours only for now; put Roblox
+-- catalog asset ids in `accessories` (e.g. a hair: { id = 123, slot = "Hair" }), `shirt` or
+-- `pants` to give the starters real hair and clothes. (tune)
+Outfit.STARTERS = {
+	Boy = {
+		skin = { 234, 184, 146 },
+		torso = { 52, 58, 68 }, -- charcoal hoodie
+		legs = { 40, 56, 92 }, -- dark jeans
+		face = 0,
+		shirt = 0,
+		pants = 0,
+		accessories = {},
+	},
+	Girl = {
+		skin = { 241, 196, 166 },
+		torso = { 138, 62, 78 }, -- dusty rose top
+		legs = { 34, 34, 44 }, -- dark leggings
+		face = 0,
+		shirt = 0,
+		pants = 0,
+		accessories = {},
+	},
 }
+Outfit.STARTER_ORDER = { "Boy", "Girl" }
+
+function Outfit.starter(kind: string?): Outfit
+	local s = (Outfit.STARTERS :: any)[kind or "Boy"] or Outfit.STARTERS.Boy
+	local accessories = {}
+	for _, a in s.accessories do
+		table.insert(accessories, { id = a.id, slot = a.slot })
+	end
+	return {
+		colors = {
+			head = table.clone(s.skin),
+			torso = table.clone(s.torso),
+			leftArm = table.clone(s.skin),
+			rightArm = table.clone(s.skin),
+			leftLeg = table.clone(s.legs),
+			rightLeg = table.clone(s.legs),
+		},
+		face = s.face,
+		shirt = s.shirt,
+		pants = s.pants,
+		tshirt = 0,
+		accessories = accessories,
+	}
+end
+
+-- The starter a brand-new player gets: boy or girl, fixed per player.
+function Outfit.starterFor(userId: number): string
+	return Outfit.STARTER_ORDER[(math.abs(userId) % #Outfit.STARTER_ORDER) + 1]
+end
 
 function Outfit.default(): Outfit
-	local colors = {}
-	for part, rgb in DEFAULT_COLORS do
-		colors[part] = table.clone(rgb)
-	end
-	return { colors = colors, face = 0, shirt = 0, pants = 0, tshirt = 0, accessories = {} }
+	return Outfit.starter("Boy")
 end
 
 local function validId(v: any): boolean

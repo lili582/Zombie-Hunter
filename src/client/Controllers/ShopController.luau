@@ -11,6 +11,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local Items = require(Shared.Config.Items)
 local Theme = require(script.Parent.Theme)
+local Room = require(script.Parent.Room)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -87,6 +88,59 @@ local function toast(text: string, color: Color3)
 	end)
 end
 
+-- What the preview shows when you click a card: the weapon in your hand, or your zombie skin.
+local function previewItem(id: string)
+	local item = Items.get(id)
+	if not item then
+		return
+	end
+	ui.room:setModifier(function(model: Model)
+		if item.skin then
+			for _, d in model:GetDescendants() do
+				if d:IsA("BasePart") and d.Parent == model and d.Name ~= "HumanoidRootPart" then
+					d.Color = rgb(item.skin)
+				elseif d:IsA("BodyColors") then
+					d:Destroy()
+				end
+			end
+			local head = model:FindFirstChild("Head") :: BasePart?
+			if head then
+				for _, x in { -0.22, 0.22 } do
+					local eye = Instance.new("Part")
+					eye.Shape = Enum.PartType.Ball
+					eye.Size = Vector3.new(0.26, 0.26, 0.26)
+					eye.Material = Enum.Material.Neon
+					eye.Color = rgb(item.eyes)
+					eye.Anchored = true
+					eye.CanCollide = false
+					eye.CFrame = head.CFrame * CFrame.new(x, 0.15, -head.Size.Z / 2 - 0.02)
+					eye.Parent = model
+				end
+			end
+		elseif item.look then
+			local hand = (model:FindFirstChild("RightHand") or model:FindFirstChild("Right Arm")) :: BasePart?
+			if hand then
+				local size = Vector3.new(item.look.size[1], item.look.size[2], item.look.size[3])
+				local tool = Instance.new("Part")
+				tool.Size = size
+				tool.Color = rgb(item.look.color)
+				tool.Anchored = true
+				tool.CanCollide = false
+				-- held in the hand: guns point forward, melee weapons stand up
+				tool.CFrame = hand.CFrame
+					* CFrame.new(
+						0,
+						-hand.Size.Y / 2,
+						if item.slot == "hunterGun" then -size.Z / 2 + 0.2 else 0
+					)
+					* (if item.slot == "hunterGun" then CFrame.new() else CFrame.new(0, size.Y / 2 - 0.4, 0))
+				tool.Parent = model
+			end
+		end
+	end)
+	ui.previewName.Text = `PREVIEW: {item.name}`
+end
+
 local function refresh()
 	if not ui.window then
 		return
@@ -113,6 +167,16 @@ local function refresh()
 			BackgroundColor3 = C.ink,
 			BackgroundTransparency = 0.2,
 		})
+		local look = Instance.new("TextButton") -- click the card to see it on your character
+		look.Name = "Preview"
+		look.BackgroundTransparency = 1
+		look.Text = ""
+		look.Size = UDim2.new(1, -124, 1, 0)
+		look.ZIndex = 2
+		look.Parent = card
+		look.Activated:Connect(function()
+			previewItem(id)
+		end)
 		if item.skin then -- a colour swatch for skins
 			local swatch = Instance.new("Frame")
 			swatch.Position = UDim2.fromOffset(8, 10)
@@ -191,9 +255,13 @@ local function setOpen(open: boolean)
 	if open and not inLobby() then
 		return
 	end
-	ui.window.Visible = open
 	if open then
+		ui.room:open()
+		ui.room:setModifier(nil)
+		ui.previewName.Text = "click an item to try it on"
 		refresh()
+	else
+		ui.room:close()
 	end
 end
 
@@ -202,7 +270,7 @@ local function build()
 	gui.Name = "Shop"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 5
+	gui.DisplayOrder = 8 -- the SHOP button and toasts, above the room
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- SHOP button (lobby only), under the PLAYERS toggle
@@ -214,51 +282,36 @@ local function build()
 		Text = "SHOP",
 	})
 	ui.open.Activated:Connect(function()
-		setOpen(not ui.window.Visible)
+		setOpen(not ui.room:isOpen())
 	end)
 
-	local window = Theme.panel(gui, {
-		Name = "Window",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(0.9, 0.8),
-		Visible = false,
-	})
-	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(560, 440)
-	limit.Parent = window
+	-- the shop room: a full screen, the items on the left, your character on the right
+	ui.room = Room.new("Shop", "Z-SHOP", C.butter, 7)
+	local window = ui.room.left
 	ui.window = window
-	Theme.label(window, {
-		Position = UDim2.fromOffset(14, 8),
-		Size = UDim2.new(0.5, 0, 0, 40),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Font = Theme.titleFont,
-		TextColor3 = C.butter,
-		Text = "Z-SHOP",
-	})
-	ui.coins = Theme.label(window, {
+	ui.coins = Theme.label(ui.room.root, {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -56, 0, 14),
-		Size = UDim2.fromOffset(180, 28),
+		Position = UDim2.new(1, -24, 0, 24),
+		Size = UDim2.fromOffset(220, 30),
 		TextXAlignment = Enum.TextXAlignment.Right,
 		TextColor3 = C.butter,
 		Text = "",
 	})
-	local close = button(window, {
+	ui.previewName = Theme.label(ui.room.root, {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 12),
-		Size = UDim2.fromOffset(34, 32),
-		BackgroundColor3 = C.blood,
-		Text = "X",
+		Position = UDim2.new(1, -24, 0, 56),
+		Size = UDim2.fromOffset(320, 18),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextScaled = false,
+		TextSize = 13,
+		TextColor3 = C.lavender,
+		Text = "",
 	})
-	close.Activated:Connect(function()
-		setOpen(false)
-	end)
 
 	ui.tabs = {}
 	for i, t in Items.tabs do
 		local b = button(window, {
-			Position = UDim2.fromOffset(14 + (i - 1) * 150, 54),
+			Position = UDim2.fromOffset(14 + (i - 1) * 150, 14),
 			Size = UDim2.fromOffset(140, 30),
 			Text = t.name,
 		})
@@ -270,8 +323,8 @@ local function build()
 	end
 
 	local list = Instance.new("ScrollingFrame")
-	list.Position = UDim2.fromOffset(10, 94)
-	list.Size = UDim2.new(1, -20, 1, -104)
+	list.Position = UDim2.fromOffset(10, 54)
+	list.Size = UDim2.new(1, -20, 1, -64)
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.ScrollBarThickness = 6
@@ -298,13 +351,14 @@ function ShopController.start()
 	Remotes.get("ProfileChanged").OnClientEvent:Connect(function(snapshot)
 		profile = snapshot
 		refresh()
+		ui.room:refreshSoon()
 	end)
 	Remotes.get("RoundStateChanged").OnClientEvent:Connect(function(newView)
 		view = newView
 		local lobby = inLobby()
 		ui.open.Visible = lobby
-		if not lobby and ui.window.Visible then
-			ui.window.Visible = false -- a round is starting for you
+		if not lobby and ui.room:isOpen() then
+			ui.room:close() -- (can't happen while busy: the round leaves you out)
 		end
 	end)
 	Remotes.get("ShopResult").OnClientEvent:Connect(function(ok, reason, itemId)
@@ -321,7 +375,7 @@ function ShopController.start()
 		end
 	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.Escape and ui.window.Visible then
+		if not processed and input.KeyCode == Enum.KeyCode.Escape and ui.room:isOpen() then
 			setOpen(false)
 		end
 	end)

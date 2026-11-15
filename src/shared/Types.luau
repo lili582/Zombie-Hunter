@@ -66,6 +66,7 @@ export type RoundState = {
 	mapHistory: { string }, -- maps of the last rounds (oldest first)
 	mapId: string?, -- map of the current / last round
 	startRoles: { [number]: Role }, -- role each player got at the start of the round
+	busy: { [number]: boolean }, -- players in the dressing room / shop: they sit the next round out
 }
 
 export type Event =
@@ -90,6 +91,7 @@ export type Event =
 	| { type: "UseAbility", playerId: number }
 	| { type: "VoteMap", playerId: number, mapId: string }
 	| { type: "FriendlyFire", shooterId: number, victimId: number } -- the Hunter shot a human
+	| { type: "SetBusy", playerId: number, busy: boolean } -- opened / closed the dressing room or shop
 
 export type Effect = { type: string, [string]: any }
 -- Effect types:

@@ -89,3 +89,12 @@ test("guns are side-grades: no gun beats the Revolver on damage per second AND r
 		end
 	end
 end)
+
+test("every weapon has a look (its tool and the shop preview need one)", function()
+	for _, id in Items.order do
+		local item = Items.get(id)
+		if item.slot == "hunterGun" or item.slot == "hunterMelee" then
+			expect(item.look ~= nil and #item.look.size == 3 and #item.look.color == 3).toBeTruthy()
+		end
+	end
+end)

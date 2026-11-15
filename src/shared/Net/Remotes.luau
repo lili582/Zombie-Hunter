@@ -20,6 +20,8 @@ Remotes.names = {
 	"CatalogColor", -- (part, paletteIndex) body colour
 	"CatalogReset", -- back to the default character
 	"CatalogUseAvatar", -- copy my real Roblox avatar
+	"CatalogStarter", -- ("Boy" | "Girl") wear a starter look
+	"SetBusy", -- (busy) I opened / closed the dressing room or shop: leave me out of the next round
 	-- (melee and claws use Tool.Activated, which already reaches the server)
 	-- server -> client
 	"RoundStateChanged", -- filtered round snapshot

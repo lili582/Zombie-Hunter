@@ -51,14 +51,13 @@ local function zombieLook(player: Player): (Color3, Color3)
 end
 
 -- Tool looks per shop item: handle size and color.
-local TOOL_LOOK: { [string]: { Vector3 | Color3 } } = {
-	Revolver = { Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44) },
-	LeverRifle = { Vector3.new(0.4, 0.8, 3.2), Color3.fromRGB(110, 75, 48) },
-	RustySMG = { Vector3.new(0.5, 1.1, 1.6), Color3.fromRGB(120, 70, 50) },
-	Bat = { Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50) },
-	Shovel = { Vector3.new(0.5, 4.6, 0.5), Color3.fromRGB(110, 110, 115) },
-	Crowbar = { Vector3.new(0.3, 3, 0.3), Color3.fromRGB(150, 40, 50) },
-}
+-- (size, colour) of a shop weapon's handle, from Config/Items `look`.
+local function toolLook(id: string, fallback: string): (Vector3, Color3)
+	local item = Items.get(id) or Items.get(fallback)
+	local look = item.look
+	return Vector3.new(look.size[1], look.size[2], look.size[3]),
+		Color3.fromRGB(look.color[1], look.color[2], look.color[3])
+end
 
 -- Set by RoundManager: which Alpha class a player has this round (nil = not an Alpha).
 CharacterService.alphaClassOf = function(_player: Player): string?
@@ -251,8 +250,8 @@ function CharacterService.giveTools(player: Player, role: string)
 		-- the gun and melee the player equipped in the shop (tool name = item id)
 		for _, slot in { "hunterGun", "hunterMelee" } do
 			local id = CharacterService.equippedOf(player, slot)
-			local look = TOOL_LOOK[id] or TOOL_LOOK[if slot == "hunterGun" then "Revolver" else "Bat"]
-			local tool = makeTool(id, look[1] :: Vector3, look[2] :: Color3)
+			local size, color = toolLook(id, if slot == "hunterGun" then "Revolver" else "Bat")
+			local tool = makeTool(id, size, color)
 			tool:SetAttribute(if slot == "hunterGun" then "Gun" else "Melee", true)
 			tool.Parent = backpack
 		end

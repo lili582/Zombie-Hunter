@@ -5,13 +5,16 @@ local Profile = require("../src/shared/Data/Profile")
 
 local HAT, HAIR, SHIRT, PANTS, FACE, LAYERED = 8, 41, 11, 12, 18, 65
 
-test("new players get the default character (classic 2014 colours, nothing worn)", function()
-	local o = Profile.new().outfit
-	expect(o.colors.head).toEqual({ 245, 205, 48 })
-	expect(o.colors.torso).toEqual({ 13, 105, 172 })
-	expect(o.colors.leftLeg).toEqual({ 164, 189, 71 })
-	expect(#o.accessories).toBe(0)
-	expect(o.shirt).toBe(0)
+test("new players haven't picked a look: they get a boy or girl starter by user id", function()
+	expect(Profile.new().outfitPicked).toBe(false)
+	expect(Outfit.starterFor(2)).toBe("Boy")
+	expect(Outfit.starterFor(3)).toBe("Girl")
+	local girl = Outfit.starter("Girl")
+	expect(girl.colors.head).toEqual(Outfit.STARTERS.Girl.skin)
+	expect(girl.colors.torso).toEqual(Outfit.STARTERS.Girl.torso)
+	expect(girl.colors.leftLeg).toEqual(Outfit.STARTERS.Girl.legs)
+	expect(Outfit.starter("Nope").colors.torso).toEqual(Outfit.STARTERS.Boy.torso)
+	expect(Profile.migrate({ outfitPicked = true }).outfitPicked).toBe(true)
 end)
 
 test("wearing: clothing replaces, accessories stack", function()
@@ -83,7 +86,7 @@ test("description properties list the accessories per slot", function()
 	expect(props.HairAccessory).toBe("13")
 	expect(props.BackAccessory).toBe("")
 	expect(props.Pants).toBe(14)
-	expect(props.HeadColor).toEqual({ 245, 205, 48 })
+	expect(props.HeadColor).toEqual(Outfit.STARTERS.Boy.skin)
 end)
 
 test("broken saves load as a valid outfit", function()
@@ -94,9 +97,9 @@ test("broken saves load as a valid outfit", function()
 		accessories = { { id = 5, slot = "Hat" }, { id = 6, slot = "Tail" }, "junk" },
 	})
 	expect(o.colors.head).toEqual({ 1, 2, 3 })
-	expect(o.colors.torso).toEqual({ 13, 105, 172 }) -- broken: default
+	expect(o.colors.torso).toEqual(Outfit.STARTERS.Boy.torso) -- broken: default
 	expect(o.shirt).toBe(0)
 	expect(o.pants).toBe(42)
 	expect(#o.accessories).toBe(1)
-	expect(Profile.migrate({}).outfit.colors.head).toEqual({ 245, 205, 48 })
+	expect(Profile.migrate({}).outfit.colors.head).toEqual(Outfit.STARTERS.Boy.skin)
 end)

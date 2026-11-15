@@ -56,7 +56,13 @@ local function edit(player: Player, change: (any) -> (boolean, string?))
 	end
 	local ok, reason = false, nil
 	DataService.update(player, function(p)
+		-- still on the starter? start editing from the look you actually have
+		local wasPicked = p.outfitPicked
+		if not wasPicked then
+			p.outfit = Outfit.starter(Outfit.starterFor(player.UserId))
+		end
 		ok, reason = change(p.outfit)
+		p.outfitPicked = if ok then true else wasPicked
 	end)
 	if ok then
 		CharacterService.applyOutfit(player)
@@ -133,14 +139,33 @@ function CatalogService.start(lobbyCheck: (Player) -> boolean)
 		end
 	end)
 	Remotes.get("CatalogReset").OnServerEvent:Connect(function(player)
+		-- back to your starter (boy / girl by user id), as if you never changed anything
 		local ok, reason = edit(player, function(o)
-			local fresh = Outfit.default()
+			local fresh = Outfit.starter(Outfit.starterFor(player.UserId))
 			for k, v in fresh do
 				o[k] = v
 			end
 			return true, nil
 		end)
+		if ok then
+			DataService.update(player, function(p)
+				p.outfitPicked = false
+			end)
+		end
 		reply(player, ok, if ok then "reset" else reason, nil)
+	end)
+	Remotes.get("CatalogStarter").OnServerEvent:Connect(function(player, kind)
+		if type(kind) ~= "string" or not (Outfit.STARTERS :: any)[kind] then
+			return
+		end
+		local ok, reason = edit(player, function(o)
+			local fresh = Outfit.starter(kind)
+			for k, v in fresh do
+				o[k] = v
+			end
+			return true, nil
+		end)
+		reply(player, ok, if ok then "starter" else reason, kind)
 	end)
 	Remotes.get("CatalogUseAvatar").OnServerEvent:Connect(function(player)
 		local copy = fromRobloxAvatar(player)

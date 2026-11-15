@@ -90,6 +90,7 @@ function Util.cloneState(s: Types.RoundState): Types.RoundState
 	copy.mapHistory = table.clone(s.mapHistory)
 	copy.mapChoices = table.clone(s.mapChoices)
 	copy.startRoles = table.clone(s.startRoles)
+	copy.busy = table.clone(s.busy)
 	return copy
 end
 
