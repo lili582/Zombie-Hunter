@@ -79,27 +79,28 @@ Outfit.PALETTE = {
 	{ 107, 50, 124 },
 }
 
--- The two starter looks: an ordinary kid in a horror movie. Colours only for now; put Roblox
--- catalog asset ids in `accessories` (e.g. a hair: { id = 123, slot = "Hair" }), `shirt` or
--- `pants` to give the starters real hair and clothes. (tune)
+-- The two starter looks: an ordinary kid in a horror movie, ready for a night out in the dark.
+-- Free items made by Roblox (checked in the catalog: classic shirt / pants / hair, price 0).
+-- Everyone also gets adventurer gear (backpack, straps, chest flashlight) built by the server.
+-- `torso` / `legs` colours show only where clothes don't cover. (tune)
 Outfit.STARTERS = {
 	Boy = {
 		skin = { 234, 184, 146 },
-		torso = { 52, 58, 68 }, -- charcoal hoodie
-		legs = { 40, 56, 92 }, -- dark jeans
+		torso = { 52, 58, 68 },
+		legs = { 40, 56, 92 },
 		face = 0,
-		shirt = 0,
-		pants = 0,
-		accessories = {},
+		shirt = 398633584, -- Denim Jacket with White Hoodie
+		pants = 144076760, -- Dark Green Jeans
+		accessories = { { id = 376524487, slot = "Hair" } }, -- Blonde Spiked Hair
 	},
 	Girl = {
 		skin = { 241, 196, 166 },
-		torso = { 138, 62, 78 }, -- dusty rose top
-		legs = { 34, 34, 44 }, -- dark leggings
+		torso = { 138, 62, 78 },
+		legs = { 34, 34, 44 },
 		face = 0,
-		shirt = 0,
-		pants = 0,
-		accessories = {},
+		shirt = 398635081, -- Blue Plaid Shirt
+		pants = 398633812, -- Black Jeans with White Shoes
+		accessories = { { id = 376548738, slot = "Hair" } }, -- Brown Charmer Hair
 	},
 }
 Outfit.STARTER_ORDER = { "Boy", "Girl" }
@@ -132,8 +133,13 @@ function Outfit.starterFor(userId: number): string
 	return Outfit.STARTER_ORDER[(math.abs(userId) % #Outfit.STARTER_ORDER) + 1]
 end
 
+-- A plain base: starter skin and colours, nothing worn. Broken saves are repaired on top of
+-- this (a missing shirt stays missing). New players wear a starter, not this.
 function Outfit.default(): Outfit
-	return Outfit.starter("Boy")
+	local o = Outfit.starter("Boy")
+	o.face, o.shirt, o.pants, o.tshirt = 0, 0, 0, 0
+	o.accessories = {}
+	return o
 end
 
 local function validId(v: any): boolean

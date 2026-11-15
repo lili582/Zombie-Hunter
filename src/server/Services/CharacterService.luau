@@ -113,6 +113,66 @@ local function weld(part: BasePart, to: BasePart, offset: CFrame)
 	w.Parent = part
 end
 
+-- Adventurer gear on every character (survivors, the Hunter, and disguised zombies alike, so it
+-- gives nothing away): a worn backpack, two shoulder straps and a little flashlight clipped to
+-- the chest. Built from parts, so it needs no catalog items.
+local function addGear(char: Model)
+	local torso = (char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")) :: BasePart?
+	if not torso or char:FindFirstChild("SurvivalGear") then
+		return
+	end
+	local gear = Instance.new("Model")
+	gear.Name = "SurvivalGear"
+	gear.Parent = char
+	local depth = torso.Size.Z / 2
+	local function piece(name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material?)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = color
+		p.Material = material or Enum.Material.Fabric
+		p.CanQuery = false
+		p.CanTouch = false
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		weld(p, torso, offset)
+		p.Parent = gear
+		return p
+	end
+	local canvas = Color3.fromRGB(92, 70, 48)
+	local dark = Color3.fromRGB(46, 38, 32)
+	-- backpack (on the back = +Z of the torso) with a flap and a rolled blanket on top
+	piece("Pack", Vector3.new(1.5, 1.7, 0.7), CFrame.new(0, -0.05, depth + 0.35), canvas)
+	piece("PackFlap", Vector3.new(1.52, 0.55, 0.74), CFrame.new(0, 0.55, depth + 0.36), dark)
+	piece("Bedroll", Vector3.new(1.7, 0.4, 0.4), CFrame.new(0, 0.95, depth + 0.3), Color3.fromRGB(70, 82, 64))
+	-- straps over the shoulders, down the front
+	for _, x in { -0.45, 0.45 } do
+		piece("Strap", Vector3.new(0.22, 1.9, 0.06), CFrame.new(x, 0, -depth - 0.03), dark)
+		piece(
+			"StrapTop",
+			Vector3.new(0.22, 0.06, torso.Size.Z + 0.1),
+			CFrame.new(x, torso.Size.Y / 2 + 0.03, 0),
+			dark
+		)
+	end
+	-- chest flashlight on the left strap, lens lit
+	piece(
+		"Torch",
+		Vector3.new(0.24, 0.5, 0.24),
+		CFrame.new(-0.45, 0.35, -depth - 0.17),
+		Color3.fromRGB(28, 28, 32),
+		Enum.Material.Metal
+	)
+	local lens = piece(
+		"TorchLens",
+		Vector3.new(0.2, 0.06, 0.2),
+		CFrame.new(-0.45, 0.62, -depth - 0.17),
+		Color3.fromRGB(255, 236, 170),
+		Enum.Material.Neon
+	)
+	lens.CastShadow = false
+end
+
 local function makeTool(name: string, handleSize: Vector3?, color: Color3?): Tool
 	local tool = Instance.new("Tool")
 	tool.Name = name
@@ -488,6 +548,7 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?, noTo
 		waited += task.wait(0.1)
 	end
 	hideNameTag(hum)
+	addGear(char)
 	char.AncestryChanged:Connect(function()
 		if not char.Parent then
 			forget(char)

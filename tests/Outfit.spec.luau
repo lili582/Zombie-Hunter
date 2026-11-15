@@ -103,3 +103,13 @@ test("broken saves load as a valid outfit", function()
 	expect(#o.accessories).toBe(1)
 	expect(Profile.migrate({}).outfit.colors.head).toEqual(Outfit.STARTERS.Boy.skin)
 end)
+
+test("starters are dressed: real hair, shirt and pants", function()
+	for _, kind in Outfit.STARTER_ORDER do
+		local o = Outfit.starter(kind)
+		expect(o.shirt > 0 and o.pants > 0).toBeTruthy()
+		expect(#o.accessories).toBe(1)
+		expect(o.accessories[1].slot).toBe("Hair")
+		expect(Outfit.descriptionProps(o).HairAccessory ~= "").toBeTruthy()
+	end
+end)
