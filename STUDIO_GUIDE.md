@@ -127,6 +127,12 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] During the countdown the HUD says **NEXT ROUND: CLASSIC - VOTE FOR A MAP AT THE BOARD** and the sign over the windows says the same mode. Step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
 - [ ] The intro's map card shows the voted map; the sign says **NOW PLAYING: CLASSIC** during the round.
 
+## v0.4 checklist
+
+- [ ] **Saving in Studio:** publish the place (File → Publish to Roblox), then **Home → Game Settings → Security → Enable Studio Access to API Services**. Without it the Output shows `DataService: ... Progress is NOT saved` and everything else still works.
+- [ ] Top left shows **Z-COINS 0** for a new player. Play a round: the YOUR COINS card amount is added to it.
+- [ ] Pick TANK at the pedestals, stop, press Play again: the lobby line still says **IF YOU ARE THE ALPHA: TANK** and your coins are still there.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:

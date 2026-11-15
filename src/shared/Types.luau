@@ -84,7 +84,7 @@ export type Event =
 	| { type: "LockerExit", playerId: number }
 	| { type: "LockerSearch", attackerId: number, lockerId: number }
 	| { type: "UseMedkit", playerId: number, targetId: number }
-	| { type: "SetAlphaClass", playerId: number, class: string }
+	| { type: "SetAlphaClass", playerId: number, class: string, quiet: boolean? } -- quiet: from a save
 	| { type: "UseAbility", playerId: number }
 	| { type: "VoteMap", playerId: number, mapId: string }
 

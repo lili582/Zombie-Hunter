@@ -130,3 +130,13 @@ test("a Survivor who replaces a leaving Alpha gets their own class", function()
 	expect(alpha ~= nil).toBeTruthy()
 	expect(s.players[alpha].alphaClass).toBe("Screamer")
 end)
+
+test("a class loaded from the save works before the player joins, with no banner", function()
+	local s = RoundRules.new(Classic, Rng.new(1))
+	local fx
+	s, fx = H.run(s, { { type = "SetAlphaClass", playerId = 3, class = "Tank", quiet = true } })
+	expect(s.alphaPrefs[3]).toBe("Tank")
+	expect(#H.find(fx, function(f)
+		return f.type == "Announce"
+	end)).toBe(0)
+end)

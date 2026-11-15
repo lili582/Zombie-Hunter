@@ -11,6 +11,8 @@ local Classic = require(Shared.Config.Classic)
 local Modes = require(Shared.Config.Modes)
 local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
+local Rewards = require(Shared.Rules.Rewards)
+local Profile = require(Shared.Data.Profile)
 
 local Services = script.Parent
 local CharacterService = require(Services.CharacterService)
@@ -21,6 +23,7 @@ local TimingService = require(Services.TimingService)
 local ObjectiveService = require(Services.ObjectiveService)
 local AbilityService = require(Services.AbilityService)
 local LobbyService = require(Services.LobbyService)
+local DataService = require(Services.DataService)
 
 local RoundManager = {}
 
@@ -75,6 +78,15 @@ function RoundManager.send(event: any)
 	end
 	if #fx > 0 then
 		dirty = true
+		-- coins and stats to save (round end, revives, infections, kills, towers...)
+		for id, reward in Rewards.collect(state, fx) do
+			local player = playerById(id)
+			if player then
+				DataService.update(player, function(p)
+					Profile.addReward(p, reward)
+				end)
+			end
+		end
 	end
 end
 
@@ -246,6 +258,13 @@ runEffect = function(f: any)
 		-- Only the Town greybox (or your hand-built workspace.Map) exists so far, so there is
 		-- nothing to swap yet. When more maps are added, load f.mapId here.
 		print(`RoundManager: map {f.mapId}`)
+	elseif f.type == "AlphaClassSet" then
+		local player = playerById(f.playerId)
+		if player then
+			DataService.update(player, function(p)
+				p.equipped.preferredAlpha = f.class
+			end)
+		end
 	elseif f.type == "AbilityUsed" then
 		AbilityService.onUsed(f)
 	elseif f.type == "PointsAwarded" then
@@ -319,6 +338,16 @@ function RoundManager.start()
 		heliZoneCount = #map.heliZones,
 	})
 	TimingService.init()
+	DataService.start()
+	DataService.onLoaded(function(player, profile)
+		-- the saved Alpha class goes back into the rules (no banner)
+		RoundManager.send({
+			type = "SetAlphaClass",
+			playerId = player.UserId,
+			class = profile.equipped.preferredAlpha,
+			quiet = true,
+		})
+	end)
 	CharacterService.humanWeapon = function(): string?
 		return state.config.humanWeapon
 	end
