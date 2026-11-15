@@ -133,7 +133,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Top left shows **Z-COINS 0** for a new player. Play a round: the YOUR COINS card amount is added to it.
 - [ ] Pick TANK at the pedestals, stop, press Play again: the lobby line still says **IF YOU ARE THE ALPHA: TANK** and your coins are still there.
 
-- [ ] Shop: walk to the counter by the west wall (sign **Z-SHOP**), press **E** (or the **SHOP** button top right). Coins top right of the window. BUY on something you can't afford: toast **YOU NEED n MORE Z-COINS**. With enough coins: BUY → coins drop, card says **EQUIPPED**. Tip for testing: in the Studio command bar on the server, `game.ServerScriptService.Server.Services.DataService` can't be reached easily, so play a few rounds, or temporarily raise `minCoins` in `Config/Points`.
+- [ ] Shop: walk to the counter by the west wall (sign **Z-SHOP**), press **E** (or the **SHOP** button top right). Coins top right of the window. BUY on something you can't afford: toast **YOU NEED n MORE Z-COINS**. With enough coins: BUY → coins drop, card says **EQUIPPED**. Tip: to test without playing many rounds, set `minCoins = 1000` in `Config/Points` for one round, then put it back to 10.
 - [ ] Equip **Lever Rifle** + **Shovel**, become the Hunter: you hold a long brown rifle (5 / 30 ammo) and a shovel. Equip **Candy Corpse**, get infected: pink zombie with mint eyes.
 - [ ] During a round the SHOP button is hidden and the counter doesn't open the shop (unless you're sitting out or escaped).
 
