@@ -9,7 +9,7 @@
 --                        and it glitches
 --   Zombie    HUNGRY     shambles in place, arms reaching, head lolling, twitching
 --
--- The pose fades in at REVEAL seconds, when the role card's light comes on.
+-- The pose fades in at `revealAt` seconds (default REVEAL), when the role card's light comes on.
 local RoleEmote = {}
 RoleEmote.__index = RoleEmote
 
@@ -35,7 +35,7 @@ local function rot(x: number, y: number, z: number): CFrame
 end
 
 -- `model` must already be staged (pivoted to the origin, facing -Z).
-function RoleEmote.new(model: Model, role: string)
+function RoleEmote.new(model: Model, role: string, revealAt: number?)
 	local pivot = model:GetPivot()
 	local rest: { [BasePart]: CFrame } = {}
 	local groupOf: { [BasePart]: string } = {}
@@ -93,8 +93,9 @@ function RoleEmote.new(model: Model, role: string)
 		groupOf = groupOf,
 		pivots = pivots,
 		props = {} :: { [string]: BasePart },
+		reveal = revealAt or REVEAL,
 		glitchUntil = 0,
-		nextGlitch = REVEAL + 1.2,
+		nextGlitch = (revealAt or REVEAL) + 1.2,
 	}, RoleEmote)
 	self:addProps(byName)
 	return self
@@ -161,8 +162,8 @@ end
 
 -- The pose at time `t` (seconds since the card started): body offset + rotation per group.
 function RoleEmote.pose(self: any, t: number): (CFrame, { [string]: CFrame })
-	local k = smooth((t - REVEAL) / 0.5) -- 0 before the reveal, 1 after
-	local after = math.max(0, t - REVEAL)
+	local k = smooth((t - self.reveal) / 0.5) -- 0 before the reveal, 1 after
+	local after = math.max(0, t - self.reveal)
 	local role = self.role
 	if role == "Survivor" then
 		local shake = math.sin(t * 55) * 0.025 * k
@@ -205,11 +206,11 @@ function RoleEmote.pose(self: any, t: number): (CFrame, { [string]: CFrame })
 		end
 		local g = if glitch then 1 else 0
 		local twitch = g * (math.random() - 0.5)
-		local rise = smooth((t - REVEAL) / 1.6)
+		local rise = smooth((t - self.reveal) / 1.6)
 		for i = 1, 2 do
 			local eye = self.props[`GlowEye{i}`]
 			if eye then
-				eye.Transparency = 1 - smooth((t - REVEAL) / 0.4)
+				eye.Transparency = 1 - smooth((t - self.reveal) / 0.4)
 			end
 		end
 		return CFrame.new(twitch * 0.4, -0.15 * limp + math.sin(after * 1.2) * 0.04, 0) * rot(

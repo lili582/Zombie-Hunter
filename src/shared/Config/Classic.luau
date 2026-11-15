@@ -11,8 +11,8 @@ local Classic = {
 	intermission = 20, -- countdown in the safehouse (map vote); keep >= 20 so players get a rest
 	-- Head start = the intro cards (everyone frozen) + 10s for humans to run before the Alpha
 	-- is released. introLength must match the card times in AnnouncementController.
-	introLength = 16,
-	headStart = 26,
+	introLength = 22,
+	headStart = 32,
 	roundLength = 360,
 	results = 15, -- result cards, already in the safehouse (rest = results + intermission)
 	bleedOut = 20,

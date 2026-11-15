@@ -5,6 +5,8 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- **Role help icon:** during a round a round **?** icon in your role colour (top left, with your role name) opens a panel with your goal and how to play, keys included (**H** on a keyboard). It follows your role (infected → zombie tips) and the mode (Outbreak survivors). Words live in `Config/RoleGuide`.
+- **Slower, creepier role pick:** the intro is now 22s (`introLength`, head start 32s). SOMEONE IS INFECTED types in slowly with whispers while the red light drifts between the shadows and sometimes lingers; YOUR ROLE has a 5-beat heartbeat in the dark before the light stutters on, then a quick one-line explanation of your role under the title.
 - **Straight to the safehouse:** the moment a round ends everyone is brought back to the safehouse, and the result and coin cards play there. Players rest at least 35s before the next round (15s results + 20s countdown); a test checks the countdown never drops under 20s.
 - **Last-minute clock:** under 1:00 the timer turns a deep blood red with a dark edge, and no longer shakes.
 - **Spread-out group starts:** at round start players are split into groups of 2 (the last group may have 3), and each group starts at its own spot, far apart on the map (`Rules/SpawnGroups`, 6 tests). Groups are reshuffled every round and the disguised Alpha lands in a random group. The greybox Town now has 7 `HumanStart` spots; a map with one spot still starts everyone together.

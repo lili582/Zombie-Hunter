@@ -2,7 +2,7 @@
 -- Full-screen cards (round start / end) and top banners (mid-round). Horror style:
 -- VHS scanlines, flicker, glitching text, typed subtitles, and the players' own characters
 -- shown as black silhouettes in the dark while roles are "chosen". No emoji, no names leaked.
--- Card times for the intro must add up to Classic.introLength (16s).
+-- Card times for the intro must add up to Classic.introLength (22s).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -13,6 +13,7 @@ local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Maps = require(Shared.Config.Maps)
 local Theme = require(script.Parent.Theme)
 local RoleEmote = require(script.Parent.RoleEmote)
+local RoleGuide = require(Shared.Config.RoleGuide)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -20,12 +21,12 @@ local player = Players.LocalPlayer
 local AnnouncementController = {}
 
 local CARD_TIME = {
-	-- intro (16s total)
+	-- intro (22s total): slow on purpose, the role pick is the scary part
 	Map = 2.5,
 	Mode = 2.5,
-	SomeoneInfected = 4,
-	YourRole = 3.5,
-	YourRules = 2,
+	SomeoneInfected = 6.5,
+	YourRole = 6,
+	YourRules = 3,
 	HunterChosen = 1.5,
 	EveryoneArmed = 1.5, -- replaces HunterChosen in modes without a Hunter
 	-- round end / other
@@ -70,6 +71,10 @@ local RESULT_TEXT = {
 	ZombiesWin = { "ZOMBIES WIN!", C.mint },
 	NoWinner = { "NOBODY WINS", C.lavender },
 }
+
+-- YourRole: heartbeat gaps (seconds), slow then faster; the reveal comes right after.
+local HEARTBEAT = { 0.85, 0.8, 0.72, 0.65, 0.6 }
+local ROLE_REVEAL = 0.85 + 0.8 + 0.72 + 0.65 + 0.6 -- when the light comes on (emote starts)
 
 local BLOOD_DARK = Color3.fromRGB(60, 8, 22)
 
@@ -342,12 +347,14 @@ local emoteRole: string? = nil
 local emoteStart = 0
 
 -- Starts (or, for the next card of the same role, continues) the emote on a staged model.
-local function playEmote(model: Model, role: string, continueIt: boolean)
-	if not (continueIt and emoteRole == role and os.clock() - emoteStart < 10) then
+local emoteReveal = 0
+local function playEmote(model: Model, role: string, continueIt: boolean, revealAt: number?)
+	if not (continueIt and emoteRole == role and os.clock() - emoteStart < 12) then
 		emoteStart = os.clock()
+		emoteReveal = revealAt or 0
 	end
 	emoteRole = role
-	emote = RoleEmote.new(model, role)
+	emote = RoleEmote.new(model, role, emoteReveal)
 end
 
 local function clearStage()
@@ -414,17 +421,34 @@ local function play(name: string, data: any, token: number)
 		doFlash(C.blood, 0.35)
 		typeText(ui.subtitle, data.line or "", 0.03, token)
 	elseif name == "SomeoneInfected" then
-		setTitle("SOMEONE IS INFECTED...", C.blood)
-		slam()
+		-- slow and quiet: the title creeps in, whispers, and a red light searches the crowd
+		setTitle("", C.blood)
+		typeText(ui.title, "SOMEONE IS INFECTED...", 0.09, token)
 		local frames = silhouetteRow()
-		-- a red light jumps between the silhouettes, slower and slower... then goes out.
-		-- It never stops on anyone: the Alpha stays secret.
+		task.spawn(function()
+			local whispers = { "who is it...", "...", "they're standing right next to you", "..." }
+			for i, line in whispers do
+				if cardToken ~= token then
+					return
+				end
+				task.wait(if i == 1 then 0.9 else 1.25)
+				if cardToken ~= token then
+					return
+				end
+				ui.subtitle.Text = ""
+				typeText(ui.subtitle, line, 0.05, token)
+			end
+		end)
+		-- the red light drifts from shadow to shadow, slower and slower. Sometimes it lingers on
+		-- someone... then moves on. It never stops on anyone: the Alpha stays secret.
 		task.spawn(function()
 			if #frames == 0 then
 				return
 			end
+			task.wait(0.8)
 			local last = 0
-			for i = 1, 16 do
+			local steps = 14
+			for i = 1, steps do
 				if cardToken ~= token then
 					return
 				end
@@ -436,39 +460,46 @@ local function play(name: string, data: any, token: number)
 				for j, vp in frames do
 					vp.LightColor = if j == pick then C.blood else Color3.new(0, 0, 0)
 					vp.Ambient = if j == pick then Color3.fromRGB(40, 0, 10) else Color3.new(0, 0, 0)
-					vp.BackgroundTransparency = if j == pick then 0.2 else 0.6
+					vp.BackgroundTransparency = if j == pick then 0.2 else 0.7
 				end
-				task.wait(0.06 + i * 0.012)
+				local linger = math.random() < 0.2 and i > 4
+				task.wait((0.1 + (i / steps) * 0.3) * (if linger then 2.6 else 1))
+			end
+			if cardToken ~= token then
+				return
 			end
 			for _, vp in frames do
 				vp.LightColor = Color3.new(0, 0, 0)
 				vp.Ambient = Color3.new(0, 0, 0)
-				vp.BackgroundTransparency = 0.85
+				vp.BackgroundTransparency = 0.9
 			end
 			doFlash(Color3.new(0, 0, 0), 1)
-			typeText(ui.subtitle, "...and it could be you.", 0.05, token)
+			ui.subtitle.Text = ""
+			typeText(ui.subtitle, "...and it could be you.", 0.07, token)
 		end)
 	elseif name == "YourRole" then
 		local role = data.role
 		local color = Theme.roleColor[role] or C.bone
+		local guide = RoleGuide.get(role, data.mode)
 		setTitle("", color)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
-			playEmote(model, role, false)
+			playEmote(model, role, false, ROLE_REVEAL)
 			ui.big.Visible = true
 		end
-		ui.subtitle.Text = "who are you?"
-		-- heartbeat in the dark, the light stutters on, then the reveal
+		ui.subtitle.Text = ""
+		typeText(ui.subtitle, "who are you...?", 0.08, token)
+		-- a slow heartbeat in the dark, getting faster; the light stutters... then the reveal
 		task.spawn(function()
-			for beat = 1, 3 do
+			for beat, gap in HEARTBEAT do
 				if cardToken ~= token then
 					return
 				end
 				ui.big.Size = UDim2.fromScale(0.28, 0.54)
-				TweenService:Create(ui.big, TweenInfo.new(0.25), { Size = UDim2.fromScale(0.26, 0.5) }):Play()
-				if beat == 3 then
-					for _ = 1, 3 do -- flicker
+				TweenService:Create(ui.big, TweenInfo.new(0.3), { Size = UDim2.fromScale(0.26, 0.5) }):Play()
+				if beat >= #HEARTBEAT - 1 then
+					for _ = 1, 3 do -- the light tries to come on
 						ui.big.LightColor = color
 						ui.big.Ambient = Color3.fromRGB(50, 40, 60)
 						task.wait(0.05)
@@ -476,17 +507,23 @@ local function play(name: string, data: any, token: number)
 						ui.big.Ambient = Color3.new(0, 0, 0)
 						task.wait(0.07)
 					end
+					task.wait(math.max(0, gap - 0.36))
+				else
+					task.wait(gap)
 				end
-				task.wait(0.4)
 			end
 			if cardToken ~= token then
 				return
 			end
 			ui.big.LightColor = color
 			ui.big.Ambient = Color3.fromRGB(55, 45, 70)
-			ui.subtitle.Text = ""
 			setTitle(ROLE_TITLE[role] or "", color)
 			slam()
+			-- the quick explanation of the role, typed under the title
+			ui.subtitle.Text = ""
+			if guide then
+				typeText(ui.subtitle, guide.quick, 0.04, token)
+			end
 			if role == "Alpha" then
 				doFlash(Color3.fromRGB(255, 30, 50), 0.8) -- red flash + shake
 				for _ = 1, 10 do
@@ -558,8 +595,7 @@ local function play(name: string, data: any, token: number)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
-			playEmote(model, "Zombie", false)
-			emoteStart -= 1.7 -- no build-up: you're already one of them
+			playEmote(model, "Zombie", false, 0) -- no build-up: you're already one of them
 			ui.big.LightColor = C.mint
 			ui.big.Ambient = Color3.fromRGB(20, 60, 35)
 			ui.big.Visible = true
