@@ -49,6 +49,7 @@ function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): S
 		mapHistory = {},
 		mapId = nil,
 		startRoles = {},
+		busy = {},
 	}
 end
 
@@ -58,18 +59,29 @@ local function setPhase(s: State, phase: Types.Phase, timeLeft: number, fx: { Ef
 	table.insert(fx, { type = "PhaseChanged", phase = phase })
 end
 
+-- Players ready to play: everyone except those in the dressing room or the shop.
+local function readyCount(s: State): number
+	local n = 0
+	for id in s.players do
+		if not s.busy[id] then
+			n += 1
+		end
+	end
+	return n
+end
+
 local function announceWaiting(s: State, fx: { Effect })
 	table.insert(fx, {
 		type = "Announce",
 		card = "WaitingForPlayers",
-		data = { count = Util.count(s.players), needed = s.config.minPlayers },
+		data = { count = readyCount(s), needed = s.config.minPlayers },
 	})
 end
 
 -- Mode for the next round. `baseConfig.modePool` lists the modes in play (default: Classic only).
 local function pickMode(s: State): string
 	local base = s.baseConfig
-	return ModePicker.pick(base.modePool or { "Classic" }, Util.count(s.players), s.lastMode, s.rng, {
+	return ModePicker.pick(base.modePool or { "Classic" }, readyCount(s), s.lastMode, s.rng, {
 		ignoreMinimums = base.ignoreModeMinimums,
 		force = base.forceMode,
 	})
@@ -78,15 +90,11 @@ end
 local function modeStillFits(s: State): boolean
 	local mode = Modes.get(s.nextMode)
 	return s.nextMode ~= nil
-		and (
-			s.baseConfig.ignoreModeMinimums
-			or s.baseConfig.forceMode
-			or Util.count(s.players) >= mode.minPlayers
-		)
+		and (s.baseConfig.ignoreModeMinimums or s.baseConfig.forceMode or readyCount(s) >= mode.minPlayers)
 end
 
 local function enterWaitingOrIntermission(s: State, fx: { Effect })
-	if Util.count(s.players) >= s.config.minPlayers then
+	if readyCount(s) >= s.config.minPlayers then
 		s.nextMode = pickMode(s)
 		s.mapChoices = MapVote.choices(
 			s.baseConfig.mapPool or Maps.order,
@@ -125,7 +133,18 @@ local function enterHeadStart(s: State, fx: { Effect })
 		table.insert(fx, { type = "MapChosen", mapId = mapId })
 	end
 	s.votes = {}
-	local ids = Util.sortedIds(s.players)
+	-- players in the dressing room / shop sit this round out (like someone who joined late)
+	local ids = {}
+	for _, id in Util.sortedIds(s.players) do
+		if s.busy[id] then
+			local out = Util.newPlayer(id)
+			out.life = "Out"
+			out.points = s.players[id].points
+			s.players[id] = out
+		else
+			table.insert(ids, id)
+		end
+	end
 	s.startRoles = {}
 	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.alphaCount, s.config.hunterCount)
 	for _, id in ids do
@@ -263,7 +282,7 @@ end
 
 local function timerRanOut(s: State, fx: { Effect })
 	if s.phase == "Intermission" then
-		if Util.count(s.players) >= s.config.minPlayers then
+		if readyCount(s) >= s.config.minPlayers then
 			enterHeadStart(s, fx)
 		else
 			enterWaitingOrIntermission(s, fx)
@@ -332,12 +351,28 @@ local function onVoteMap(s: State, playerId: number, mapId: string, fx: { Effect
 	table.insert(fx, { type = "Announce", card = "Voted", toPlayerId = playerId, data = { mapId = mapId } })
 end
 
+-- Opened / closed the dressing room or the shop. While busy you are left out of the next round;
+-- the countdown only counts ready players.
+local function onSetBusy(s: State, playerId: number, busy: boolean, fx: { Effect })
+	if not s.players[playerId] or (s.busy[playerId] == true) == busy then
+		return
+	end
+	s.busy[playerId] = if busy then true else nil
+	if s.phase == "Waiting" then
+		enterWaitingOrIntermission(s, fx)
+	elseif s.phase == "Intermission" and readyCount(s) < s.config.minPlayers then
+		setPhase(s, "Waiting", 0, fx)
+		announceWaiting(s, fx)
+	end
+end
+
 local function onLeft(s: State, playerId: number, fx: { Effect })
 	local leaver = s.players[playerId]
 	if not leaver then
 		return
 	end
 	s.votes[playerId] = nil
+	s.busy[playerId] = nil
 	s.players[playerId] = nil
 	s.sinceSpecial[playerId] = nil
 	s.lastHits[playerId] = nil
@@ -346,7 +381,7 @@ local function onLeft(s: State, playerId: number, fx: { Effect })
 	if s.phase == "Waiting" then
 		announceWaiting(s, fx)
 	elseif s.phase == "Intermission" then
-		if Util.count(s.players) < s.config.minPlayers then
+		if readyCount(s) < s.config.minPlayers then
 			setPhase(s, "Waiting", 0, fx)
 			announceWaiting(s, fx)
 		end
@@ -372,6 +407,8 @@ function RoundRules.apply(state: State, event: Types.Event): (State, { Effect })
 		onLeft(s, event.playerId, fx)
 	elseif event.type == "VoteMap" then
 		onVoteMap(s, event.playerId, event.mapId, fx)
+	elseif event.type == "SetBusy" then
+		onSetBusy(s, event.playerId, event.busy, fx)
 	else
 		local before = #fx
 		Infection.step(s, event, fx)
@@ -451,7 +488,8 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		alphaRevealed = s.alphaRevealed,
 		humansLeft = humansLeft,
 		needed = s.config.minPlayers,
-		count = Util.count(s.players),
+		count = readyCount(s),
+		busy = s.busy[viewerId] == true, -- you're in the dressing room / shop
 		hitsToDown = s.config.hitsToDown,
 		bleedOut = s.config.bleedOut,
 		reviveTime = s.config.reviveTime,

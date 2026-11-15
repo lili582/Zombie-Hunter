@@ -1,6 +1,7 @@
 --!strict
 -- Spawns characters and applies each role's look, health, speed, tools and lights.
--- Keeps the player's own outfit; zombies only get their skin recolored.
+-- Characters are built from the player's in-game outfit (catalog, saved in their profile;
+-- new players get the default character). Zombies only get their skin recoloured on top.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
@@ -9,6 +10,7 @@ local Weapons = require(Shared.Config.Weapons)
 local Classic = require(Shared.Config.Classic)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Items = require(Shared.Config.Items)
+local Outfit = require(Shared.Data.Outfit)
 
 local CharacterService = {}
 
@@ -21,6 +23,11 @@ local ROLE_COLORS = {
 local ZOMBIE_SKIN = Color3.fromRGB(118, 156, 96)
 
 local diedCallback: ((Player, Model) -> ())? = nil
+
+-- Set by RoundManager: the player's saved outfit (nil while their save is loading).
+CharacterService.outfitOf = function(_player: Player): any
+	return nil
+end
 
 -- Set by RoundManager: the gun every Survivor carries this round (Outbreak), or nil.
 CharacterService.humanWeapon = function(): string?
@@ -44,14 +51,13 @@ local function zombieLook(player: Player): (Color3, Color3)
 end
 
 -- Tool looks per shop item: handle size and color.
-local TOOL_LOOK: { [string]: { Vector3 | Color3 } } = {
-	Revolver = { Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44) },
-	LeverRifle = { Vector3.new(0.4, 0.8, 3.2), Color3.fromRGB(110, 75, 48) },
-	RustySMG = { Vector3.new(0.5, 1.1, 1.6), Color3.fromRGB(120, 70, 50) },
-	Bat = { Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50) },
-	Shovel = { Vector3.new(0.5, 4.6, 0.5), Color3.fromRGB(110, 110, 115) },
-	Crowbar = { Vector3.new(0.3, 3, 0.3), Color3.fromRGB(150, 40, 50) },
-}
+-- (size, colour) of a shop weapon's handle, from Config/Items `look`.
+local function toolLook(id: string, fallback: string): (Vector3, Color3)
+	local item = Items.get(id) or Items.get(fallback)
+	local look = item.look
+	return Vector3.new(look.size[1], look.size[2], look.size[3]),
+		Color3.fromRGB(look.color[1], look.color[2], look.color[3])
+end
 
 -- Set by RoundManager: which Alpha class a player has this round (nil = not an Alpha).
 CharacterService.alphaClassOf = function(_player: Player): string?
@@ -67,6 +73,35 @@ local function humanoidOf(player: Player): Humanoid?
 	return if char then char:FindFirstChildOfClass("Humanoid") else nil
 end
 
+-- The HumanoidDescription for a player's in-game character.
+function CharacterService.descriptionFor(player: Player): HumanoidDescription
+	local o = CharacterService.outfitOf(player) or Outfit.default()
+	local desc = Instance.new("HumanoidDescription")
+	for prop, value in Outfit.descriptionProps(o) do
+		if type(value) == "table" then
+			(desc :: any)[prop] = Color3.fromRGB(value[1], value[2], value[3])
+		else
+			(desc :: any)[prop] = value
+		end
+	end
+	return desc
+end
+
+-- Puts the player's current outfit on their character right away (catalog try-on, lobby only).
+function CharacterService.applyOutfit(player: Player): boolean
+	local hum = humanoidOf(player)
+	if not hum then
+		return false
+	end
+	local ok, err = pcall(function()
+		hum:ApplyDescription(CharacterService.descriptionFor(player))
+	end)
+	if not ok then
+		warn(`CharacterService: couldn't apply outfit for {player.Name}: {err}`)
+	end
+	return ok
+end
+
 local function weld(part: BasePart, to: BasePart, offset: CFrame)
 	part.Anchored = false
 	part.CanCollide = false
@@ -76,6 +111,66 @@ local function weld(part: BasePart, to: BasePart, offset: CFrame)
 	w.Part0 = to
 	w.Part1 = part
 	w.Parent = part
+end
+
+-- Adventurer gear on every character (survivors, the Hunter, and disguised zombies alike, so it
+-- gives nothing away): a worn backpack, two shoulder straps and a little flashlight clipped to
+-- the chest. Built from parts, so it needs no catalog items.
+local function addGear(char: Model)
+	local torso = (char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")) :: BasePart?
+	if not torso or char:FindFirstChild("SurvivalGear") then
+		return
+	end
+	local gear = Instance.new("Model")
+	gear.Name = "SurvivalGear"
+	gear.Parent = char
+	local depth = torso.Size.Z / 2
+	local function piece(name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material?)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = color
+		p.Material = material or Enum.Material.Fabric
+		p.CanQuery = false
+		p.CanTouch = false
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		weld(p, torso, offset)
+		p.Parent = gear
+		return p
+	end
+	local canvas = Color3.fromRGB(92, 70, 48)
+	local dark = Color3.fromRGB(46, 38, 32)
+	-- backpack (on the back = +Z of the torso) with a flap and a rolled blanket on top
+	piece("Pack", Vector3.new(1.5, 1.7, 0.7), CFrame.new(0, -0.05, depth + 0.35), canvas)
+	piece("PackFlap", Vector3.new(1.52, 0.55, 0.74), CFrame.new(0, 0.55, depth + 0.36), dark)
+	piece("Bedroll", Vector3.new(1.7, 0.4, 0.4), CFrame.new(0, 0.95, depth + 0.3), Color3.fromRGB(70, 82, 64))
+	-- straps over the shoulders, down the front
+	for _, x in { -0.45, 0.45 } do
+		piece("Strap", Vector3.new(0.22, 1.9, 0.06), CFrame.new(x, 0, -depth - 0.03), dark)
+		piece(
+			"StrapTop",
+			Vector3.new(0.22, 0.06, torso.Size.Z + 0.1),
+			CFrame.new(x, torso.Size.Y / 2 + 0.03, 0),
+			dark
+		)
+	end
+	-- chest flashlight on the left strap, lens lit
+	piece(
+		"Torch",
+		Vector3.new(0.24, 0.5, 0.24),
+		CFrame.new(-0.45, 0.35, -depth - 0.17),
+		Color3.fromRGB(28, 28, 32),
+		Enum.Material.Metal
+	)
+	local lens = piece(
+		"TorchLens",
+		Vector3.new(0.2, 0.06, 0.2),
+		CFrame.new(-0.45, 0.62, -depth - 0.17),
+		Color3.fromRGB(255, 236, 170),
+		Enum.Material.Neon
+	)
+	lens.CastShadow = false
 end
 
 local function makeTool(name: string, handleSize: Vector3?, color: Color3?): Tool
@@ -215,8 +310,8 @@ function CharacterService.giveTools(player: Player, role: string)
 		-- the gun and melee the player equipped in the shop (tool name = item id)
 		for _, slot in { "hunterGun", "hunterMelee" } do
 			local id = CharacterService.equippedOf(player, slot)
-			local look = TOOL_LOOK[id] or TOOL_LOOK[if slot == "hunterGun" then "Revolver" else "Bat"]
-			local tool = makeTool(id, look[1] :: Vector3, look[2] :: Color3)
+			local size, color = toolLook(id, if slot == "hunterGun" then "Revolver" else "Bat")
+			local tool = makeTool(id, size, color)
 			tool:SetAttribute(if slot == "hunterGun" then "Gun" else "Melee", true)
 			tool.Parent = backpack
 		end
@@ -245,7 +340,8 @@ function CharacterService.giveTools(player: Player, role: string)
 end
 
 -- Look + stats for a role on the current character (no respawn).
-function CharacterService.applyRole(player: Player, role: string)
+-- `noTools`: the look and stats only, empty hands (the intro: tools would show your role).
+function CharacterService.applyRole(player: Player, role: string, noTools: boolean?)
 	local char = player.Character
 	local hum = humanoidOf(player)
 	if not char or not hum then
@@ -265,7 +361,7 @@ function CharacterService.applyRole(player: Player, role: string)
 		flashlight(char)
 		-- secret roles: the Hunter looks like everyone else (no hat, no name tag)
 	end
-	CharacterService.giveTools(player, role)
+	CharacterService.giveTools(player, if noTools then "None" else role)
 end
 
 -- A zombie's true face. Shown while the claws are out (setClawsOut), and for `seconds` after an
@@ -413,11 +509,30 @@ local function forget(char: Model)
 end
 
 -- Loads a fresh character, applies the role and moves it to `at`. Yields.
-function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
+-- `noTools`: spawn empty-handed (round intro); call giveTools later.
+function CharacterService.spawn(player: Player, role: string?, at: CFrame?, noTools: boolean?)
 	if player.Parent == nil then
 		return
 	end
-	player:LoadCharacter()
+	-- the in-game character (catalog outfit), not the Roblox avatar
+	local ok = pcall(function()
+		player:LoadCharacterWithHumanoidDescription(CharacterService.descriptionFor(player))
+	end)
+	if not ok then
+		warn(`CharacterService: outfit failed to load for {player.Name}, using the default character`)
+		local fallback = pcall(function()
+			local desc = Instance.new("HumanoidDescription")
+			for prop, value in Outfit.descriptionProps(Outfit.default()) do
+				if type(value) == "table" then
+					(desc :: any)[prop] = Color3.fromRGB(value[1], value[2], value[3])
+				end
+			end
+			player:LoadCharacterWithHumanoidDescription(desc)
+		end)
+		if not fallback then
+			player:LoadCharacter()
+		end
+	end
 	local char = player.Character
 	if not char then
 		return
@@ -433,6 +548,7 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 		waited += task.wait(0.1)
 	end
 	hideNameTag(hum)
+	addGear(char)
 	char.AncestryChanged:Connect(function()
 		if not char.Parent then
 			forget(char)
@@ -447,7 +563,7 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 		char:PivotTo(at + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
 	end
 	if role then
-		CharacterService.applyRole(player, role)
+		CharacterService.applyRole(player, role, noTools)
 	else
 		CharacterService.giveTools(player, "None")
 	end

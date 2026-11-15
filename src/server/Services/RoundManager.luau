@@ -14,6 +14,8 @@ local Remotes = require(Shared.Net.Remotes)
 local Rewards = require(Shared.Rules.Rewards)
 local Profile = require(Shared.Data.Profile)
 local SpawnGroups = require(Shared.Rules.SpawnGroups)
+local Lobby = require(Shared.Rules.Lobby)
+local Outfit = require(Shared.Data.Outfit)
 
 local Services = script.Parent
 local CharacterService = require(Services.CharacterService)
@@ -26,6 +28,7 @@ local AbilityService = require(Services.AbilityService)
 local LobbyService = require(Services.LobbyService)
 local DataService = require(Services.DataService)
 local ShopService = require(Services.ShopService)
+local CatalogService = require(Services.CatalogService)
 
 local RoundManager = {}
 
@@ -202,9 +205,22 @@ local function spawnRoundCharacters()
 		-- the Alpha starts in a group like everyone else, disguised (claws wake up at release)
 		local at = startFor(id)
 		task.spawn(function()
-			CharacterService.spawn(player, p.role, at)
-			giveGun(player, p.role)
+			-- empty hands during the intro: the toolbar would show your role before the reveal
+			CharacterService.spawn(player, p.role, at, true)
+			local char = player.Character
 			CharacterService.freeze(player, introEnds - os.clock())
+			task.wait(math.max(0, introEnds - os.clock()))
+			-- the intro is over: hand out the tools (and the Hunter's ammo) for the role you have now
+			local now = state.players[player.UserId]
+			if
+				now
+				and player.Character == char
+				and inRound()
+				and (now.life == "Alive" or now.life == "Downed")
+			then
+				CharacterService.giveTools(player, now.role)
+				giveGun(player, now.role)
+			end
 		end)
 	end
 end
@@ -327,7 +343,7 @@ end
 -- A character died (fell off the map, or a zombie was killed by the Hunter).
 local function onDied(player: Player, char: Model)
 	local p = state.players[player.UserId]
-	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" or p.life == "Dead" then
+	if not p or not inRound() or Lobby.isSittingOut(p.life) then
 		task.delay(2, function()
 			if player.Character == char then
 				CharacterService.spawn(player, nil, map.lobbySpawn)
@@ -378,8 +394,27 @@ function RoundManager.start()
 	TimingService.init()
 	DataService.start()
 	ShopService.start(RoundManager)
+	CatalogService.start(ShopService.canShop) -- same rule: in the lobby, not while playing
+	CharacterService.outfitOf = function(player: Player): any
+		-- your own look once you've changed anything; until then your boy / girl starter
+		local profile = DataService.get(player)
+		if profile and profile.outfitPicked then
+			return profile.outfit
+		end
+		return Outfit.starter(Outfit.starterFor(player.UserId))
+	end
+	-- dressing room / shop open: leave this player out of the next round
+	Remotes.get("SetBusy").OnServerEvent:Connect(function(player, busy)
+		if type(busy) == "boolean" then
+			RoundManager.send({ type = "SetBusy", playerId = player.UserId, busy = busy })
+		end
+	end)
 	CharacterService.equippedOf = ShopService.equipped
 	DataService.onLoaded(function(player, profile)
+		-- the save arrived: dress the character in their outfit (unless they're in a round)
+		if ShopService.canShop(player) then
+			CharacterService.applyOutfit(player)
+		end
 		-- the saved Alpha class goes back into the rules (no banner)
 		RoundManager.send({
 			type = "SetAlphaClass",

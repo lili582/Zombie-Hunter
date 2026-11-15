@@ -1,7 +1,7 @@
 --!strict
 -- Finds the tagged spots of the map. If there is no map yet, builds a greybox Town + a lobby,
 -- so the game is playable right away. Replace workspace.Map with a hand-built map later:
--- it only needs parts tagged HumanStart (1+, more = players start in spread-out groups), AlphaStart, ZombieSpawn (3+), AmmoSpawn, and an
+-- it only needs parts tagged HumanStart (1+, more = players start in spread-out groups), ZombieSpawn (3+), AmmoSpawn, and an
 -- optional part named "AlphaDoor". Phase 2 adds TowerSpot (5+, ideally 8), HeliZone (1-3) and
 -- Locker (the locker parts themselves, any number).
 local CollectionService = game:GetService("CollectionService")
@@ -15,7 +15,6 @@ local MapService = {}
 export type MapInfo = {
 	humanStart: CFrame,
 	humanStarts: { CFrame }, -- every HumanStart spot: groups of players start at different ones
-	alphaStart: CFrame,
 	zombieSpawns: { CFrame },
 	ammoSpawns: { CFrame },
 	lobbySpawn: CFrame,
@@ -420,7 +419,7 @@ local function buildLobby()
 		COLORS.blood
 	)
 
-	-- shop counter (west wall) + dressing mirror (catalog: later)
+	-- shop counter (west wall) + dressing mirror (character catalog)
 	local east = Vector3.new(1, 0, 0)
 	local counter = piece("ShopCounter", Vector3.new(4, 4, 16), at(-37, 3, -10), SAFEHOUSE.wood)
 	sign(
@@ -449,9 +448,19 @@ local function buildLobby()
 		"MirrorSign",
 		Vector3.new(10, 2, 0.3),
 		facing(at(-W / 2 + 1.2, 13.5, 2), east),
-		"CATALOG - SOON",
+		"CATALOG",
 		Color3.fromRGB(191, 169, 242)
 	)
+	-- the dressing mirror opens the character catalog
+	local catalogPrompt = Instance.new("ProximityPrompt")
+	catalogPrompt.ActionText = "Edit your character"
+	catalogPrompt.ObjectText = "Catalog"
+	catalogPrompt.KeyboardKeyCode = Enum.KeyCode.E
+	catalogPrompt.HoldDuration = 0
+	catalogPrompt.MaxActivationDistance = 10
+	catalogPrompt.RequiresLineOfSight = false
+	CollectionService:AddTag(catalogPrompt, "CatalogPrompt")
+	catalogPrompt.Parent = mirror
 
 	-- the Alpha pedestals (east wall)
 	buildAlphaStation(lobby, at(W / 2 - 8, 1, 0), Vector3.new(-1, 0, 0))
@@ -571,7 +580,6 @@ local function buildTown()
 	do
 		marker(map, "HumanStart", p)
 	end
-	marker(map, "AlphaStart", roomPos + Vector3.new(0, 3, 0))
 	for _, p in
 		{
 			Vector3.new(-150, 3, -150),
@@ -665,7 +673,6 @@ function MapService.load(): MapInfo
 	local info: MapInfo = {
 		humanStart = cframesFor("HumanStart", 1)[1],
 		humanStarts = cframesFor("HumanStart", 1),
-		alphaStart = cframesFor("AlphaStart", 1)[1],
 		zombieSpawns = cframesFor("ZombieSpawn", 3),
 		ammoSpawns = cframesFor("AmmoSpawn", 0),
 		towerSpots = cframesFor("TowerSpot", 0),

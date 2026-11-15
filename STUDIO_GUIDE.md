@@ -95,6 +95,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] **Group starts:** with 2 players you start at 2 different places; with 3, one alone and a pair; with 4, 2 pairs. Never everyone in one place. Who is with whom changes every round.
 - [ ] **Role help icon:** in a round a round **?** icon in your role colour sits top left with your role name (it pulses at the start). Click it, tap it or press **H**: a panel explains your goal and how to play (keys included). It changes when you're infected, and Outbreak survivors get the pistol version.
 - [ ] **Role emote:** on YOUR ROLE / rules cards your character moves: Survivor cowers and shakes, Hunter aims and fires with a flash, Alpha hangs limp then snaps up crooked with red eyes and glitches. Getting infected: the infected card shows your character shambling with mint eyes.
+- [ ] **No early hints:** during the intro your toolbar at the bottom is empty (no gun / medkit / claws). Your tools appear the moment the intro ends.
 - [ ] **Secret roles:** the player list shows no role for any other player for the whole round, not even ZOMBIE or DOWN (only WAITING for people sitting out). Your own row shows your role. No floating player names, health bars, name tags or Hunter hat over heads.
 - [ ] **The Alpha is disguised**: starts with the survivors, looks exactly like one (own skin, flashlight, normal speed). After the 10s run his claws wake up + banner **THE ALPHA HAS AWAKENED — it could be anyone**. Taking the claws out (**1**) shows his zombie face (zombie skin, red eyes, faster) until he puts them away.
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
@@ -148,10 +149,14 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Get infected: you still look like yourself (other players see you that way, with a flashlight), claws in the toolbar. Press **1**: zombie skin + glowing eyes, and they stay while the claws are out. Press **1** again (put them away): you look human again. The Alpha's eyes are red when revealed. During the head start the Alpha's claws won't come out.
 - [ ] Lobby countdown: HUD says **NEXT ROUND STARTING - VOTE FOR A MAP AT THE BOARD**, the sign says **NEXT ROUND STARTING SOON**. The mode only shows on the MODE card.
 
+- [ ] **Starter look:** a new player is an ordinary boy (charcoal top, jeans) or girl (rose top, dark legs). In the dressing room, STARTER tab: BOY / GIRL switch.
+- [ ] **Rooms:** the mirror / CATALOG opens a full-screen DRESSING ROOM, the counter / SHOP a full-screen Z-SHOP: your character turns on the right (drag it). Shop: click a card to preview the weapon in your hand or the zombie skin. Stay in a room when the countdown ends: you are NOT pulled into the round (no intro cards), you join the next one after DONE. With 5 needed and one player in a room, the lobby shows WAITING FOR PLAYERS 4/5.
+- [ ] **Character catalog:** Press E at the mirror on the west wall (sign CATALOG) or the CATALOG button top right: the window opens on the left. HATS tab shows real catalog items with pictures; WEAR puts one on your character right away; REMOVE takes it off. BODY tab: pick ARMS, click a colour. WEARING lists what you have on. RESET TO DEFAULT / USE MY ROBLOX AVATAR work. Stop and Play again: you keep your character (needs the place published with API access, see Saving above). During your round the button is hidden and the mirror doesn't open it. Catalog search needs the place to be published.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:
-`HumanStart` (1+; with several, players start in spread-out groups of 2-3, ideally 6-8 spots), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
+`HumanStart` (1+; with several, players start in spread-out groups of 2-3, ideally 6-8 spots), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
 
 ## Where to change numbers
 
@@ -159,4 +164,4 @@ Everything marked *(tune)* in the spec is in `Shared/Config`: round timers, hits
 
 ## Known Phase 1 limits (next phases)
 
-Points/coins are not saved yet (DataService, v0.4). Only one map exists, so the map vote has one choice until the v1.0 maps are added; adding a map = a builder in `MapService` + an entry in `Config/Maps` + loading it on `MapChosen` in `RoundManager`. `AlphaStart` / `AlphaDoor` are no longer used (the Alpha spawns disguised with the survivors) but are still built.
+Points/coins are not saved yet (DataService, v0.4). Only one map exists, so the map vote has one choice until the v1.0 maps are added; adding a map = a builder in `MapService` + an entry in `Config/Maps` + loading it on `MapChosen` in `RoundManager`.

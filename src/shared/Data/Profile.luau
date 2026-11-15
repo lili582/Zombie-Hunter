@@ -1,6 +1,8 @@
 --!strict
 -- The saved player profile: coins, owned items, what is equipped, stats. Pure.
 -- Everything read from the DataStore goes through `migrate`, so old or broken saves still load.
+local Outfit = require("./Outfit")
+
 local Profile = {}
 
 Profile.VERSION = 1
@@ -31,6 +33,8 @@ export type Profile = {
 	owned: { [string]: boolean }, -- item id -> true (starter items are always owned)
 	equipped: Equipped,
 	stats: Stats,
+	outfit: Outfit.Outfit, -- your in-game character (dressing room)
+	outfitPicked: boolean, -- false = you still wear your starter (boy/girl by user id)
 }
 
 -- A reward for one round (or one event): coins and stat counters to add.
@@ -73,6 +77,8 @@ function Profile.new(): Profile
 		owned = {},
 		equipped = table.clone(DEFAULT_EQUIPPED),
 		stats = stats :: any,
+		outfit = Outfit.default(),
+		outfitPicked = false,
 	}
 end
 
@@ -98,6 +104,8 @@ function Profile.migrate(raw: any): Profile
 			end
 		end
 	end
+	p.outfit = Outfit.migrate(raw.outfit)
+	p.outfitPicked = raw.outfitPicked == true
 	if type(raw.stats) == "table" then
 		for _, name in STAT_NAMES do
 			(p.stats :: any)[name] = count(raw.stats[name])
@@ -124,6 +132,8 @@ function Profile.snapshot(p: Profile): { [string]: any }
 		owned = table.clone(p.owned),
 		equipped = table.clone(p.equipped),
 		stats = table.clone(p.stats),
+		outfit = Outfit.migrate(p.outfit), -- a copy
+		outfitPicked = p.outfitPicked,
 	}
 end
 

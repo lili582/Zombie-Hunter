@@ -27,6 +27,7 @@ Items.list = {
 		price = 0,
 		line = "Six shots. Reliable.",
 		stats = Weapons.Revolver,
+		look = { size = { 0.4, 0.9, 1.8 }, color = { 40, 40, 44 } },
 	},
 	LeverRifle = {
 		name = "LEVER RIFLE",
@@ -34,6 +35,7 @@ Items.list = {
 		slot = "hunterGun",
 		price = 400,
 		line = "Hits hard, far. Slow to fire, 5 shots.",
+		look = { size = { 0.4, 0.8, 3.2 }, color = { 110, 75, 48 } },
 		stats = { damage = 50, fireInterval = 0.9, mag = 5, reserve = 30, range = 260, reloadTime = 2 },
 	},
 	RustySMG = {
@@ -42,6 +44,7 @@ Items.list = {
 		slot = "hunterGun",
 		price = 600,
 		line = "Sprays fast, weak and short range.",
+		look = { size = { 0.5, 1.1, 1.6 }, color = { 120, 70, 50 } },
 		stats = { damage = 12, fireInterval = 0.15, mag = 20, reserve = 80, range = 120, reloadTime = 1.8 },
 	},
 	-- Hunter melee
@@ -52,6 +55,7 @@ Items.list = {
 		price = 0,
 		line = "Pushes zombies back.",
 		stats = Weapons.Melee,
+		look = { size = { 0.4, 4, 0.4 }, color = { 120, 85, 50 } },
 	},
 	Shovel = {
 		name = "SHOVEL",
@@ -59,6 +63,7 @@ Items.list = {
 		slot = "hunterMelee",
 		price = 250,
 		line = "Heavier hit, slower swing.",
+		look = { size = { 0.5, 4.6, 0.5 }, color = { 110, 110, 115 } },
 		stats = { damage = 22, interval = 1.1, range = 7.5 },
 	},
 	Crowbar = {
@@ -67,6 +72,7 @@ Items.list = {
 		slot = "hunterMelee",
 		price = 250,
 		line = "Quick swings, shorter reach.",
+		look = { size = { 0.3, 3, 0.3 }, color = { 150, 40, 50 } },
 		stats = { damage = 11, interval = 0.55, range = 6 },
 	},
 	-- Zombie skins: body color + eye glow as { r, g, b } (basic zombie, and the Alpha's face when
