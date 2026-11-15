@@ -5,6 +5,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- **Slimmer health bar:** a small, thin rounded bar in the bottom-left corner with a caption above it (HEALTHY / WOUNDED x1 / HP for zombies). It slides smoothly on a hit, humans' bar is split into 3 hit marks, and it turns pink when you're one hit from going down. The medkit line sits just above it.
 - **Every zombie is disguised:** infected (basic) zombies now look like any other player too (own skin and clothes, a flashlight). Each claw swing shows their zombie face (their zombie skin + glowing eyes) for 3s; the Alpha's revealed eyes are red. Basic zombies keep their slower speed.
 - **The next mode is a surprise:** the lobby no longer says which mode is next (HUD shows NEXT ROUND STARTING, the sign shows NEXT ROUND STARTING SOON / ROUND IN PROGRESS). You find out on the intro's MODE card.
 
