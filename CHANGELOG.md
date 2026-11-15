@@ -5,6 +5,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- **Spread-out group starts:** at round start players are split into groups of 2 (the last group may have 3), and each group starts at its own spot, far apart on the map (`Rules/SpawnGroups`, 6 tests). Groups are reshuffled every round and the disguised Alpha lands in a random group. The greybox Town now has 7 `HumanStart` spots; a map with one spot still starts everyone together.
 - **Role reveal emotes:** on the intro's role card your character acts out what it got, as the light comes on: **Survivor** crouches, shields its face and shakes, head snapping around; **Hunter** raises a revolver, scans and fires (recoil + muzzle flash); **Alpha** hangs limp, then its head snaps up crooked, red eyes open, claws rise and it glitches; **Zombie** (the infected card) shambles with arms reaching, head lolling and mint eyes. It carries on into the rules card. Made in code (`RoleEmote`), R6 and R15.
 - **Repair emote:** while repairing a radio tower your character turns to face the box, holds a wrench and hammers at it (left hand steadying), with sparks on every hit. Everyone sees it. Made in code (no animation asset), works on R6 and R15.
 - **Slimmer health bar:** a small, thin rounded bar in the bottom-left corner with a caption above it (HEALTHY / WOUNDED x1 / HP for zombies). It slides smoothly on a hit, humans' bar is split into 3 hit marks, and it turns pink when you're one hit from going down. The medkit line sits just above it.

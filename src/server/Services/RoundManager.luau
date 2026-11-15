@@ -13,6 +13,7 @@ local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
 local Rewards = require(Shared.Rules.Rewards)
 local Profile = require(Shared.Data.Profile)
+local SpawnGroups = require(Shared.Rules.SpawnGroups)
 
 local Services = script.Parent
 local CharacterService = require(Services.CharacterService)
@@ -166,16 +167,40 @@ local function sendEveryoneToLobby()
 	end
 end
 
+-- Where each player started this round (their group's spot). Used again if they fall out of
+-- the world, or become the Alpha during the head start.
+local startOf: { [number]: CFrame } = {}
+local spawnRng = Rng.new(os.time() + 7)
+
+local function startFor(id: number): CFrame
+	return startOf[id] or map.humanStart
+end
+
 local function spawnRoundCharacters()
 	-- everyone stands frozen in the dark while the intro cards play
 	local introEnds = os.clock() + Classic.introLength
+	-- groups of 2-3 start at different spots, spread over the map
+	local ids = {}
+	for id, p in state.players do
+		if p.life ~= "Out" then
+			table.insert(ids, id)
+		end
+	end
+	local spots = {}
+	for _, cf in map.humanStarts do
+		table.insert(spots, { x = cf.Position.X, z = cf.Position.Z })
+	end
+	startOf = {}
+	for id, spot in SpawnGroups.assign(ids, spots, spawnRng) do
+		startOf[id] = map.humanStarts[spot]
+	end
 	for id, p in state.players do
 		local player = playerById(id)
 		if not player or p.life == "Out" then
 			continue
 		end
-		-- the Alpha starts among the survivors, disguised (claws only work after release)
-		local at = map.humanStart
+		-- the Alpha starts in a group like everyone else, disguised (claws wake up at release)
+		local at = startFor(id)
 		task.spawn(function()
 			CharacterService.spawn(player, p.role, at)
 			giveGun(player, p.role)
@@ -240,7 +265,7 @@ runEffect = function(f: any)
 		if player then
 			local role = if f.type == "BecameAlpha" then "Alpha" else "Zombie"
 			local at = if state.phase == "HeadStart"
-				then map.humanStart
+				then startFor(f.playerId)
 				else (CharacterService.position(player) or randomZombieSpawn())
 			CombatService.clearGun(player)
 			task.spawn(CharacterService.spawn, player, role, at)
@@ -315,7 +340,7 @@ local function onDied(player: Player, char: Model)
 		task.delay(2, function()
 			local now = state.players[player.UserId]
 			if now and inRound() and player.Character == char then
-				CharacterService.spawn(player, now.role, map.humanStart)
+				CharacterService.spawn(player, now.role, startFor(player.UserId))
 				giveGun(player, now.role)
 				if now.life == "Downed" then
 					CharacterService.setDowned(player, true, hookRevivePrompt)

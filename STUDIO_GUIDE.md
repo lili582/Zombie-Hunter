@@ -92,6 +92,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
 - [ ] 20s countdown → everyone frozen in the dark while the intro plays (~16s): map name types in → **MODE: CLASSIC** (red flash) → **SOMEONE IS INFECTED...** with every player shown as a faceless shadow while a red light jumps between them and goes out on nobody → **your own character** in the dark, heartbeat, light flickers on in your role colour → your rules → **A HUNTER WALKS AMONG YOU** over all the shadows. Then humans get 10s to run before the Alpha is released.
+- [ ] **Group starts:** with 4 players you start in 2 pairs at 2 different places on the map (with 2-3 players everyone starts together). Who is with whom changes every round.
 - [ ] **Role emote:** on YOUR ROLE / rules cards your character moves: Survivor cowers and shakes, Hunter aims and fires with a flash, Alpha hangs limp then snaps up crooked with red eyes and glitches. Getting infected: the infected card shows your character shambling with mint eyes.
 - [ ] **Secret roles:** the player list shows no role for any other player for the whole round, not even ZOMBIE or DOWN (only WAITING for people sitting out). Your own row shows your role. No floating player names, health bars, name tags or Hunter hat over heads.
 - [ ] **The Alpha is disguised**: starts with the survivors, looks exactly like one (own skin, flashlight, normal speed). After the 10s run his claws wake up + banner **THE ALPHA HAS AWAKENED — it could be anyone**. Taking the claws out (**1**) shows his zombie face (zombie skin, red eyes, faster) until he puts them away.
@@ -146,7 +147,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:
-`HumanStart` (1), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
+`HumanStart` (1+; with several, players start in spread-out groups of 2-3, ideally 6-8 spots), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
 
 ## Where to change numbers
 

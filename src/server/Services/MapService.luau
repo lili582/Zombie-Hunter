@@ -1,7 +1,7 @@
 --!strict
 -- Finds the tagged spots of the map. If there is no map yet, builds a greybox Town + a lobby,
 -- so the game is playable right away. Replace workspace.Map with a hand-built map later:
--- it only needs parts tagged HumanStart, AlphaStart, ZombieSpawn (3+), AmmoSpawn, and an
+-- it only needs parts tagged HumanStart (1+, more = players start in spread-out groups), AlphaStart, ZombieSpawn (3+), AmmoSpawn, and an
 -- optional part named "AlphaDoor". Phase 2 adds TowerSpot (5+, ideally 8), HeliZone (1-3) and
 -- Locker (the locker parts themselves, any number).
 local CollectionService = game:GetService("CollectionService")
@@ -14,6 +14,7 @@ local MapService = {}
 
 export type MapInfo = {
 	humanStart: CFrame,
+	humanStarts: { CFrame }, -- every HumanStart spot: groups of players start at different ones
 	alphaStart: CFrame,
 	zombieSpawns: { CFrame },
 	ammoSpawns: { CFrame },
@@ -556,7 +557,20 @@ local function buildTown()
 	end
 
 	-- tagged spots
-	marker(map, "HumanStart", Vector3.new(0, 3, 150))
+	-- start spots (groups of 2-3 players each start at a different one, spread out)
+	for _, p in
+		{
+			Vector3.new(0, 3, 150), -- south road
+			Vector3.new(150, 3, 0), -- east road
+			Vector3.new(-150, 3, 0), -- west road
+			Vector3.new(0, 3, -110), -- north road
+			Vector3.new(-40, 3, 100), -- behind the police station
+			Vector3.new(100, 3, -20), -- by the houses
+			Vector3.new(40, 3, 128), -- south-east yards
+		}
+	do
+		marker(map, "HumanStart", p)
+	end
 	marker(map, "AlphaStart", roomPos + Vector3.new(0, 3, 0))
 	for _, p in
 		{
@@ -650,6 +664,7 @@ function MapService.load(): MapInfo
 	local map = workspace:FindFirstChild("Map")
 	local info: MapInfo = {
 		humanStart = cframesFor("HumanStart", 1)[1],
+		humanStarts = cframesFor("HumanStart", 1),
 		alphaStart = cframesFor("AlphaStart", 1)[1],
 		zombieSpawns = cframesFor("ZombieSpawn", 3),
 		ammoSpawns = cframesFor("AmmoSpawn", 0),
