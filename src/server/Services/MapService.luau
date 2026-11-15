@@ -399,6 +399,8 @@ local MapLighting = require(MapsFolder.Lighting)
 local BUILDERS: { [string]: any } = {
 	Town = require(MapsFolder.Town),
 	ForestCamp = require(MapsFolder.ForestCamp),
+	School = require(MapsFolder.School),
+	Mall = require(MapsFolder.Mall),
 }
 
 local current: MapInfo? = nil

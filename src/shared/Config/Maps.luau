@@ -3,7 +3,7 @@
 -- towers, helicopter zones...) are data in that builder; the round rules get them through the
 -- server. All (tune).
 local Maps = {
-	order = { "Town", "ForestCamp" },
+	order = { "Town", "ForestCamp", "School", "Mall" },
 	choices = 3, -- maps shown on the vote board
 	maxRepeats = 2, -- a map can't be played more than twice in a row
 	Town = {
@@ -15,6 +15,16 @@ local Maps = {
 		id = "ForestCamp",
 		name = "FOREST CAMP",
 		line = "the counselors never came back from the lake",
+	},
+	School = {
+		id = "School",
+		name = "SCHOOL AT NIGHT",
+		line = "detention ran late. very late.",
+	},
+	Mall = {
+		id = "Mall",
+		name = "SHOPPING MALL",
+		line = "closing time was three weeks ago",
 	},
 }
 

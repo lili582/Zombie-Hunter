@@ -78,18 +78,20 @@ test("votes count only during the intermission and only for maps on the board", 
 end)
 
 test("the voted map is played, named on the map card, and remembered", function()
+	local Maps = require("../src/shared/Config/Maps")
 	local s = H.run(RoundRules.new(Classic, Rng.new(1)), H.join(5))
+	local pick = s.mapChoices[#s.mapChoices] -- any map on the board
 	local fx
-	s, fx = H.run(s, { vote(1, "Town"), H.tick(Classic.intermission) })
-	expect(s.mapId).toBe("Town")
-	expect(s.mapHistory).toEqual({ "Town" })
+	s, fx = H.run(s, { vote(1, pick), H.tick(Classic.intermission) })
+	expect(s.mapId).toBe(pick)
+	expect(s.mapHistory).toEqual({ pick })
 	expect(#H.find(fx, function(f)
-		return f.type == "MapChosen" and f.mapId == "Town"
+		return f.type == "MapChosen" and f.mapId == pick
 	end)).toBe(1)
 	local card = H.find(fx, function(f)
 		return f.type == "Announce" and f.card == "Map"
 	end)
-	expect(card[1].data.name).toBe("ABANDONED TOWN")
+	expect(card[1].data.name).toBe(Maps.get(pick).name)
 	expect(next(s.votes)).toBeNil() -- votes are cleared for the next intermission
 end)
 
@@ -117,4 +119,10 @@ test("without per-map data the round keeps the map data it was given", function(
 	local s = H.run(RoundRules.new(Classic, Rng.new(1), H.mapMeta), H.join(5))
 	s = H.run(s, { H.tick(Classic.intermission) })
 	expect(s.mapMeta).toBe(H.mapMeta)
+end)
+
+test("with all four maps, the board shows 3 different ones", function()
+	local s = H.run(RoundRules.new(Classic, Rng.new(3)), H.join(5))
+	expect(#s.mapChoices).toBe(3)
+	expect(s.mapChoices[1] ~= s.mapChoices[2] and s.mapChoices[2] ~= s.mapChoices[3]).toBeTruthy()
 end)

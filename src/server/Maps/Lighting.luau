@@ -54,6 +54,42 @@ MapLighting.PRESETS = {
 		grade = { brightness = 0, contrast = 0.15, saturation = -0.3, tint = Color3.fromRGB(222, 240, 245) },
 		bloom = { intensity = 0.8, size = 34, threshold = 1.5 },
 	} :: Preset,
+	-- buzzing fluorescent green inside, wet sodium haze outside
+	School = {
+		clock = 0.4,
+		brightness = 1.1,
+		ambient = Color3.fromRGB(18, 22, 20),
+		outdoor = Color3.fromRGB(36, 42, 50),
+		exposure = -0.15,
+		fog = {
+			density = 0.38,
+			offset = 0.08,
+			color = Color3.fromRGB(62, 70, 66),
+			decay = Color3.fromRGB(34, 40, 36),
+			haze = 2,
+			glare = 0,
+		},
+		grade = { brightness = 0, contrast = 0.14, saturation = -0.32, tint = Color3.fromRGB(226, 245, 232) },
+		bloom = { intensity = 0.75, size = 30, threshold = 1.5 },
+	} :: Preset,
+	-- pale, dead mall light with a pink neon tint
+	Mall = {
+		clock = 0.1,
+		brightness = 1.1,
+		ambient = Color3.fromRGB(22, 20, 26),
+		outdoor = Color3.fromRGB(42, 38, 52),
+		exposure = -0.1,
+		fog = {
+			density = 0.36,
+			offset = 0.1,
+			color = Color3.fromRGB(74, 66, 80),
+			decay = Color3.fromRGB(42, 32, 46),
+			haze = 1.8,
+			glare = 0,
+		},
+		grade = { brightness = 0, contrast = 0.12, saturation = -0.2, tint = Color3.fromRGB(245, 232, 245) },
+		bloom = { intensity = 0.9, size = 32, threshold = 1.4 },
+	} :: Preset,
 }
 
 local function effect(className: string, name: string): any
