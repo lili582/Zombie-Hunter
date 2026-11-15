@@ -760,4 +760,96 @@ function BuildingKit.line(parent: Instance, a: Vector3, b: Vector3, width: numbe
 	p.CanQuery = false
 end
 
+-- A solid flight of stairs from `bottom` going along `dir`, one stud up per step, until it has
+-- climbed `rise` studs. The last step's top is at bottom.Y + rise, ready to meet a floor.
+function BuildingKit.stairs(
+	parent: Instance,
+	bottom: Vector3,
+	dir: Vector3,
+	rise: number,
+	width: number
+): Model
+	local stairs = Instance.new("Model")
+	stairs.Name = "Stairs"
+	stairs.Parent = parent
+	local run = 1.5
+	local flat = Vector3.new(dir.X, 0, dir.Z).Unit
+	local look = CFrame.lookAt(bottom, bottom + flat)
+	for i = 1, math.ceil(rise) do
+		local top = math.min(i, rise)
+		Kit.part(
+			stairs,
+			"Step",
+			Vector3.new(width, top, run),
+			look * CFrame.new(0, top / 2, -(i - 0.5) * run),
+			Color3.fromRGB(150, 148, 142),
+			Enum.Material.Concrete
+		)
+	end
+	return stairs
+end
+
+-- A hospital bed: a steel frame, a stained mattress and a pillow. Some have a sheet over
+-- something that isn't moving.
+function BuildingKit.hospitalBed(parent: Instance, cf: CFrame, covered: boolean)
+	local bed = Instance.new("Model")
+	bed.Name = "HospitalBed"
+	bed.Parent = parent
+	for _, x in { -1.3, 1.3 } do
+		for _, z in { -3, 3 } do
+			Kit.onGround(
+				bed,
+				"Leg",
+				Vector3.new(0.25, 2, 0.25),
+				cf * CFrame.new(x, 0, z),
+				BuildingKit.METAL,
+				Enum.Material.Metal
+			)
+		end
+	end
+	Kit.part(
+		bed,
+		"Frame",
+		Vector3.new(3, 0.4, 6.6),
+		cf * CFrame.new(0, 2.1, 0),
+		BuildingKit.METAL,
+		Enum.Material.Metal
+	)
+	Kit.part(
+		bed,
+		"Mattress",
+		Vector3.new(2.8, 0.6, 6.2),
+		cf * CFrame.new(0, 2.6, 0),
+		Color3.fromRGB(196, 200, 190),
+		Enum.Material.Fabric
+	)
+	Kit.part(
+		bed,
+		"Headboard",
+		Vector3.new(3, 2.4, 0.3),
+		cf * CFrame.new(0, 3, -3.2),
+		BuildingKit.METAL,
+		Enum.Material.Metal
+	)
+	Kit.part(
+		bed,
+		"Pillow",
+		Vector3.new(2, 0.4, 1.2),
+		cf * CFrame.new(0, 3.1, -2.4),
+		Color3.fromRGB(220, 222, 216),
+		Enum.Material.Fabric
+	)
+	if covered then
+		Kit.part(
+			bed,
+			"Sheet",
+			Vector3.new(2.6, 1, 5),
+			cf * CFrame.new(0, 3.3, 0.4),
+			Color3.fromRGB(206, 208, 200),
+			Enum.Material.Fabric
+		)
+	end
+	return bed
+end
+
 return BuildingKit

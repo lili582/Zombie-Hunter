@@ -172,6 +172,10 @@ end
 -- A wooden cabin: log walls, a door gap front and back (a chase loop through it), windows with
 -- glass, a pitched roof and a porch step. `lit` puts a weak warm light inside.
 -- `cf` is the centre of the floor, facing its front door along -Z.
+-- How a cabin looks: the default is dark log wood under a slate roof; a town house passes its
+-- painted siding and roof colour.
+export type CabinStyle = { wall: Color3, material: Enum.Material, roof: Color3 }
+
 function Kit.cabin(
 	parent: Instance,
 	cf: CFrame,
@@ -179,16 +183,19 @@ function Kit.cabin(
 	d: number,
 	h: number,
 	lit: boolean,
-	rng: Random
+	rng: Random,
+	style: CabinStyle?
 ): Model
 	local cabin = Instance.new("Model")
 	cabin.Name = "Cabin"
 	cabin.Parent = parent
 	local t = 1
 	local door = 5
-	local wallColor = Kit.WOOD:Lerp(Kit.WOOD_DARK, rng:NextNumber(0, 0.5))
+	local wallColor = if style then style.wall else Kit.WOOD:Lerp(Kit.WOOD_DARK, rng:NextNumber(0, 0.5))
+	local wallMaterial = if style then style.material else Enum.Material.WoodPlanks
+	local roofColor = if style then style.roof else Color3.fromRGB(48, 44, 46)
 	local function wall(name: string, size: Vector3, offset: Vector3)
-		Kit.part(cabin, name, size, cf * CFrame.new(offset), wallColor, Enum.Material.WoodPlanks)
+		Kit.part(cabin, name, size, cf * CFrame.new(offset), wallColor, wallMaterial)
 	end
 	Kit.part(
 		cabin,
@@ -236,7 +243,7 @@ function Kit.cabin(
 			"Roof",
 			Vector3.new(w + 2, 0.7, slab),
 			cf * CFrame.new(0, h + rise / 2, sz * half / 2) * CFrame.Angles(sz * pitch, 0, 0),
-			Color3.fromRGB(48, 44, 46),
+			roofColor,
 			Enum.Material.Slate
 		)
 	end
@@ -250,7 +257,7 @@ function Kit.cabin(
 				* CFrame.new(x, h + rise / 2, sz * d / 4)
 				* CFrame.Angles(0, if sz > 0 then math.pi else 0, 0)
 			gable.Color = wallColor
-			gable.Material = Enum.Material.WoodPlanks
+			gable.Material = wallMaterial
 			gable.Parent = cabin
 		end
 	end
