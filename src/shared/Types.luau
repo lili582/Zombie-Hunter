@@ -64,6 +64,7 @@ export type RoundState = {
 	votes: { [number]: string }, -- player -> voted map
 	mapHistory: { string }, -- maps of the last rounds (oldest first)
 	mapId: string?, -- map of the current / last round
+	startRoles: { [number]: Role }, -- role each player got at the start of the round
 }
 
 export type Event =

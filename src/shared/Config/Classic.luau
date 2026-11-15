@@ -14,7 +14,7 @@ local Classic = {
 	introLength = 22,
 	headStart = 32,
 	roundLength = 360,
-	results = 15, -- result cards, already in the safehouse (rest = results + intermission)
+	results = 20, -- result + recap + coin cards, in the safehouse (rest = results + intermission)
 	bleedOut = 20,
 	reviveTime = 4,
 	hitsToDown = { Alpha = 2, Zombie = 3 } :: { [string]: number },

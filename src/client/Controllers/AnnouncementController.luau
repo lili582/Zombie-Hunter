@@ -30,8 +30,9 @@ local CARD_TIME = {
 	HunterChosen = 1.5,
 	EveryoneArmed = 1.5, -- replaces HunterChosen in modes without a Hunter
 	-- round end / other
-	Result = 3,
-	YourCoins = 2,
+	Result = 4,
+	Recap = 8, -- the real length is set per round (recapDuration)
+	YourCoins = 3,
 	Infected = 2.5,
 	Escaped = 3,
 }
@@ -362,8 +363,10 @@ local function clearStage()
 	ui.big.Visible = false
 	ui.big:ClearAllChildren()
 	ui.row.Visible = false
+	ui.row.Size = UDim2.fromScale(0.9, 0.32)
+	ui.row.Position = UDim2.fromScale(0.5, 0.36)
 	for _, child in ui.row:GetChildren() do
-		if child:IsA("ViewportFrame") then
+		if child:IsA("ViewportFrame") or child:IsA("Frame") then
 			child:Destroy()
 		end
 	end
@@ -392,6 +395,153 @@ local function silhouetteRow(): { ViewportFrame }
 	end
 	ui.row.Visible = #frames > 0
 	return frames
+end
+
+-- Round recap: everyone who played, lined up in the dark. One by one a light comes on over each
+-- character with their name, the role they really had, and what happened to them.
+local OUTCOME_LOOK = {
+	SURVIVED = { "SURVIVED", Theme.colors.baby },
+	ESCAPED = { "ESCAPED", Theme.colors.butter },
+	INFECTED = { "INFECTED", Theme.colors.mint },
+	ZOMBIE = { "ZOMBIE", Theme.colors.mint },
+	ALPHA = { "THE ALPHA", Theme.colors.blood },
+}
+local RECAP_STEP = 0.55 -- seconds between two reveals (slow on purpose)
+local RECAP_MAX = 12
+
+-- Turns a character copy into its zombie self: rotten skin, glowing eyes.
+local function zombify(model: Model, eyeColor: Color3)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and d.Parent == model and d.Name ~= "HumanoidRootPart" then
+			d.Color = Color3.fromRGB(118, 156, 96)
+		elseif d:IsA("BodyColors") then
+			d:Destroy()
+		end
+	end
+	local head = model:FindFirstChild("Head") :: BasePart?
+	if head then
+		for _, x in { -0.22, 0.22 } do
+			local eye = Instance.new("Part")
+			eye.Name = "Eye"
+			eye.Shape = Enum.PartType.Ball
+			eye.Size = Vector3.new(0.26, 0.26, 0.26)
+			eye.Material = Enum.Material.Neon
+			eye.Color = eyeColor
+			eye.Anchored = true
+			eye.CanCollide = false
+			eye.CFrame = head.CFrame * CFrame.new(x, 0.15, -head.Size.Z / 2 - 0.02)
+			eye.Parent = model
+		end
+	end
+end
+
+local function recapDuration(count: number): number
+	return 2.2 + math.min(count, RECAP_MAX) * RECAP_STEP + 3.5
+end
+
+local function playRecap(data: any, token: number)
+	local entries = data.players or {}
+	local zombiesWon = data.winner == "ZombiesWin"
+	setTitle("", C.bone)
+	typeText(
+		ui.title,
+		if zombiesWon then "THE NIGHT BELONGS TO THEM" else "WHO MADE IT THROUGH THE NIGHT",
+		0.06,
+		token
+	)
+	ui.kicker.Text = "THE ROUND"
+	ui.row.Size = UDim2.fromScale(0.94, 0.46)
+	ui.row.Position = UDim2.fromScale(0.5, 0.42)
+	local slots = {}
+	for i = 1, math.min(#entries, RECAP_MAX) do
+		local e = entries[i]
+		local who = Players:GetPlayerByUserId(e.id)
+		local look = OUTCOME_LOOK[e.outcome] or OUTCOME_LOOK.SURVIVED
+		local slot = Instance.new("Frame")
+		slot.Name = "RecapSlot"
+		slot.LayoutOrder = i
+		slot.Size = UDim2.fromScale(math.min(0.15, 0.9 / math.max(#entries, 1)), 1)
+		slot.BackgroundTransparency = 1
+		slot.Parent = ui.row
+		local vp = Instance.new("ViewportFrame")
+		vp.Size = UDim2.fromScale(1, 0.72)
+		vp.BackgroundColor3 = Color3.fromRGB(12, 8, 18)
+		vp.BackgroundTransparency = 0.4
+		vp.Parent = slot
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = vp
+		local model = if who then cloneCharacter(who) else nil
+		if model then
+			if e.outcome == "INFECTED" or e.outcome == "ZOMBIE" then
+				zombify(model, Theme.colors.mint)
+			elseif e.outcome == "ALPHA" then
+				zombify(model, Color3.fromRGB(255, 40, 60))
+			end
+			stage(vp, model)
+		end
+		local function caption(y: number, height: number, text: string, color: Color3, size: number)
+			return Theme.label(slot, {
+				Position = UDim2.new(0, 0, 0.72, y),
+				Size = UDim2.new(1, 0, 0, height),
+				TextScaled = false,
+				TextSize = size,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				TextColor3 = color,
+				TextTransparency = 1,
+				TextStrokeTransparency = 1,
+				Text = text,
+			})
+		end
+		local name = caption(4, 16, if who then who.DisplayName else "?", C.bone, 14)
+		local role =
+			caption(20, 13, Theme.roleText[e.role] or e.role, Theme.roleColor[e.role] or C.lavender, 11)
+		local outcome = caption(34, 16, look[1], look[2], 14)
+		local winner = caption(52, 14, if e.won then "WINNER" else "", C.butter, 12)
+		table.insert(
+			slots,
+			{ vp = vp, labels = { name, role, outcome, winner }, color = look[2], won = e.won }
+		)
+	end
+	ui.row.Visible = #slots > 0
+	task.spawn(function()
+		task.wait(1.6)
+		for _, slot in slots do
+			if cardToken ~= token then
+				return
+			end
+			-- the light comes on over this one
+			slot.vp.LightColor = slot.color
+			slot.vp.Ambient = Color3.fromRGB(45, 38, 60)
+			slot.vp.BackgroundColor3 = if slot.won
+				then Color3.fromRGB(40, 32, 12)
+				else Color3.fromRGB(18, 12, 26)
+			slot.vp.BackgroundTransparency = 0.15
+			for _, label in slot.labels do
+				TweenService
+					:Create(
+						label,
+						TweenInfo.new(0.35),
+						{ TextTransparency = 0, TextStrokeTransparency = 0.55 }
+					)
+					:Play()
+			end
+			task.wait(RECAP_STEP)
+		end
+		if cardToken ~= token then
+			return
+		end
+		-- the losers fade back into the dark; the winners stay lit
+		for _, slot in slots do
+			if not slot.won then
+				TweenService:Create(slot.vp, TweenInfo.new(0.8), { BackgroundTransparency = 0.6 }):Play()
+				slot.vp.LightColor = Color3.fromRGB(60, 60, 70)
+			end
+		end
+		local r = RESULT_TEXT[data.winner] or RESULT_TEXT.NoWinner
+		ui.subtitle.Text = ""
+		typeText(ui.subtitle, r[1], 0.05, token)
+	end)
 end
 
 ----------------------------------------------------------------------------- the cards
@@ -571,6 +721,8 @@ local function play(name: string, data: any, token: number)
 		slam()
 		silhouetteRow()
 		ui.subtitle.Text = "No Hunter tonight. Shoot anything that bites."
+	elseif name == "Recap" then
+		playRecap(data, token)
 	elseif name == "Result" then
 		local r = RESULT_TEXT[data.winner] or RESULT_TEXT.NoWinner
 		setTitle(r[1], r[2])
@@ -664,7 +816,11 @@ local function playQueue()
 			cardToken += 1
 			ui.card.Visible = true
 			play(item.card, item.data or {}, cardToken)
-			task.wait(CARD_TIME[item.card] or 2)
+			local seconds = CARD_TIME[item.card] or 2
+			if item.card == "Recap" then
+				seconds = recapDuration(#((item.data or {}).players or {}))
+			end
+			task.wait(seconds)
 		end
 		cardToken += 1
 		clearStage()

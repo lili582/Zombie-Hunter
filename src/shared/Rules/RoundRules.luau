@@ -48,6 +48,7 @@ function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): S
 		votes = {},
 		mapHistory = {},
 		mapId = nil,
+		startRoles = {},
 	}
 end
 
@@ -125,6 +126,7 @@ local function enterHeadStart(s: State, fx: { Effect })
 	end
 	s.votes = {}
 	local ids = Util.sortedIds(s.players)
+	s.startRoles = {}
 	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.alphaCount, s.config.hunterCount)
 	for _, id in ids do
 		local fresh = Util.newPlayer(id)
@@ -135,6 +137,7 @@ local function enterHeadStart(s: State, fx: { Effect })
 			Abilities.makeAlpha(s, fresh)
 		end
 		s.players[id] = fresh
+		s.startRoles[id] = fresh.role
 		if fresh.role == "Survivor" then
 			s.sinceSpecial[id] = (s.sinceSpecial[id] or 0) + 1
 		else
@@ -189,11 +192,61 @@ local function enterActive(s: State, fx: { Effect })
 	table.insert(fx, { type = "Announce", card = "AlphaAwakened" }) -- secret: no name
 end
 
+-- End-of-round recap: every player who played, their real role (secrets are over), what
+-- happened to them and whether their side won. Winners first, then by points.
+--   outcome: "ESCAPED" | "SURVIVED" | "INFECTED" (turned) | "ALPHA" | "ZOMBIE"
+function RoundRules.recap(s: State, winner: Types.Winner): { { [string]: any } }
+	local list = {}
+	for _, id in Util.sortedIds(s.players) do
+		local p = s.players[id]
+		if p.life == "Out" then
+			continue -- sat this round out
+		end
+		local outcome
+		if p.role == "Alpha" then
+			outcome = "ALPHA"
+		elseif p.role == "Zombie" then
+			outcome = if p.wasInfected then "INFECTED" else "ZOMBIE"
+		elseif p.life == "Escaped" then
+			outcome = "ESCAPED"
+		else
+			outcome = "SURVIVED"
+		end
+		local zombieSide = Util.isZombieRole(p.role)
+		local won = (winner == "ZombiesWin" and zombieSide)
+			or ((winner == "SurvivorsSurvived" or winner == "SurvivorsEscaped") and not zombieSide)
+		-- the role they started with: an infected Hunter was a Hunter
+		local role: string = p.role
+		if p.wasInfected and s.startRoles[id] then
+			role = s.startRoles[id]
+		end
+		table.insert(list, { id = id, role = role, outcome = outcome, won = won, points = p.points })
+	end
+	table.sort(list, function(a, b)
+		if a.won ~= b.won then
+			return a.won
+		end
+		if a.points ~= b.points then
+			return a.points > b.points
+		end
+		return a.id < b.id
+	end)
+	return list
+end
+
 local function endRound(s: State, winner: Types.Winner, fx: { Effect })
 	s.winner = winner
 	setPhase(s, "Results", s.config.results, fx)
 	table.insert(fx, { type = "RoundOver", winner = winner })
 	table.insert(fx, { type = "Announce", card = "Result", data = { winner = winner } })
+	table.insert(
+		fx,
+		{
+			type = "Announce",
+			card = "Recap",
+			data = { winner = winner, players = RoundRules.recap(s, winner) },
+		}
+	)
 end
 
 local function checkWin(s: State, fx: { Effect })

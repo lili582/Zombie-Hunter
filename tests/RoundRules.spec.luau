@@ -192,7 +192,7 @@ test("a player joining mid-round waits (Out) and plays next round", function()
 	expect(s.players[99].life).toBe("Out")
 	s = H.run(s, { H.tick(360) }) -- survivors survive
 	expect(s.phase).toBe("Results")
-	s = H.run(s, { H.tick(15) })
+	s = H.run(s, { H.tick(Classic.results) })
 	expect(s.phase).toBe("Intermission")
 	expect(s.players[99].life).toBe("Alive")
 end)

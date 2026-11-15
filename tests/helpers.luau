@@ -31,6 +31,7 @@ function H.activeRound(n: number)
 	assert(s.phase == "Active", "expected Active, got " .. s.phase)
 	for id, p in s.players do
 		p.role = if id == 1 then "Alpha" elseif id == 2 then "Hunter" else "Survivor"
+		s.startRoles[id] = p.role
 	end
 	return s
 end
@@ -55,6 +56,7 @@ function H.objectiveRound(n: number)
 	assert(s.phase == "Active", "expected Active, got " .. s.phase)
 	for id, p in s.players do
 		p.role = if id == 1 then "Alpha" elseif id == 2 then "Hunter" else "Survivor"
+		s.startRoles[id] = p.role
 		p.medkits = if p.role == "Survivor" then 1 else 0
 	end
 	return s

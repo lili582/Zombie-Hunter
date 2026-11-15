@@ -105,6 +105,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter (banner: SOMEONE PICKED UP THE GUN, no name); nobody else can.
 - [ ] Last human turns → ZOMBIES WIN! → +coins card → back to the lobby → next round.
 - [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; under 1:00 the timer is deep red (it doesn't shake).
+- [ ] **Recap:** after the result card, every player's character in a row in the dark; lights come on one by one with name, real role (ALPHA / HUNTER revealed), SURVIVED / ESCAPED / INFECTED / THE ALPHA and WINNER. Infected players look like zombies. Winners first and stay lit.
 - [ ] When a round ends everyone appears in the safehouse right away (ROUND OVER - SAFE IN THE SAFEHOUSE), the result + coins cards play there, then the 20s countdown starts.
 - [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat (Hunter); Survivors tap to escape; prompts show a tap button.
 
