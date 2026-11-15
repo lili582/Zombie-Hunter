@@ -12,6 +12,7 @@ local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Maps = require(Shared.Config.Maps)
 local Theme = require(script.Parent.Theme)
+local RoleEmote = require(script.Parent.RoleEmote)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -335,7 +336,22 @@ local function stage(vp: ViewportFrame, model: Model)
 	vp.LightDirection = Vector3.new(0.6, -0.4, 1)
 end
 
+-- The role emote playing in the big viewport (your character acting out its role).
+local emote: any = nil
+local emoteRole: string? = nil
+local emoteStart = 0
+
+-- Starts (or, for the next card of the same role, continues) the emote on a staged model.
+local function playEmote(model: Model, role: string, continueIt: boolean)
+	if not (continueIt and emoteRole == role and os.clock() - emoteStart < 10) then
+		emoteStart = os.clock()
+	end
+	emoteRole = role
+	emote = RoleEmote.new(model, role)
+end
+
 local function clearStage()
+	emote = nil
 	ui.big.Visible = false
 	ui.big:ClearAllChildren()
 	ui.row.Visible = false
@@ -439,6 +455,7 @@ local function play(name: string, data: any, token: number)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
+			playEmote(model, role, false)
 			ui.big.Visible = true
 		end
 		ui.subtitle.Text = "who are you?"
@@ -486,6 +503,7 @@ local function play(name: string, data: any, token: number)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
+			playEmote(model, role, true) -- keeps going from the role card
 			ui.big.LightColor = Theme.roleColor[role] or C.bone
 			ui.big.Ambient = Color3.fromRGB(55, 45, 70)
 			ui.big.Visible = true
@@ -540,6 +558,8 @@ local function play(name: string, data: any, token: number)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
+			playEmote(model, "Zombie", false)
+			emoteStart -= 1.7 -- no build-up: you're already one of them
 			ui.big.LightColor = C.mint
 			ui.big.Ambient = Color3.fromRGB(20, 60, 35)
 			ui.big.Visible = true
@@ -586,10 +606,14 @@ local function animate(dt: number)
 	ui.ghostA.Size = ui.title.Size
 	ui.ghostB.Size = ui.title.Size
 
-	-- the character sways slowly, as if breathing
+	-- the character sways slowly, as if breathing, and acts out its role (RoleEmote)
 	local model = ui.big:FindFirstChildOfClass("Model")
 	if ui.big.Visible and model then
-		model:PivotTo(CFrame.Angles(0, math.sin(t * 0.7) * 0.5, 0))
+		if emote and emote.model == model then
+			emote:step(os.clock() - emoteStart, CFrame.Angles(0, math.sin(t * 0.7) * 0.25, 0))
+		else
+			model:PivotTo(CFrame.Angles(0, math.sin(t * 0.7) * 0.5, 0))
+		end
 	end
 end
 
