@@ -24,6 +24,7 @@ local ObjectiveService = require(Services.ObjectiveService)
 local AbilityService = require(Services.AbilityService)
 local LobbyService = require(Services.LobbyService)
 local DataService = require(Services.DataService)
+local ShopService = require(Services.ShopService)
 
 local RoundManager = {}
 
@@ -150,7 +151,7 @@ end
 -- Hunters get the revolver; in armed modes (Outbreak) Survivors get the mode's gun.
 local function giveGun(player: Player, role: string)
 	if role == "Hunter" then
-		CombatService.resetGun(player, "Revolver")
+		CombatService.resetGun(player, ShopService.equipped(player, "hunterGun"))
 	elseif role == "Survivor" and state.config.humanWeapon then
 		CombatService.resetGun(player, state.config.humanWeapon)
 	end
@@ -252,7 +253,7 @@ runEffect = function(f: any)
 		local player = playerById(f.playerId)
 		if player then
 			CharacterService.applyRole(player, "Hunter")
-			CombatService.resetGun(player, "Revolver")
+			CombatService.resetGun(player, ShopService.equipped(player, "hunterGun"))
 		end
 	elseif f.type == "MapChosen" then
 		-- Only the Town greybox (or your hand-built workspace.Map) exists so far, so there is
@@ -339,6 +340,8 @@ function RoundManager.start()
 	})
 	TimingService.init()
 	DataService.start()
+	ShopService.start(RoundManager)
+	CharacterService.equippedOf = ShopService.equipped
 	DataService.onLoaded(function(player, profile)
 		-- the saved Alpha class goes back into the rules (no banner)
 		RoundManager.send({

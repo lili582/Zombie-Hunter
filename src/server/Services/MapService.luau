@@ -419,17 +419,26 @@ local function buildLobby()
 		COLORS.blood
 	)
 
-	-- shop counter + dressing mirror (west wall): open in v0.4
+	-- shop counter (west wall) + dressing mirror (catalog: later)
 	local east = Vector3.new(1, 0, 0)
-	piece("ShopCounter", Vector3.new(4, 4, 16), at(-37, 3, -10), SAFEHOUSE.wood)
+	local counter = piece("ShopCounter", Vector3.new(4, 4, 16), at(-37, 3, -10), SAFEHOUSE.wood)
 	sign(
 		lobby,
 		"ShopSign",
 		Vector3.new(14, 3, 0.3),
 		facing(at(-W / 2 + 1.2, 12, -10), east),
-		"SHOP - OPENS SOON",
+		"Z-SHOP",
 		COLORS.lamp
 	)
+	local shopPrompt = Instance.new("ProximityPrompt")
+	shopPrompt.ActionText = "Open shop"
+	shopPrompt.ObjectText = "Z-Shop"
+	shopPrompt.KeyboardKeyCode = Enum.KeyCode.E
+	shopPrompt.HoldDuration = 0
+	shopPrompt.MaxActivationDistance = 10
+	shopPrompt.RequiresLineOfSight = false
+	CollectionService:AddTag(shopPrompt, "ShopPrompt")
+	shopPrompt.Parent = counter
 	local mirror =
 		piece("Mirror", Vector3.new(0.3, 10, 6), at(-W / 2 + 1.2, 7, 2), Color3.fromRGB(200, 205, 220))
 	mirror.Material = Enum.Material.Glass

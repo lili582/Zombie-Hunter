@@ -596,7 +596,8 @@ local function render()
 	local char = player.Character
 	local holdingGun = hasGun
 		and char ~= nil
-		and (char:FindFirstChild("Revolver") ~= nil or char:FindFirstChild("Pistol") ~= nil)
+		and char:FindFirstChildWhichIsA("Tool") ~= nil
+		and (char:FindFirstChildWhichIsA("Tool") :: Tool):GetAttribute("Gun") == true
 	ui.ammo.Visible = hasGun == true
 	ui.ammo.Text = `{ammo.mag} / {ammo.reserve}`
 	ui.crosshair.Visible = holdingGun == true

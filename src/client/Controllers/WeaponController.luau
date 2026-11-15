@@ -13,7 +13,7 @@ local mouse = player:GetMouse()
 local WeaponController = {}
 
 local function hookTool(tool: Instance)
-	local isGun = tool.Name == "Revolver" or tool.Name == "Pistol"
+	local isGun = tool:GetAttribute("Gun") == true -- Hunter's equipped gun, or an Outbreak Pistol
 	if not tool:IsA("Tool") or not isGun or tool:GetAttribute("ClientHooked") then
 		return
 	end
