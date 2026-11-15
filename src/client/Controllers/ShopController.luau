@@ -206,13 +206,11 @@ local function build()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- SHOP button (lobby only), under the PLAYERS toggle
-	ui.open = button(gui, {
+	ui.open = Theme.button(gui, {
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -78, 0, 40),
-		Size = UDim2.fromOffset(64, 20),
-		BackgroundColor3 = C.butter,
-		TextScaled = false,
-		TextSize = 13,
+		Position = UDim2.new(1, -100, 0, 12),
+		Size = UDim2.fromOffset(78, 26),
+		TextColor3 = C.butter,
 		Text = "SHOP",
 	})
 	ui.open.Activated:Connect(function()

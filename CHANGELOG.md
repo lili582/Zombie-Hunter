@@ -5,6 +5,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- **Cleaner HUD design:** one glass style everywhere (dark see-through plum, soft rounded corners, a thin lavender edge, softer text outlines). The clock sits in a pill at the top centre in a clean font with one quiet line under it; coins and the role help icon top left; PLAYERS and SHOP pills top right with the list under them; health + medkit bottom left; repair bar bottom centre (slim, like health); ammo, ability and reload bottom right; smaller point popups. Chips only appear when they have something to say.
 - **Role help icon:** during a round a round **?** icon in your role colour (top left, with your role name) opens a panel with your goal and how to play, keys included (**H** on a keyboard). It follows your role (infected → zombie tips) and the mode (Outbreak survivors). Words live in `Config/RoleGuide`.
 - **Slower, creepier role pick:** the intro is now 22s (`introLength`, head start 32s). SOMEONE IS INFECTED types in slowly with whispers while the red light drifts between the shadows and sometimes lingers; YOUR ROLE has a 5-beat heartbeat in the dark before the light stutters on, then a quick one-line explanation of your role under the title.
 - **Straight to the safehouse:** the moment a round ends everyone is brought back to the safehouse, and the result and coin cards play there. Players rest at least 35s before the next round (15s results + 20s countdown); a test checks the countdown never drops under 20s.
@@ -17,6 +18,8 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 - **The next mode is a surprise:** the lobby no longer says which mode is next (HUD shows NEXT ROUND STARTING, the sign shows NEXT ROUND STARTING SOON / ROUND IN PROGRESS). You find out on the intro's MODE card.
 
 ### Fixed
+- No green bar when you join: the health bar stays hidden until a round, and Roblox's own health bar is turned off.
+- Repair emote: your own repair now also starts it straight from your round state (it no longer depends only on the server's signal), and the Output warns if the character has no arm joints to animate.
 - **Gun aiming:** the crosshair now follows your mouse cursor (centre of the screen on phones and in shift-lock), the mouse pointer hides while you hold a gun, and the shot goes exactly to the point under the crosshair. Bullets no longer stop on invisible parts.
 
 - **No roles in the player list:** other players are always blank in the list, even infected zombies, downed or escaped players (only WAITING for people sitting out the round). Your own row still shows your role. The server no longer sends anyone else's role, wounds or downed state to your client.

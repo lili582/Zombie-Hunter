@@ -6,6 +6,9 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Remotes = require(Shared.Net.Remotes)
+
 local Theme = require(script.Parent.Theme)
 
 local RepairAnimController = {}
@@ -24,6 +27,9 @@ type Rig = {
 }
 
 local rigs: { [Model]: Rig } = {}
+local localPlayer = Players.LocalPlayer
+local iAmRepairing = false -- from my own round state (backup for the attribute)
+local warned = false
 
 local SWINGS_PER_SECOND = 2.2
 
@@ -45,6 +51,10 @@ local function start(char: Model)
 	local left = findMotor(char, { "Left Shoulder", "LeftShoulder" })
 	local hand = (char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")) :: BasePart?
 	if not right or not left or not hand then
+		if not warned then
+			warned = true
+			warn(`RepairAnim: no shoulder joints / hand found on {char.Name}, can't play the repair emote`)
+		end
 		return
 	end
 	-- a small wrench in the right hand (local only: every client makes its own)
@@ -148,21 +158,30 @@ local function step()
 	end
 end
 
-local function watchCharacter(char: Model)
-	local function update()
-		if char:GetAttribute("Repairing") == true then
-			start(char)
-		else
-			stop(char)
+local function update(char: Model)
+	local repairing = char:GetAttribute("Repairing") == true
+		or (char == localPlayer.Character and iAmRepairing)
+	if repairing then
+		local ok, err = pcall(start, char)
+		if not ok then
+			warn("RepairAnim: " .. tostring(err))
 		end
+	else
+		stop(char)
 	end
-	char:GetAttributeChangedSignal("Repairing"):Connect(update)
+end
+
+local function watchCharacter(char: Model)
+	local function changed()
+		update(char)
+	end
+	char:GetAttributeChangedSignal("Repairing"):Connect(changed)
 	char.AncestryChanged:Connect(function()
 		if not char.Parent then
 			stop(char)
 		end
 	end)
-	update()
+	changed()
 end
 
 local function watchPlayer(p: Player)
@@ -178,6 +197,16 @@ function RepairAnimController.start()
 	end
 	Players.PlayerAdded:Connect(watchPlayer)
 	RunService.RenderStepped:Connect(step)
+	-- my own repairs also come in my round state: start right away, even before the attribute
+	Remotes.get("RoundStateChanged").OnClientEvent:Connect(function(view)
+		local now = view.repairing ~= nil
+		if now ~= iAmRepairing then
+			iAmRepairing = now
+			if localPlayer.Character then
+				update(localPlayer.Character)
+			end
+		end
+	end)
 end
 
 return RepairAnimController

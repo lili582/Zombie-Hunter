@@ -162,15 +162,12 @@ local function enterHeadStart(s: State, fx: { Effect })
 	table.insert(fx, { type = "Announce", card = "SomeoneInfected" })
 	for _, id in ids do
 		local role = s.players[id].role
-		table.insert(
-			fx,
-			{
-				type = "Announce",
-				card = "YourRole",
-				toPlayerId = id,
-				data = { role = role, mode = s.config.modeId },
-			}
-		)
+		table.insert(fx, {
+			type = "Announce",
+			card = "YourRole",
+			toPlayerId = id,
+			data = { role = role, mode = s.config.modeId },
+		})
 		table.insert(fx, {
 			type = "Announce",
 			card = "YourRules",
