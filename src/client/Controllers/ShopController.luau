@@ -9,9 +9,11 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
+local Lobby = require(Shared.Rules.Lobby)
 local Items = require(Shared.Config.Items)
 local Theme = require(script.Parent.Theme)
 local Room = require(script.Parent.Room)
+local CharacterCopy = require(script.Parent.CharacterCopy)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -40,11 +42,8 @@ local function inLobby(): boolean
 	if not view then
 		return true
 	end
-	if view.phase ~= "HeadStart" and view.phase ~= "Active" then
-		return true
-	end
 	local me = view.players[tostring(player.UserId)]
-	return me == nil or me.life == "Out" or me.life == "Escaped" or me.life == "Dead"
+	return Lobby.isFree(view.phase, me and me.life)
 end
 
 local function owns(id: string): boolean
@@ -96,27 +95,7 @@ local function previewItem(id: string)
 	end
 	ui.room:setModifier(function(model: Model)
 		if item.skin then
-			for _, d in model:GetDescendants() do
-				if d:IsA("BasePart") and d.Parent == model and d.Name ~= "HumanoidRootPart" then
-					d.Color = rgb(item.skin)
-				elseif d:IsA("BodyColors") then
-					d:Destroy()
-				end
-			end
-			local head = model:FindFirstChild("Head") :: BasePart?
-			if head then
-				for _, x in { -0.22, 0.22 } do
-					local eye = Instance.new("Part")
-					eye.Shape = Enum.PartType.Ball
-					eye.Size = Vector3.new(0.26, 0.26, 0.26)
-					eye.Material = Enum.Material.Neon
-					eye.Color = rgb(item.eyes)
-					eye.Anchored = true
-					eye.CanCollide = false
-					eye.CFrame = head.CFrame * CFrame.new(x, 0.15, -head.Size.Z / 2 - 0.02)
-					eye.Parent = model
-				end
-			end
+			CharacterCopy.zombify(model, rgb(item.eyes), rgb(item.skin))
 		elseif item.look then
 			local hand = (model:FindFirstChild("RightHand") or model:FindFirstChild("Right Arm")) :: BasePart?
 			if hand then

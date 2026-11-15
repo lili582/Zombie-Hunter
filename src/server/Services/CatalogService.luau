@@ -141,10 +141,7 @@ function CatalogService.start(lobbyCheck: (Player) -> boolean)
 	Remotes.get("CatalogReset").OnServerEvent:Connect(function(player)
 		-- back to your starter (boy / girl by user id), as if you never changed anything
 		local ok, reason = edit(player, function(o)
-			local fresh = Outfit.starter(Outfit.starterFor(player.UserId))
-			for k, v in fresh do
-				o[k] = v
-			end
+			Outfit.replace(o, Outfit.starter(Outfit.starterFor(player.UserId)))
 			return true, nil
 		end)
 		if ok then
@@ -159,10 +156,7 @@ function CatalogService.start(lobbyCheck: (Player) -> boolean)
 			return
 		end
 		local ok, reason = edit(player, function(o)
-			local fresh = Outfit.starter(kind)
-			for k, v in fresh do
-				o[k] = v
-			end
+			Outfit.replace(o, Outfit.starter(kind))
 			return true, nil
 		end)
 		reply(player, ok, if ok then "starter" else reason, kind)
@@ -173,9 +167,7 @@ function CatalogService.start(lobbyCheck: (Player) -> boolean)
 			return reply(player, false, "avatar", nil)
 		end
 		local ok, reason = edit(player, function(o)
-			for k, v in copy do
-				o[k] = v
-			end
+			Outfit.replace(o, copy)
 			return true, nil
 		end)
 		reply(player, ok, if ok then "avatar_ok" else reason, nil)

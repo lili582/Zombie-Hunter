@@ -156,7 +156,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:
-`HumanStart` (1+; with several, players start in spread-out groups of 2-3, ideally 6-8 spots), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
+`HumanStart` (1+; with several, players start in spread-out groups of 2-3, ideally 6-8 spots), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
 
 ## Where to change numbers
 
@@ -164,4 +164,4 @@ Everything marked *(tune)* in the spec is in `Shared/Config`: round timers, hits
 
 ## Known Phase 1 limits (next phases)
 
-Points/coins are not saved yet (DataService, v0.4). Only one map exists, so the map vote has one choice until the v1.0 maps are added; adding a map = a builder in `MapService` + an entry in `Config/Maps` + loading it on `MapChosen` in `RoundManager`. `AlphaStart` / `AlphaDoor` are no longer used (the Alpha spawns disguised with the survivors) but are still built.
+Points/coins are not saved yet (DataService, v0.4). Only one map exists, so the map vote has one choice until the v1.0 maps are added; adding a map = a builder in `MapService` + an entry in `Config/Maps` + loading it on `MapChosen` in `RoundManager`.

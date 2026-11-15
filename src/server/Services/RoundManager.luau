@@ -14,6 +14,7 @@ local Remotes = require(Shared.Net.Remotes)
 local Rewards = require(Shared.Rules.Rewards)
 local Profile = require(Shared.Data.Profile)
 local SpawnGroups = require(Shared.Rules.SpawnGroups)
+local Lobby = require(Shared.Rules.Lobby)
 local Outfit = require(Shared.Data.Outfit)
 
 local Services = script.Parent
@@ -342,7 +343,7 @@ end
 -- A character died (fell off the map, or a zombie was killed by the Hunter).
 local function onDied(player: Player, char: Model)
 	local p = state.players[player.UserId]
-	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" or p.life == "Dead" then
+	if not p or not inRound() or Lobby.isSittingOut(p.life) then
 		task.delay(2, function()
 			if player.Character == char then
 				CharacterService.spawn(player, nil, map.lobbySpawn)

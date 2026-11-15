@@ -113,3 +113,16 @@ test("starters are dressed: real hair, shirt and pants", function()
 		expect(Outfit.descriptionProps(o).HairAccessory ~= "").toBeTruthy()
 	end
 end)
+
+test("replace puts a whole new look on the same outfit table (the saved profile keeps it)", function()
+	local saved = Outfit.default()
+	Outfit.wear(saved, 9, HAT)
+	local girl = Outfit.starter("Girl")
+	Outfit.replace(saved, girl)
+	expect(saved.shirt).toBe(girl.shirt)
+	expect(saved.colors.torso).toEqual(girl.colors.torso)
+	expect(Outfit.wears(saved, 9)).toBe(false)
+	-- no shared tables: changing the copy leaves the source alone
+	Outfit.wear(saved, 10, HAT)
+	expect(#girl.accessories).toBe(1)
+end)

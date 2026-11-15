@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
+local Lobby = require(Shared.Rules.Lobby)
 local Outfit = require(Shared.Data.Outfit)
 local Theme = require(script.Parent.Theme)
 local Room = require(script.Parent.Room)
@@ -65,11 +66,8 @@ local function inLobby(): boolean
 	if not view then
 		return true
 	end
-	if view.phase ~= "HeadStart" and view.phase ~= "Active" then
-		return true
-	end
 	local me = view.players[tostring(player.UserId)]
-	return me == nil or me.life == "Out" or me.life == "Escaped" or me.life == "Dead"
+	return Lobby.isFree(view.phase, me and me.life)
 end
 
 local toastToken = 0

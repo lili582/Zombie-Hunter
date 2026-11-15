@@ -8,6 +8,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Shop = require(Shared.Data.Shop)
 local Items = require(Shared.Config.Items)
 local Remotes = require(Shared.Net.Remotes)
+local Lobby = require(Shared.Rules.Lobby)
 local DataService = require(script.Parent.DataService)
 
 local ShopService = {}
@@ -24,11 +25,8 @@ local MIN_GAP = 0.25 -- seconds between requests (no spamming)
 -- You can shop in the lobby: between rounds, or while sitting out a round.
 function ShopService.canShop(player: Player): boolean
 	local s = round.getState()
-	if s.phase ~= "HeadStart" and s.phase ~= "Active" then
-		return true
-	end
 	local p = s.players[player.UserId]
-	return p == nil or p.life == "Out" or p.life == "Escaped" or p.life == "Dead"
+	return Lobby.isFree(s.phase, p and p.life)
 end
 
 local function handle(player: Player, itemId: any, action: (any, string) -> (boolean, string?))

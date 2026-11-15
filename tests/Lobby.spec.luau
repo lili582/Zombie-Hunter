@@ -1,0 +1,30 @@
+local lib = require("./lib")
+local test, expect = lib.test, lib.expect
+local Lobby = require("../src/shared/Rules/Lobby")
+
+test("between rounds everyone is free to use the shop and dressing room", function()
+	expect(Lobby.isFree("Waiting", "Alive")).toBe(true)
+	expect(Lobby.isFree("Intermission", "Alive")).toBe(true)
+	expect(Lobby.isFree("Results", "Alive")).toBe(true)
+end)
+
+test("during a round, players who are playing are not free", function()
+	expect(Lobby.isFree("HeadStart", "Alive")).toBe(false)
+	expect(Lobby.isFree("Active", "Alive")).toBe(false)
+	expect(Lobby.isFree("Active", "Downed")).toBe(false)
+end)
+
+test("during a round, players sitting it out are free: joined late, escaped, killed, unknown", function()
+	expect(Lobby.isFree("Active", "Out")).toBe(true)
+	expect(Lobby.isFree("Active", "Escaped")).toBe(true)
+	expect(Lobby.isFree("Active", "Dead")).toBe(true)
+	expect(Lobby.isFree("HeadStart", nil)).toBe(true)
+end)
+
+test("sitting out: Out, Escaped and Dead are not in the round any more; Alive and Downed are", function()
+	expect(Lobby.isSittingOut("Out")).toBe(true)
+	expect(Lobby.isSittingOut("Escaped")).toBe(true)
+	expect(Lobby.isSittingOut("Dead")).toBe(true)
+	expect(Lobby.isSittingOut("Alive")).toBe(false)
+	expect(Lobby.isSittingOut("Downed")).toBe(false)
+end)

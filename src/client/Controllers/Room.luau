@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local Theme = require(script.Parent.Theme)
+local CharacterCopy = require(script.Parent.CharacterCopy)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -18,44 +19,6 @@ local Room = {}
 Room.__index = Room
 
 local openRooms = 0 -- busy while any room is open
-
--- A copy of a character that can sit in a ViewportFrame (no scripts, tools or lights).
-local function cloneCharacter(): Model?
-	local char = player.Character
-	if not char then
-		return nil
-	end
-	local was = char.Archivable
-	char.Archivable = true
-	local ok, copy = pcall(function()
-		return char:Clone()
-	end)
-	char.Archivable = was
-	if not ok or not copy then
-		return nil
-	end
-	for _, d in copy:GetDescendants() do
-		if
-			d:IsA("BaseScript")
-			or d:IsA("Sound")
-			or d:IsA("Light")
-			or d:IsA("BillboardGui")
-			or d:IsA("Tool")
-			or d:IsA("ProximityPrompt")
-			or d:IsA("ParticleEmitter")
-		then
-			d:Destroy()
-		elseif d:IsA("BasePart") then
-			d.Anchored = true
-			d.CanCollide = false
-		end
-	end
-	local hum = copy:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-	end
-	return copy
-end
 
 function Room.new(name: string, title: string, accent: Color3, displayOrder: number)
 	local gui = Instance.new("ScreenGui")
@@ -236,7 +199,7 @@ function Room.refreshPreview(self: any)
 	if not self.root.Visible then
 		return
 	end
-	local copy = cloneCharacter()
+	local copy = CharacterCopy.of(player)
 	if self.model then
 		self.model:Destroy()
 		self.model = nil

@@ -19,6 +19,7 @@ return {
 	},
 	AlphaReveal = { seconds = 3 }, -- how long the Alpha's face shows after an ability (claws out = always)
 	AmmoBox = { amount = 12, respawn = 30 },
-	health = { human = 100, basic = 100, alpha = 350 },
-	speed = { human = 16, downed = 3, basic = 14, alpha = 18 },
+	-- the Alpha's health and unmasked speed come from its class (Config/AlphaClasses)
+	health = { human = 100, basic = 100 },
+	speed = { human = 16, downed = 3, basic = 14 },
 }

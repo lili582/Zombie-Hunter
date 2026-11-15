@@ -12,6 +12,7 @@ local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Maps = require(Shared.Config.Maps)
 local Theme = require(script.Parent.Theme)
+local CharacterCopy = require(script.Parent.CharacterCopy)
 local RoleEmote = require(script.Parent.RoleEmote)
 local RoleGuide = require(Shared.Config.RoleGuide)
 
@@ -271,43 +272,6 @@ local function typeText(label: TextLabel, text: string, perChar: number, token: 
 	end)
 end
 
--- Copy of a player's character that can sit in a ViewportFrame.
-local function cloneCharacter(plr: Player): Model?
-	local char = plr.Character
-	if not char then
-		return nil
-	end
-	local wasArchivable = char.Archivable
-	char.Archivable = true
-	local ok, copy = pcall(function()
-		return char:Clone()
-	end)
-	char.Archivable = wasArchivable
-	if not ok or not copy then
-		return nil
-	end
-	for _, d in copy:GetDescendants() do
-		if
-			d:IsA("BaseScript")
-			or d:IsA("Sound")
-			or d:IsA("Light")
-			or d:IsA("BillboardGui")
-			or d:IsA("ProximityPrompt")
-			or d:IsA("Tool")
-		then
-			d:Destroy()
-		elseif d:IsA("BasePart") then
-			d.Anchored = true
-			d.CanCollide = false
-		end
-	end
-	local hum = copy:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-	end
-	return copy
-end
-
 -- Turns a character copy into a faceless shadow: same shape, no face, no clothes, no glowing
 -- eyes, no skin colour. Used for the "everyone" rows, so nothing hints at anyone's role.
 local function shadowify(model: Model)
@@ -388,7 +352,7 @@ local function silhouetteRow(): { ViewportFrame }
 	local frames = {}
 	local list = Players:GetPlayers()
 	for i = 1, math.min(#list, 10) do
-		local model = cloneCharacter(list[i])
+		local model = CharacterCopy.of(list[i])
 		if model then
 			shadowify(model)
 			local vp = Instance.new("ViewportFrame")
@@ -420,32 +384,6 @@ local OUTCOME_LOOK = {
 }
 local RECAP_STEP = 0.55 -- seconds between two reveals (slow on purpose)
 local RECAP_MAX = 12
-
--- Turns a character copy into its zombie self: rotten skin, glowing eyes.
-local function zombify(model: Model, eyeColor: Color3)
-	for _, d in model:GetDescendants() do
-		if d:IsA("BasePart") and d.Parent == model and d.Name ~= "HumanoidRootPart" then
-			d.Color = Color3.fromRGB(118, 156, 96)
-		elseif d:IsA("BodyColors") then
-			d:Destroy()
-		end
-	end
-	local head = model:FindFirstChild("Head") :: BasePart?
-	if head then
-		for _, x in { -0.22, 0.22 } do
-			local eye = Instance.new("Part")
-			eye.Name = "Eye"
-			eye.Shape = Enum.PartType.Ball
-			eye.Size = Vector3.new(0.26, 0.26, 0.26)
-			eye.Material = Enum.Material.Neon
-			eye.Color = eyeColor
-			eye.Anchored = true
-			eye.CanCollide = false
-			eye.CFrame = head.CFrame * CFrame.new(x, 0.15, -head.Size.Z / 2 - 0.02)
-			eye.Parent = model
-		end
-	end
-end
 
 local function recapDuration(count: number): number
 	return 2.2 + math.min(count, RECAP_MAX) * RECAP_STEP + 3.5
@@ -483,12 +421,12 @@ local function playRecap(data: any, token: number)
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = vp
-		local model = if who then cloneCharacter(who) else nil
+		local model = if who then CharacterCopy.of(who) else nil
 		if model then
 			if e.outcome == "INFECTED" or e.outcome == "ZOMBIE" then
-				zombify(model, Theme.colors.mint)
+				CharacterCopy.zombify(model, Theme.colors.mint)
 			elseif e.outcome == "ALPHA" then
-				zombify(model, Color3.fromRGB(255, 40, 60))
+				CharacterCopy.zombify(model, Color3.fromRGB(255, 40, 60))
 			end
 			stage(vp, model)
 		end
@@ -646,7 +584,7 @@ local function play(name: string, data: any, token: number)
 		local color = Theme.roleColor[role] or C.bone
 		local guide = RoleGuide.get(role, data.mode)
 		setTitle("", color)
-		local model = cloneCharacter(player)
+		local model = CharacterCopy.of(player)
 		if model then
 			stage(ui.big, model)
 			playEmote(model, role, false, ROLE_REVEAL)
@@ -701,7 +639,7 @@ local function play(name: string, data: any, token: number)
 		end)
 	elseif name == "YourRules" then
 		local role = data.role
-		local model = cloneCharacter(player)
+		local model = CharacterCopy.of(player)
 		if model then
 			stage(ui.big, model)
 			playEmote(model, role, true) -- keeps going from the role card
@@ -780,7 +718,7 @@ local function play(name: string, data: any, token: number)
 		setTitle("YOU'VE BEEN INFECTED!", C.blood)
 		slam()
 		doFlash(C.mint, 0.7)
-		local model = cloneCharacter(player)
+		local model = CharacterCopy.of(player)
 		if model then
 			stage(ui.big, model)
 			playEmote(model, "Zombie", false, 0) -- no build-up: you're already one of them

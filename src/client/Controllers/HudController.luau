@@ -10,6 +10,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local RoleGuide = require(Shared.Config.RoleGuide)
+local Lobby = require(Shared.Rules.Lobby)
 local Theme = require(script.Parent.Theme)
 local Aim = require(script.Parent.Aim)
 
@@ -834,12 +835,7 @@ local function render()
 	end
 
 	-- lobby: your Alpha class
-	local lobby = not inRound
-		and (
-			phase == "Waiting"
-			or phase == "Intermission"
-			or (mine and (mine.life == "Out" or mine.life == "Dead"))
-		)
+	local lobby = Lobby.isFree(phase, mine and mine.life)
 	ui.alphaPref.Text = if lobby
 		then `IF YOU ARE THE ALPHA: {AlphaClasses.get(view.alphaPref).name}  -  change it at the pedestals`
 		else ""

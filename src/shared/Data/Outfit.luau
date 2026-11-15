@@ -219,6 +219,15 @@ function Outfit.wears(o: Outfit, id: number): boolean
 	return false
 end
 
+-- Puts a whole other look on `target` (in place, so the profile that holds it keeps it).
+-- The source is copied, never shared.
+function Outfit.replace(target: Outfit, source: Outfit)
+	local copy = Outfit.migrate(source)
+	for key, value in copy do
+		(target :: any)[key] = value
+	end
+end
+
 -- Puts an item on. `typeId` is the Roblox AssetTypeId (checked by the server).
 -- Returns (true, nil) or (false, reason): "type" (not allowed) | "full" (too many accessories)
 -- | "worn" (already on). Clothing and faces replace what was there.
