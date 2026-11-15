@@ -2,7 +2,7 @@
 -- Full-screen cards (round start / end) and top banners (mid-round). Horror style:
 -- VHS scanlines, flicker, glitching text, typed subtitles, and the players' own characters
 -- shown as black silhouettes in the dark while roles are "chosen". No emoji, no names leaked.
--- Card times for the intro must add up to Classic.introLength (29s).
+-- Card times for the intro must add up to Classic.introLength (32s).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -21,11 +21,11 @@ local player = Players.LocalPlayer
 local AnnouncementController = {}
 
 local CARD_TIME = {
-	-- intro (29s total): slow on purpose, the role pick is the scary part and needs time to read
+	-- intro (32s total): slow on purpose, the role pick is the scary part and needs time to read
 	Map = 2.5,
-	Mode = 2.5,
-	SomeoneInfected = 6.5,
-	YourRole = 8,
+	Mode = 3,
+	SomeoneInfected = 8.5,
+	YourRole = 8.5,
 	YourRules = 7,
 	HunterChosen = 2.5,
 	EveryoneArmed = 2.5, -- replaces HunterChosen in modes without a Hunter
@@ -249,11 +249,20 @@ local function doFlash(color: Color3, strength: number)
 	TweenService:Create(ui.flash, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
 end
 
+-- When the last text on the current card finishes typing. A card never switches before that
+-- plus READ_HOLD, so there is always time to read it.
+local READ_HOLD = 1.2
+local textDoneAt = 0
+local typingOn: { [TextLabel]: number } = {} -- newest typing job per label (older ones stop)
+
 local function typeText(label: TextLabel, text: string, perChar: number, token: number)
+	typingOn[label] = (typingOn[label] or 0) + 1
+	local job = typingOn[label]
+	textDoneAt = math.max(textDoneAt, os.clock() + #text * perChar)
 	task.spawn(function()
 		label.Text = ""
 		for i = 1, #text do
-			if cardToken ~= token then
+			if cardToken ~= token or typingOn[label] ~= job then
 				return
 			end
 			label.Text = string.sub(text, 1, i)
@@ -574,22 +583,20 @@ local function play(name: string, data: any, token: number)
 		doFlash(C.blood, 0.35)
 		typeText(ui.subtitle, data.line or "", 0.03, token)
 	elseif name == "SomeoneInfected" then
+		local cardStart = os.clock()
 		-- slow and quiet: the title creeps in, whispers, and a red light searches the crowd
 		setTitle("", C.blood)
 		typeText(ui.title, "SOMEONE IS INFECTED...", 0.09, token)
 		local frames = silhouetteRow()
 		task.spawn(function()
-			local whispers = { "who is it...", "...", "they're standing right next to you", "..." }
-			for i, line in whispers do
+			-- two slow whispers, each left up long enough to read
+			local whispers = { { 1.0, "who is it..." }, { 3.2, "they're standing right next to you" } }
+			for _, w in whispers do
+				task.wait(math.max(0, w[1] - (os.clock() - cardStart)))
 				if cardToken ~= token then
 					return
 				end
-				task.wait(if i == 1 then 0.9 else 1.25)
-				if cardToken ~= token then
-					return
-				end
-				ui.subtitle.Text = ""
-				typeText(ui.subtitle, line, 0.05, token)
+				typeText(ui.subtitle, w[2], 0.06, token)
 			end
 		end)
 		-- the red light drifts from shadow to shadow, slower and slower. Sometimes it lingers on
@@ -626,9 +633,13 @@ local function play(name: string, data: any, token: number)
 				vp.Ambient = Color3.new(0, 0, 0)
 				vp.BackgroundTransparency = 0.9
 			end
+			-- the last line only after the second whisper has had time to be read
+			task.wait(math.max(0, 6 - (os.clock() - cardStart)))
+			if cardToken ~= token then
+				return
+			end
 			doFlash(Color3.new(0, 0, 0), 1)
-			ui.subtitle.Text = ""
-			typeText(ui.subtitle, "...and it could be you.", 0.07, token)
+			typeText(ui.subtitle, "...and it could be you.", 0.08, token)
 		end)
 	elseif name == "YourRole" then
 		local role = data.role
@@ -839,6 +850,7 @@ local function playQueue()
 		while #queue > 0 do
 			local item = table.remove(queue, 1) :: any
 			cardToken += 1
+			textDoneAt = 0
 			ui.card.Visible = true
 			play(item.card, item.data or {}, cardToken)
 			local seconds = CARD_TIME[item.card] or 2
@@ -846,6 +858,11 @@ local function playQueue()
 				seconds = recapDuration(#((item.data or {}).players or {}))
 			end
 			task.wait(seconds)
+			-- still typing? let it finish, then leave it up a moment to be read (max 4s more)
+			local extra = 0
+			while os.clock() < textDoneAt + READ_HOLD and extra < 4 do
+				extra += task.wait(0.1)
+			end
 		end
 		cardToken += 1
 		clearStage()

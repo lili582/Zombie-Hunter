@@ -802,7 +802,8 @@ local function render()
 	-- repairing a tower
 	local towerId = inRound and view.repairing
 	local tower = towerId and view.towers[tostring(towerId)]
-	ui.repairBack.Visible = tower ~= nil
+	-- (tower can be false here, not just nil: only a real tower shows the bar)
+	ui.repairBack.Visible = if tower then true else false
 	if tower then
 		ui.repairFill.Size = UDim2.fromScale(math.clamp(tower.progress, 0, 1), 1)
 		ui.repairText.Text = `REPAIRING  {math.floor(tower.progress * 100)}%`
