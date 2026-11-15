@@ -220,7 +220,9 @@ runEffect = function(f: any)
 			removeDroppedGun()
 		elseif f.phase == "Active" then
 			MapService.setAlphaDoor(map, true)
-		elseif (f.phase == "Intermission" or f.phase == "Waiting") and from == "Results" then
+		elseif f.phase == "Results" and (from == "HeadStart" or from == "Active") then
+			-- the round is over: everyone goes straight to the safehouse to rest. They stay there
+			-- for the results (15s) and the next countdown (20s) before the next round.
 			ObjectiveService.cleanup()
 			sendEveryoneToLobby()
 		end

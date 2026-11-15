@@ -590,7 +590,9 @@ local function render()
 		and mine.life ~= "Escaped"
 
 	-- top center
-	local shake = UDim2.fromOffset(0, 0)
+	local lastMinute = phase == "Active" and left < 60
+	-- last minute: the clock turns a deep blood red with a dark edge (no shaking)
+	ui.timer.TextStrokeColor3 = if lastMinute then Color3.fromRGB(40, 0, 6) else C.ink
 	if phase == "Waiting" then
 		ui.timer.Text = "ZOMBIE HUNTER"
 		ui.timer.TextColor3 = C.mint
@@ -607,10 +609,7 @@ local function render()
 			else "SOMEONE IS INFECTED... RUN"
 	elseif phase == "Active" then
 		ui.timer.Text = Theme.timeText(left)
-		ui.timer.TextColor3 = if left < 60 then C.blood else C.bone
-		if left < 60 then
-			shake = UDim2.fromOffset(math.random(-2, 2), math.random(-2, 2))
-		end
+		ui.timer.TextColor3 = if lastMinute then Color3.fromRGB(200, 10, 28) else C.bone
 		local line = `HUMANS LEFT: {view.humansLeft}`
 		if next(view.towers) ~= nil then
 			line ..= `   TOWERS {view.towersDone}/{view.towersNeeded}`
@@ -626,9 +625,8 @@ local function render()
 	elseif phase == "Results" then
 		ui.timer.Text = "ROUND OVER"
 		ui.timer.TextColor3 = C.lavender
-		ui.sub.Text = `BACK TO THE SAFEHOUSE IN {math.ceil(left)}`
+		ui.sub.Text = "SAFE IN THE SAFEHOUSE  -  REST UP"
 	end
-	ui.top.Position = UDim2.new(0.5, 0, 0, 44) + shake
 
 	-- health / wounds
 	ui.healthBack.Visible = inRound == true

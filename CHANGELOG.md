@@ -5,6 +5,8 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 ## [Unreleased]
 
 ### Changed
+- **Straight to the safehouse:** the moment a round ends everyone is brought back to the safehouse, and the result and coin cards play there. Players rest at least 35s before the next round (15s results + 20s countdown); a test checks the countdown never drops under 20s.
+- **Last-minute clock:** under 1:00 the timer turns a deep blood red with a dark edge, and no longer shakes.
 - **Spread-out group starts:** at round start players are split into groups of 2 (the last group may have 3), and each group starts at its own spot, far apart on the map (`Rules/SpawnGroups`, 6 tests). Groups are reshuffled every round and the disguised Alpha lands in a random group. The greybox Town now has 7 `HumanStart` spots; a map with one spot still starts everyone together.
 - **Role reveal emotes:** on the intro's role card your character acts out what it got, as the light comes on: **Survivor** crouches, shields its face and shakes, head snapping around; **Hunter** raises a revolver, scans and fires (recoil + muzzle flash); **Alpha** hangs limp, then its head snaps up crooked, red eyes open, claws rise and it glitches; **Zombie** (the infected card) shambles with arms reaching, head lolling and mint eyes. It carries on into the rules card. Made in code (`RoleEmote`), R6 and R15.
 - **Repair emote:** while repairing a radio tower your character turns to face the box, holds a wrench and hammers at it (left hand steadying), with sparks on every hit. Everyone sees it. Made in code (no animation asset), works on R6 and R15.

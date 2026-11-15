@@ -8,13 +8,13 @@ local Classic = {
 	minPlayers = 5,
 	studioMinPlayers = 2, -- used automatically when testing in Roblox Studio
 	nameTagDistance = 0, -- studs; 0 = no floating player names or health bars at all
-	intermission = 20,
+	intermission = 20, -- countdown in the safehouse (map vote); keep >= 20 so players get a rest
 	-- Head start = the intro cards (everyone frozen) + 10s for humans to run before the Alpha
 	-- is released. introLength must match the card times in AnnouncementController.
 	introLength = 16,
 	headStart = 26,
 	roundLength = 360,
-	results = 15,
+	results = 15, -- result cards, already in the safehouse (rest = results + intermission)
 	bleedOut = 20,
 	reviveTime = 4,
 	hitsToDown = { Alpha = 2, Zombie = 3 } :: { [string]: number },

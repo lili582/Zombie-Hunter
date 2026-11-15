@@ -103,7 +103,8 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Survivors have **no weapons**. When a zombie claws a Survivor, an **ESCAPE!** bar appears: click/tap/Space while the needle is in the green → ESCAPED! (speed burst, +5); miss or wait → CAUGHT! and the hit counts. Hunters get no escape bar.
 - [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter (banner: SOMEONE PICKED UP THE GUN, no name); nobody else can.
 - [ ] Last human turns → ZOMBIES WIN! → +coins card → back to the lobby → next round.
-- [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; timer turns pink and shakes under 1:00.
+- [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; under 1:00 the timer is deep red (it doesn't shake).
+- [ ] When a round ends everyone appears in the safehouse right away (ROUND OVER - SAFE IN THE SAFEHOUSE), the result + coins cards play there, then the 20s countdown starts.
 - [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat (Hunter); Survivors tap to escape; prompts show a tap button.
 
 ## Phase 2 checklist
