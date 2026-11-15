@@ -21,6 +21,18 @@ test("server start builds the safehouse lobby and the first map", function()
 	expect(#info.zombieSpawns >= 3).toBe(true)
 end)
 
+test("the safehouse has every station players use", function()
+	local _, MapService = mapService()
+	MapService.load()
+	expect(World.tagged("LobbySpawn")).toBe(1)
+	expect(World.tagged("MapVotePrompt")).toBe(3)
+	expect(World.tagged("AlphaPickPrompt")).toBe(3)
+	expect(World.tagged("ShopPrompt")).toBe(1)
+	expect(World.tagged("CatalogPrompt")).toBe(1)
+	expect(#MapService.lobby.mapSlots).toBe(3)
+	expect(MapService.lobby.modeLabel.Text).toBe("WAITING FOR PLAYERS")
+end)
+
 for _, mapId in Maps.order do
 	test(`{mapId} builds with all its spots`, function()
 		local _, MapService = mapService()

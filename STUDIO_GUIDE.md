@@ -131,7 +131,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 - [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. The MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
 
-- [ ] Safehouse: you spawn on the pink pad in a warm room with string lights, a couch and TV, a zombie face with mint eyes in the right window, SHOP and CATALOG signs (soon), the Alpha pedestals on the east wall and the vote board on the north wall.
+- [ ] Safehouse: you spawn in the middle of a dim, lived-in room: a crackling fireplace (the mode sign on the chimney, a clock stopped at 3:33), a leather couch and armchairs, hanging lamps (one flickers), dust in the air, static on the old TV. Boarded windows with a dark figure pressing its hands on the right one; a barricaded door with claw marks and DON'T LET THEM IN on the wall. The vote posters on the corkboard (north), the Z-SHOP counter and the CATALOG mirror (west), the Alpha pedestals under red lights (east). E works on all of them as before.
 - [ ] During the countdown step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
 - [ ] The intro's map card shows the voted map; the sign says **NOW PLAYING: CLASSIC** during the round.
 
