@@ -102,6 +102,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Not revived in 20s → **YOU'VE BEEN INFECTED!** → green zombie with mint eyes, claws equipped.
 - [ ] Hunter: click shoots (yellow tracer), ammo `6 / 36`, R reloads; 3 shots kill a basic zombie → respawns in 5s at a corner; +10 for the Hunter.
 - [ ] Survivors have **no weapons**. When a zombie claws a Survivor, an **ESCAPE!** bar appears: click/tap/Space while the needle is in the green → ESCAPED! (speed burst, +5); miss or wait → CAUGHT! and the hit counts. Hunters get no escape bar.
+- [ ] **Friendly fire:** as the Hunter, shoot a survivor: they fall dead and so do you (cards YOU SHOT AN INNOCENT / THE HUNTER SHOT YOU), both go to the safehouse, banner THE HUNTER SHOT AN INNOCENT, the glowing gun lies where you fell; another survivor presses E on it and is the new Hunter. Shooting a (disguised) zombie still just damages it.
 - [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter (banner: SOMEONE PICKED UP THE GUN, no name); nobody else can.
 - [ ] Last human turns → ZOMBIES WIN! → +coins card → back to the lobby → next round.
 - [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; under 1:00 the timer is deep red (it doesn't shake).

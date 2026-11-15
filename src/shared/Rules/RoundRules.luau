@@ -194,7 +194,7 @@ end
 
 -- End-of-round recap: every player who played, their real role (secrets are over), what
 -- happened to them and whether their side won. Winners first, then by points.
---   outcome: "ESCAPED" | "SURVIVED" | "INFECTED" (turned) | "ALPHA" | "ZOMBIE"
+--   outcome: "ESCAPED" | "SURVIVED" | "INFECTED" (turned) | "ALPHA" | "ZOMBIE" | "KILLED"
 function RoundRules.recap(s: State, winner: Types.Winner): { { [string]: any } }
 	local list = {}
 	for _, id in Util.sortedIds(s.players) do
@@ -203,7 +203,9 @@ function RoundRules.recap(s: State, winner: Types.Winner): { { [string]: any } }
 			continue -- sat this round out
 		end
 		local outcome
-		if p.role == "Alpha" then
+		if p.life == "Dead" then
+			outcome = "KILLED"
+		elseif p.role == "Alpha" then
 			outcome = "ALPHA"
 		elseif p.role == "Zombie" then
 			outcome = if p.wasInfected then "INFECTED" else "ZOMBIE"
@@ -213,8 +215,11 @@ function RoundRules.recap(s: State, winner: Types.Winner): { { [string]: any } }
 			outcome = "SURVIVED"
 		end
 		local zombieSide = Util.isZombieRole(p.role)
-		local won = (winner == "ZombiesWin" and zombieSide)
-			or ((winner == "SurvivorsSurvived" or winner == "SurvivorsEscaped") and not zombieSide)
+		local won = p.life ~= "Dead"
+			and (
+				(winner == "ZombiesWin" and zombieSide)
+				or ((winner == "SurvivorsSurvived" or winner == "SurvivorsEscaped") and not zombieSide)
+			)
 		-- the role they started with: an infected Hunter was a Hunter
 		local role: string = p.role
 		if p.wasInfected and s.startRoles[id] then
@@ -239,14 +244,11 @@ local function endRound(s: State, winner: Types.Winner, fx: { Effect })
 	setPhase(s, "Results", s.config.results, fx)
 	table.insert(fx, { type = "RoundOver", winner = winner })
 	table.insert(fx, { type = "Announce", card = "Result", data = { winner = winner } })
-	table.insert(
-		fx,
-		{
-			type = "Announce",
-			card = "Recap",
-			data = { winner = winner, players = RoundRules.recap(s, winner) },
-		}
-	)
+	table.insert(fx, {
+		type = "Announce",
+		card = "Recap",
+		data = { winner = winner, players = RoundRules.recap(s, winner) },
+	})
 end
 
 local function checkWin(s: State, fx: { Effect })

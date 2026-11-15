@@ -272,6 +272,16 @@ runEffect = function(f: any)
 			CombatService.clearGun(player)
 			task.spawn(CharacterService.spawn, player, role, at)
 		end
+	elseif f.type == "Killed" then
+		-- friendly fire: the character falls; onDied sends them to the safehouse to watch
+		local player = playerById(f.playerId)
+		local hum = player and player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if player then
+			CombatService.clearGun(player)
+		end
+		if hum then
+			hum.Health = 0
+		end
 	elseif f.type == "GunDropped" then
 		local at = lastPositions[f.fromId] or map.humanStart
 		spawnDroppedGun(at)
@@ -317,7 +327,7 @@ end
 -- A character died (fell off the map, or a zombie was killed by the Hunter).
 local function onDied(player: Player, char: Model)
 	local p = state.players[player.UserId]
-	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" then
+	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" or p.life == "Dead" then
 		task.delay(2, function()
 			if player.Character == char then
 				CharacterService.spawn(player, nil, map.lobbySpawn)

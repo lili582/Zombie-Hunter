@@ -35,6 +35,8 @@ local CARD_TIME = {
 	YourCoins = 3,
 	Infected = 2.5,
 	Escaped = 3,
+	ShotInnocent = 3.5, -- private: you (the Hunter) shot a human
+	ShotByHunter = 3.5, -- private: the Hunter shot you
 }
 local BANNERS = {
 	AlphaAwakened = true,
@@ -55,7 +57,7 @@ local ROLE_TITLE = {
 }
 local ROLE_RULES = {
 	Survivor = "No weapons  -  Repair 3 radio towers  -  Hide in lockers  -  Revive friends\nZombie attack? CLICK IN TIME to escape!",
-	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
+	Hunter = "Your role is SECRET  -  Only you have a gun\nShoot a HUMAN and you both die  -  Ammo boxes  -  [R] reload",
 	Alpha = "You look like them. Blend in.\nClaws wake up at release  -  [1] takes them out: your face shows until you put them away",
 	Zombie = "You still look human. Blend in.\n[1] takes your claws out: your face shows until you put them away  -  3 hits downs a human",
 }
@@ -405,6 +407,7 @@ local OUTCOME_LOOK = {
 	INFECTED = { "INFECTED", Theme.colors.mint },
 	ZOMBIE = { "ZOMBIE", Theme.colors.mint },
 	ALPHA = { "THE ALPHA", Theme.colors.blood },
+	KILLED = { "KILLED", Theme.colors.lavender },
 }
 local RECAP_STEP = 0.55 -- seconds between two reveals (slow on purpose)
 local RECAP_MAX = 12
@@ -732,6 +735,28 @@ local function play(name: string, data: any, token: number)
 		setTitle(`+{data.coins} Z-COINS`, C.butter)
 		slam()
 		typeText(ui.subtitle, `{data.points} points this round`, 0.03, token)
+	elseif name == "ShotInnocent" then
+		ui.card.BackgroundColor3 = Color3.fromRGB(30, 4, 8)
+		setTitle("YOU SHOT AN INNOCENT", C.blood)
+		slam()
+		doFlash(Color3.fromRGB(255, 30, 50), 0.8)
+		typeText(
+			ui.subtitle,
+			"They were human. The guilt takes you too... your gun lies in the dirt.",
+			0.03,
+			token
+		)
+	elseif name == "ShotByHunter" then
+		ui.card.BackgroundColor3 = Color3.fromRGB(14, 10, 20)
+		setTitle("THE HUNTER SHOT YOU", C.peach)
+		slam()
+		doFlash(Color3.new(1, 1, 1), 0.6)
+		typeText(
+			ui.subtitle,
+			"You were human. They didn't believe it. Watch from the safehouse.",
+			0.03,
+			token
+		)
 	elseif name == "Escaped" then
 		ui.card.BackgroundColor3 = Color3.fromRGB(10, 14, 30)
 		setTitle("YOU ESCAPED", C.baby)
@@ -837,7 +862,9 @@ local function showBanner(name: string, data: any)
 	if name == "AlphaAwakened" then
 		text = "THE ALPHA HAS AWAKENED - it could be anyone"
 	elseif name == "HunterFallen" then
-		text = "THE HUNTER HAS FALLEN - GRAB THE GUN!"
+		text = if data.reason == "innocent"
+			then "THE HUNTER SHOT AN INNOCENT - BOTH ARE DEAD. GRAB THE GUN!"
+			else "THE HUNTER HAS FALLEN - GRAB THE GUN!"
 		color = C.peach
 	elseif name == "NewHunter" then
 		text = "SOMEONE PICKED UP THE GUN"

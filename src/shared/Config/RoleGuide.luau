@@ -28,13 +28,14 @@ RoleGuide.roles = {
 	},
 	Hunter = {
 		title = "HUNTER",
-		quick = "Only you have a gun. Protect them.",
+		quick = "Only you have a gun. Shoot a human and you die.",
 		goal = "Keep the survivors alive. Your role is secret.",
 		tips = {
 			"Click to shoot where the + crosshair is. [R] reloads.",
 			"Grab ammo boxes [E] around the map.",
 			"Your melee knocks zombies back.",
 			"Zombies look human until their claws come out. Watch who swings.",
+			"Shoot a HUMAN by mistake and you both die. Be sure before you fire.",
 			"If you fall, your gun drops. The first survivor to grab it is the new Hunter.",
 		},
 	},

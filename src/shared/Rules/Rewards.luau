@@ -20,6 +20,9 @@ local function add(out: { [number]: Reward }, playerId: number?, stat: string)
 end
 
 local function onSide(winner: Types.Winner, p: Types.PlayerState): boolean
+	if p.life == "Dead" then
+		return false -- killed this round: no win
+	end
 	if winner == "ZombiesWin" then
 		return Util.isZombieRole(p.role)
 	elseif winner == "SurvivorsSurvived" or winner == "SurvivorsEscaped" then
@@ -67,7 +70,7 @@ function Rewards.collect(s: Types.RoundState, effects: { Types.Effect }): { [num
 				if onSide(f.winner, p) then
 					add(out, id, "wins")
 				end
-				if f.winner == "SurvivorsSurvived" and Util.isHumanRole(p.role) then
+				if f.winner == "SurvivorsSurvived" and Util.isHumanRole(p.role) and p.life ~= "Dead" then
 					add(out, id, "survivals")
 				end
 				out[id].coins = Scoring.coins(p.points)

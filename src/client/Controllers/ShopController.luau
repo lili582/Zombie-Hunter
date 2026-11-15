@@ -43,7 +43,7 @@ local function inLobby(): boolean
 		return true
 	end
 	local me = view.players[tostring(player.UserId)]
-	return me == nil or me.life == "Out" or me.life == "Escaped"
+	return me == nil or me.life == "Out" or me.life == "Escaped" or me.life == "Dead"
 end
 
 local function owns(id: string): boolean

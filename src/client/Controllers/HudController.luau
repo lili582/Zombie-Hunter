@@ -564,6 +564,8 @@ local function rebuildList()
 			roleText = "WAITING"
 		elseif isMe and p.life == "Downed" then
 			roleText = "DOWN"
+		elseif isMe and p.life == "Dead" then
+			roleText = "DEAD"
 		end
 		-- one compact row: name (cut if long) | role | points
 		local row = Instance.new("Frame")
@@ -699,6 +701,7 @@ local function render()
 		and mine ~= nil
 		and mine.life ~= "Out"
 		and mine.life ~= "Escaped"
+		and mine.life ~= "Dead"
 
 	-- top center
 	local lastMinute = phase == "Active" and left < 60
@@ -831,7 +834,11 @@ local function render()
 
 	-- lobby: your Alpha class
 	local lobby = not inRound
-		and (phase == "Waiting" or phase == "Intermission" or (mine and mine.life == "Out"))
+		and (
+			phase == "Waiting"
+			or phase == "Intermission"
+			or (mine and (mine.life == "Out" or mine.life == "Dead"))
+		)
 	ui.alphaPref.Text = if lobby
 		then `IF YOU ARE THE ALPHA: {AlphaClasses.get(view.alphaPref).name}  -  change it at the pedestals`
 		else ""

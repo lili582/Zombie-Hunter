@@ -187,6 +187,9 @@ local function onFire(player: Player, direction: any)
 		local role = victim and roleOf(victim)
 		if victim and (role == "Alpha" or role == "Zombie") then
 			damageZombie(victim, w.damage, player)
+		elseif victim and (role == "Survivor" or role == "Hunter") and roleOf(player) == "Hunter" then
+			-- the Hunter shot a human: the rules kill both and drop the gun
+			round.send({ type = "FriendlyFire", shooterId = player.UserId, victimId = victim.UserId })
 		end
 	end
 	Remotes.get("ShotFired"):FireAllClients(origin, hitPos)
