@@ -60,7 +60,7 @@ end)
 test("no mode pool: always Classic", function()
 	local s = H.run(RoundRules.new(Classic, Rng.new(1)), H.join(8))
 	expect(s.nextMode).toBe("Classic")
-	expect(RoundRules.viewFor(s, 1).nextMode).toBe("Classic")
+	expect(RoundRules.viewFor(s, 1).nextMode).toBeNil() -- the lobby never learns the next mode
 end)
 
 test("Outbreak round: 2 Alphas, no Hunter, armed survivors, 4:00, 10s bleed-out", function()
@@ -174,4 +174,17 @@ test("Outbreak: a Survivor who kills a zombie gets the kill points; in Classic t
 	expect(#H.find(fx, function(f)
 		return f.type == "PointsAwarded"
 	end)).toBe(0)
+end)
+
+test("every role has a quick line and how-to-play tips, also per mode", function()
+	local RoleGuide = require("../src/shared/Config/RoleGuide")
+	for _, role in { "Survivor", "Hunter", "Alpha", "Zombie" } do
+		for _, mode in { "Classic", "Outbreak" } do
+			local g = RoleGuide.get(role, mode)
+			expect(g ~= nil).toBeTruthy()
+			expect(#g.quick > 0 and #g.goal > 0 and #g.tips > 0).toBeTruthy()
+		end
+	end
+	expect(RoleGuide.get("Survivor", "Outbreak").quick).toBe("Everyone's armed. Survive 4:00.")
+	expect(RoleGuide.get(nil, nil)).toBeNil()
 end)

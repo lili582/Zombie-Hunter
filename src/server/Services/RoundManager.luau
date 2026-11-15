@@ -13,6 +13,7 @@ local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
 local Rewards = require(Shared.Rules.Rewards)
 local Profile = require(Shared.Data.Profile)
+local SpawnGroups = require(Shared.Rules.SpawnGroups)
 
 local Services = script.Parent
 local CharacterService = require(Services.CharacterService)
@@ -166,16 +167,40 @@ local function sendEveryoneToLobby()
 	end
 end
 
+-- Where each player started this round (their group's spot). Used again if they fall out of
+-- the world, or become the Alpha during the head start.
+local startOf: { [number]: CFrame } = {}
+local spawnRng = Rng.new(os.time() + 7)
+
+local function startFor(id: number): CFrame
+	return startOf[id] or map.humanStart
+end
+
 local function spawnRoundCharacters()
 	-- everyone stands frozen in the dark while the intro cards play
 	local introEnds = os.clock() + Classic.introLength
+	-- groups of 2-3 start at different spots, spread over the map
+	local ids = {}
+	for id, p in state.players do
+		if p.life ~= "Out" then
+			table.insert(ids, id)
+		end
+	end
+	local spots = {}
+	for _, cf in map.humanStarts do
+		table.insert(spots, { x = cf.Position.X, z = cf.Position.Z })
+	end
+	startOf = {}
+	for id, spot in SpawnGroups.assign(ids, spots, spawnRng) do
+		startOf[id] = map.humanStarts[spot]
+	end
 	for id, p in state.players do
 		local player = playerById(id)
 		if not player or p.life == "Out" then
 			continue
 		end
-		-- the Alpha starts among the survivors, disguised (claws only work after release)
-		local at = map.humanStart
+		-- the Alpha starts in a group like everyone else, disguised (claws wake up at release)
+		local at = startFor(id)
 		task.spawn(function()
 			CharacterService.spawn(player, p.role, at)
 			giveGun(player, p.role)
@@ -195,7 +220,9 @@ runEffect = function(f: any)
 			removeDroppedGun()
 		elseif f.phase == "Active" then
 			MapService.setAlphaDoor(map, true)
-		elseif (f.phase == "Intermission" or f.phase == "Waiting") and from == "Results" then
+		elseif f.phase == "Results" and (from == "HeadStart" or from == "Active") then
+			-- the round is over: everyone goes straight to the safehouse to rest. They stay there
+			-- for the results (15s) and the next countdown (20s) before the next round.
 			ObjectiveService.cleanup()
 			sendEveryoneToLobby()
 		end
@@ -240,10 +267,20 @@ runEffect = function(f: any)
 		if player then
 			local role = if f.type == "BecameAlpha" then "Alpha" else "Zombie"
 			local at = if state.phase == "HeadStart"
-				then map.humanStart
+				then startFor(f.playerId)
 				else (CharacterService.position(player) or randomZombieSpawn())
 			CombatService.clearGun(player)
 			task.spawn(CharacterService.spawn, player, role, at)
+		end
+	elseif f.type == "Killed" then
+		-- friendly fire: the character falls; onDied sends them to the safehouse to watch
+		local player = playerById(f.playerId)
+		local hum = player and player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if player then
+			CombatService.clearGun(player)
+		end
+		if hum then
+			hum.Health = 0
 		end
 	elseif f.type == "GunDropped" then
 		local at = lastPositions[f.fromId] or map.humanStart
@@ -290,7 +327,7 @@ end
 -- A character died (fell off the map, or a zombie was killed by the Hunter).
 local function onDied(player: Player, char: Model)
 	local p = state.players[player.UserId]
-	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" then
+	if not p or not inRound() or p.life == "Out" or p.life == "Escaped" or p.life == "Dead" then
 		task.delay(2, function()
 			if player.Character == char then
 				CharacterService.spawn(player, nil, map.lobbySpawn)
@@ -315,7 +352,7 @@ local function onDied(player: Player, char: Model)
 		task.delay(2, function()
 			local now = state.players[player.UserId]
 			if now and inRound() and player.Character == char then
-				CharacterService.spawn(player, now.role, map.humanStart)
+				CharacterService.spawn(player, now.role, startFor(player.UserId))
 				giveGun(player, now.role)
 				if now.life == "Downed" then
 					CharacterService.setDowned(player, true, hookRevivePrompt)
@@ -351,6 +388,9 @@ function RoundManager.start()
 			quiet = true,
 		})
 	end)
+	CharacterService.clawsAllowed = function(_player: Player): boolean
+		return state.phase == "Active" -- the Alpha's claws sleep through the head start
+	end
 	CharacterService.humanWeapon = function(): string?
 		return state.config.humanWeapon
 	end

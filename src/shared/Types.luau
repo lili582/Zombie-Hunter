@@ -2,7 +2,8 @@
 -- Shared types for the rules core. Pure: no Roblox APIs.
 
 export type Role = "Alpha" | "Hunter" | "Survivor" | "Zombie"
-export type Life = "Alive" | "Downed" | "Out" | "Escaped"
+-- Out = sat this round out (joined late). Dead = killed this round (friendly fire), watching.
+export type Life = "Alive" | "Downed" | "Out" | "Escaped" | "Dead"
 export type Phase = "Waiting" | "Intermission" | "HeadStart" | "Active" | "Results"
 export type Winner = "SurvivorsSurvived" | "SurvivorsEscaped" | "ZombiesWin" | "NoWinner"
 
@@ -64,6 +65,7 @@ export type RoundState = {
 	votes: { [number]: string }, -- player -> voted map
 	mapHistory: { string }, -- maps of the last rounds (oldest first)
 	mapId: string?, -- map of the current / last round
+	startRoles: { [number]: Role }, -- role each player got at the start of the round
 }
 
 export type Event =
@@ -87,6 +89,7 @@ export type Event =
 	| { type: "SetAlphaClass", playerId: number, class: string, quiet: boolean? } -- quiet: from a save
 	| { type: "UseAbility", playerId: number }
 	| { type: "VoteMap", playerId: number, mapId: string }
+	| { type: "FriendlyFire", shooterId: number, victimId: number } -- the Hunter shot a human
 
 export type Effect = { type: string, [string]: any }
 -- Effect types:
@@ -105,6 +108,7 @@ export type Effect = { type: string, [string]: any }
 --   Healed {playerId, targetId}
 --   AlphaClassSet {playerId, class}  AbilityUsed {playerId, class, ability}
 --   MapVoted {playerId, mapId}  MapChosen {mapId}
+--   Killed {playerId, byId?}  (friendly fire: the victim, then the Hunter)
 --   PointsAwarded {playerId, amount, reason}
 --   Announce {card, toPlayerId?, data?}
 --   RoundOver {winner}

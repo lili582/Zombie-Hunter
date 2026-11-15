@@ -9,7 +9,9 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
+local RoleGuide = require(Shared.Config.RoleGuide)
 local Theme = require(script.Parent.Theme)
+local Aim = require(script.Parent.Aim)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -56,26 +58,38 @@ local function build()
 	edge.Parent = vignette
 	ui.edge = edge
 
-	-- top center: timer + subline
+	-- top centre: the clock in a glass pill, and one quiet line under it
 	local top = Instance.new("Frame")
 	top.BackgroundTransparency = 1
 	top.AnchorPoint = Vector2.new(0.5, 0)
-	top.Position = UDim2.new(0.5, 0, 0, 44)
-	top.Size = UDim2.fromOffset(320, 90)
+	top.Position = UDim2.new(0.5, 0, 0, 12)
+	top.Size = UDim2.fromOffset(520, 80)
 	top.Parent = gui
 	ui.top = top
-	ui.timer = Theme.label(top, { Size = UDim2.new(1, 0, 0, 56), Text = "", Font = Theme.titleFont })
-	ui.sub =
-		Theme.label(top, { Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 26), Text = "" })
+	ui.timer = Theme.chip(top, {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0),
+		Size = UDim2.fromOffset(0, 44),
+		TextSize = 28,
+		TextStrokeTransparency = 0.7,
+		Text = "",
+	})
+	ui.sub = Theme.label(top, {
+		Position = UDim2.fromOffset(0, 50),
+		Size = UDim2.new(1, 0, 0, 18),
+		TextScaled = false,
+		TextSize = 13,
+		TextColor3 = C.lavender,
+		Text = "",
+	})
 
 	-- top right: player list
 	local list = Theme.panel(gui, {
 		Name = "PlayerList",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -8, 0, 64),
+		Position = UDim2.new(1, -16, 0, 46),
 		Size = UDim2.fromOffset(LIST_WIDTH, 10),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 0.35,
 		Visible = not UserInputService.TouchEnabled, -- phones start with it closed
 	})
 	local layout = Instance.new("UIListLayout")
@@ -91,47 +105,98 @@ local function build()
 	ui.list = list
 
 	-- small toggle button (and Tab on a keyboard) to show / hide the list
-	local toggle = Instance.new("TextButton")
-	toggle.AnchorPoint = Vector2.new(1, 0)
-	toggle.Position = UDim2.new(1, -8, 0, 40)
-	toggle.Size = UDim2.fromOffset(64, 20)
-	toggle.BackgroundColor3 = C.plum
-	toggle.BackgroundTransparency = 0.3
-	toggle.Font = Theme.uiFont
-	toggle.TextSize = 13
-	toggle.TextColor3 = C.lavender
-	toggle.Text = "PLAYERS"
-	local tc = Instance.new("UICorner")
-	tc.CornerRadius = UDim.new(0, 6)
-	tc.Parent = toggle
-	toggle.Parent = gui
+	local toggle = Theme.button(gui, {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 12),
+		Size = UDim2.fromOffset(78, 26),
+		Text = "PLAYERS",
+	})
 	toggle.Activated:Connect(function()
 		list.Visible = not list.Visible
 	end)
 
-	-- bottom left: health / wounds
-	local healthBack, healthFill = Theme.bar(gui, {
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 16, 1, -70),
-		Size = UDim2.fromOffset(220, 22),
-	}, C.mint)
-	ui.healthBack, ui.healthFill = healthBack, healthFill
-	ui.healthText = Theme.label(healthBack, { Size = UDim2.fromScale(1, 1), Text = "", ZIndex = 3 })
+	-- bottom left: a small, slim health bar with a caption above it
+	local health = Instance.new("Frame")
+	health.Name = "Health"
+	health.AnchorPoint = Vector2.new(0, 1)
+	health.Position = UDim2.new(0, 16, 1, -16)
+	health.Size = UDim2.fromOffset(150, 26)
+	health.BackgroundTransparency = 1
+	health.Visible = false -- shown only in a round
+	health.Parent = gui
+	ui.healthBack = health
+	ui.healthText = Theme.label(health, {
+		Size = UDim2.new(1, 0, 0, 14),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextScaled = false,
+		TextSize = 12,
+		TextStrokeTransparency = 0.5,
+		Text = "",
+	})
+	local track = Instance.new("Frame")
+	track.Name = "Track"
+	track.AnchorPoint = Vector2.new(0, 1)
+	track.Position = UDim2.fromScale(0, 1)
+	track.Size = UDim2.new(1, 0, 0, 7)
+	track.BackgroundColor3 = C.plum
+	track.BackgroundTransparency = 0.35
+	track.BorderSizePixel = 0
+	track.ClipsDescendants = true
+	track.Parent = health
+	local trackCorner = Instance.new("UICorner")
+	trackCorner.CornerRadius = UDim.new(1, 0)
+	trackCorner.Parent = track
+	local trackStroke = Instance.new("UIStroke")
+	trackStroke.Color = C.ink
+	trackStroke.Thickness = 1
+	trackStroke.Transparency = 0.2
+	trackStroke.Parent = track
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = C.mint
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+	local sheen = Instance.new("UIGradient") -- a soft glossy top edge
+	sheen.Rotation = 90
+	sheen.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 200, 200))
+	sheen.Parent = fill
+	ui.healthFill = fill
+	-- humans go down in hits: thin marks split the bar into 3
+	ui.healthMarks = {}
+	for i = 1, 2 do
+		local mark = Instance.new("Frame")
+		mark.AnchorPoint = Vector2.new(0.5, 0)
+		mark.Position = UDim2.fromScale(i / 3, 0)
+		mark.Size = UDim2.new(0, 2, 1, 0)
+		mark.BackgroundColor3 = C.plum
+		mark.BorderSizePixel = 0
+		mark.ZIndex = 2
+		mark.Parent = track
+		table.insert(ui.healthMarks, mark)
+	end
+	ui.healthShown = 1 -- eased fill amount
 
 	-- hunter: ammo + crosshair
-	ui.ammo = Theme.label(gui, {
+	ui.ammo = Theme.chip(gui, {
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -20, 1, -130),
-		Size = UDim2.fromOffset(160, 40),
+		Position = UDim2.new(1, -16, 1, -16),
+		Size = UDim2.fromOffset(0, 34),
+		TextSize = 20,
 		Text = "",
 		TextColor3 = C.peach,
+		Visible = false,
 	})
 	ui.crosshair = Theme.label(gui, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(30, 30),
+		Size = UDim2.fromOffset(26, 26),
 		Text = "+",
 		TextColor3 = C.peach,
+		TextStrokeTransparency = 0.3,
 		Visible = false,
 	})
 
@@ -175,104 +240,162 @@ local function build()
 	local popups = Instance.new("Frame")
 	popups.BackgroundTransparency = 1
 	popups.AnchorPoint = Vector2.new(1, 1)
-	popups.Position = UDim2.new(1, -20, 1, -180)
-	popups.Size = UDim2.fromOffset(260, 200)
+	popups.Position = UDim2.new(1, -16, 1, -150)
+	popups.Size = UDim2.fromOffset(260, 160)
 	popups.Parent = gui
 	ui.popups = popups
 
 	-- phone: reload button for the Hunter (attack = tap, interact = prompt buttons)
-	local reload = Instance.new("TextButton")
-	reload.AnchorPoint = Vector2.new(1, 1)
-	reload.Position = UDim2.new(1, -30, 1, -230)
-	reload.Size = UDim2.fromOffset(80, 80)
-	reload.BackgroundColor3 = C.peach
-	reload.Font = Theme.uiFont
-	reload.Text = "RELOAD"
-	reload.TextColor3 = C.ink
-	reload.TextScaled = true
-	reload.Visible = false
-	local rc = Instance.new("UICorner")
-	rc.CornerRadius = UDim.new(1, 0)
-	rc.Parent = reload
-	reload.Parent = gui
+	local reload = Theme.button(gui, {
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -16, 1, -108),
+		Size = UDim2.fromOffset(64, 64),
+		Text = "RELOAD",
+		TextColor3 = C.peach,
+		Visible = false,
+	})
 	reload.Activated:Connect(function()
 		Remotes.get("Reload"):FireServer()
 	end)
 	ui.reload = reload
 
 	-- Alpha: class ability button ([Q] on a keyboard), shows the cooldown
-	local ability = Instance.new("TextButton")
-	ability.AnchorPoint = Vector2.new(1, 1)
-	ability.Position = UDim2.new(1, -30, 1, -230)
-	ability.Size = UDim2.fromOffset(110, 56)
-	ability.BackgroundColor3 = C.blood
-	ability.Font = Theme.uiFont
-	ability.Text = ""
-	ability.TextColor3 = C.ink
-	ability.TextScaled = true
-	ability.Visible = false
-	local ac = Instance.new("UICorner")
-	ac.CornerRadius = UDim.new(0, 14)
-	ac.Parent = ability
-	local astroke = Instance.new("UIStroke")
-	astroke.Color = C.ink
-	astroke.Thickness = 3
-	astroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	astroke.Parent = ability
-	ability.Parent = gui
+	local ability = Theme.button(gui, {
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -16, 1, -60),
+		Size = UDim2.fromOffset(150, 40),
+		TextSize = 16,
+		Text = "",
+		Visible = false,
+	})
 	ability.Activated:Connect(function()
 		Remotes.get("UseAbility"):FireServer()
 	end)
 	ui.ability = ability
 
-	-- your saved Z-Coins (top left)
-	ui.coins = Theme.label(gui, {
-		Position = UDim2.fromOffset(16, 44),
-		Size = UDim2.fromOffset(200, 26),
+	-- role help: a round icon (top left) that opens "how to play your role" ([H])
+	local help = Instance.new("TextButton")
+	help.Name = "RoleHelp"
+	help.Position = UDim2.fromOffset(16, 46)
+	help.Size = UDim2.fromOffset(32, 32)
+	help.BackgroundColor3 = C.baby
+	help.Font = Theme.titleFont
+	help.TextScaled = true
+	help.TextColor3 = C.ink
+	help.Text = "?"
+	help.Visible = false
+	local hc = Instance.new("UICorner")
+	hc.CornerRadius = UDim.new(1, 0)
+	hc.Parent = help
+	local hs = Instance.new("UIStroke")
+	hs.Color = C.plum
+	hs.Thickness = 2
+	hs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	hs.Parent = help
+	help.Parent = gui
+	ui.help = help
+	ui.helpStroke = hs
+	ui.helpLabel = Theme.label(gui, {
+		Position = UDim2.fromOffset(56, 46),
+		Size = UDim2.fromOffset(200, 16),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextScaled = false,
-		TextSize = 20,
+		TextSize = 14,
+		Text = "",
+		Visible = false,
+	})
+	Theme.label(ui.helpLabel, {
+		Position = UDim2.fromOffset(0, 17),
+		Size = UDim2.fromOffset(200, 13),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextScaled = false,
+		TextSize = 11,
+		TextColor3 = C.lavender,
+		Text = if UserInputService.TouchEnabled then "tap ? for how to play" else "[H] how to play",
+	})
+
+	local panel = Theme.panel(gui, {
+		Name = "RoleHelpPanel",
+		Position = UDim2.fromOffset(16, 86),
+		Size = UDim2.fromOffset(340, 10),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Visible = false,
+	})
+	local panelPad = Instance.new("UIPadding")
+	panelPad.PaddingTop = UDim.new(0, 10)
+	panelPad.PaddingBottom = UDim.new(0, 12)
+	panelPad.PaddingLeft = UDim.new(0, 12)
+	panelPad.PaddingRight = UDim.new(0, 12)
+	panelPad.Parent = panel
+	local panelLayout = Instance.new("UIListLayout")
+	panelLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	panelLayout.Padding = UDim.new(0, 6)
+	panelLayout.Parent = panel
+	ui.helpPanel = panel
+	help.Activated:Connect(function()
+		panel.Visible = not panel.Visible
+	end)
+
+	-- your saved Z-Coins (top left)
+	ui.coins = Theme.chip(gui, {
+		Position = UDim2.fromOffset(16, 12),
 		Text = "",
 		TextColor3 = C.butter,
+		Visible = false, -- until your save has loaded
 	})
 
 	-- lobby: which Alpha class you will play if you are picked
-	ui.alphaPref = Theme.label(gui, {
+	ui.alphaPref = Theme.chip(gui, {
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -24),
-		Size = UDim2.fromOffset(520, 22),
-		TextScaled = false,
-		TextSize = 16,
+		Position = UDim2.new(0.5, 0, 1, -16),
+		TextSize = 13,
 		Text = "",
 		TextColor3 = C.blood,
+		Visible = false,
 	})
 
 	-- repairing: progress of the tower you're working on
-	local repairBack, repairFill = Theme.bar(gui, {
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -120),
-		Size = UDim2.fromOffset(260, 18),
-		Visible = false,
-	}, C.mint)
-	ui.repairBack, ui.repairFill = repairBack, repairFill
-	ui.repairText = Theme.label(repairBack, {
-		Size = UDim2.fromScale(1, 1),
-		Text = "",
-		ZIndex = 3,
+	local repair = Instance.new("Frame")
+	repair.Name = "Repair"
+	repair.AnchorPoint = Vector2.new(0.5, 1)
+	repair.Position = UDim2.new(0.5, 0, 1, -110)
+	repair.Size = UDim2.fromOffset(240, 26)
+	repair.BackgroundTransparency = 1
+	repair.Visible = false
+	repair.Parent = gui
+	ui.repairText = Theme.label(repair, {
+		Size = UDim2.new(1, 0, 0, 14),
 		TextScaled = false,
-		TextSize = 13,
+		TextSize = 12,
+		TextColor3 = C.mint,
+		Text = "",
 	})
+	local repairTrack = Instance.new("Frame")
+	repairTrack.AnchorPoint = Vector2.new(0, 1)
+	repairTrack.Position = UDim2.fromScale(0, 1)
+	repairTrack.Size = UDim2.new(1, 0, 0, 7)
+	repairTrack.ClipsDescendants = true
+	repairTrack.Parent = repair
+	Theme.glass(repairTrack, true)
+	local repairFill = Instance.new("Frame")
+	repairFill.Size = UDim2.fromScale(0, 1)
+	repairFill.BackgroundColor3 = C.mint
+	repairFill.BorderSizePixel = 0
+	repairFill.Parent = repairTrack
+	local rfc = Instance.new("UICorner")
+	rfc.CornerRadius = UDim.new(1, 0)
+	rfc.Parent = repairFill
+	ui.repairBack, ui.repairFill = repair, repairFill
 
 	-- medkit count (Survivors)
-	ui.medkit = Theme.label(gui, {
+	ui.medkit = Theme.chip(gui, {
 		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 16, 1, -98),
-		Size = UDim2.fromOffset(220, 20),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextScaled = false,
-		TextSize = 15,
+		Position = UDim2.new(0, 16, 1, -50),
+		Size = UDim2.fromOffset(0, 22),
+		TextSize = 12,
 		Text = "",
 		TextColor3 = C.blood,
+		Visible = false,
 	})
 
 	-- hiding in a locker: dark screen with slats and a way out
@@ -376,6 +499,48 @@ local function revealHumans(chars: { Model }, seconds: number)
 	end
 end
 
+-- Fills the role help panel: role title, the goal, then one line per tip.
+local helpFor = ""
+local function fillHelp(role: string, mode: string)
+	local key = role .. "/" .. mode
+	if key == helpFor then
+		return
+	end
+	helpFor = key
+	local guide = RoleGuide.get(role, mode)
+	for _, child in ui.helpPanel:GetChildren() do
+		if child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	if not guide then
+		return
+	end
+	local color = Theme.roleColor[role] or C.bone
+	local order = 0
+	local function line(text: string, size: number, textColor: Color3, font: Enum.Font?)
+		order += 1
+		Theme.label(ui.helpPanel, {
+			LayoutOrder = order,
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextWrapped = true,
+			TextScaled = false,
+			TextSize = size,
+			TextStrokeTransparency = 0.5,
+			TextColor3 = textColor,
+			Font = font or Theme.uiFont,
+			Text = text,
+		})
+	end
+	line(`YOU ARE THE {guide.title}`, 22, color, Theme.titleFont)
+	line(guide.goal, 15, C.bone)
+	for _, tip in guide.tips do
+		line("-  " .. tip, 13, C.lavender)
+	end
+end
+
 local function rebuildList()
 	for _, child in ui.list:GetChildren() do
 		if child:IsA("Frame") then
@@ -399,6 +564,8 @@ local function rebuildList()
 			roleText = "WAITING"
 		elseif isMe and p.life == "Downed" then
 			roleText = "DOWN"
+		elseif isMe and p.life == "Dead" then
+			roleText = "DEAD"
 		end
 		-- one compact row: name (cut if long) | role | points
 		local row = Instance.new("Frame")
@@ -488,8 +655,10 @@ local function popup(amount: number, reason: string)
 	local l = Theme.label(ui.popups, {
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.fromScale(1, 1),
-		Size = UDim2.fromOffset(260, 30),
+		Size = UDim2.fromOffset(260, 22),
 		TextXAlignment = Enum.TextXAlignment.Right,
+		TextScaled = false,
+		TextSize = 17,
 		Text = `+{amount} {reason}`,
 		TextColor3 = C.butter,
 	})
@@ -532,9 +701,12 @@ local function render()
 		and mine ~= nil
 		and mine.life ~= "Out"
 		and mine.life ~= "Escaped"
+		and mine.life ~= "Dead"
 
 	-- top center
-	local shake = UDim2.fromOffset(0, 0)
+	local lastMinute = phase == "Active" and left < 60
+	-- last minute: the clock turns a deep blood red with a dark edge (no shaking)
+	ui.timer.TextStrokeColor3 = if lastMinute then Color3.fromRGB(40, 0, 6) else C.ink
 	if phase == "Waiting" then
 		ui.timer.Text = "ZOMBIE HUNTER"
 		ui.timer.TextColor3 = C.mint
@@ -542,7 +714,7 @@ local function render()
 	elseif phase == "Intermission" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.bone
-		ui.sub.Text = `NEXT ROUND: {string.upper(view.nextMode or "Classic")}  -  VOTE FOR A MAP AT THE BOARD`
+		ui.sub.Text = "NEXT ROUND STARTING  -  VOTE FOR A MAP AT THE BOARD"
 	elseif phase == "HeadStart" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.blood
@@ -551,10 +723,7 @@ local function render()
 			else "SOMEONE IS INFECTED... RUN"
 	elseif phase == "Active" then
 		ui.timer.Text = Theme.timeText(left)
-		ui.timer.TextColor3 = if left < 60 then C.blood else C.bone
-		if left < 60 then
-			shake = UDim2.fromOffset(math.random(-2, 2), math.random(-2, 2))
-		end
+		ui.timer.TextColor3 = if lastMinute then Color3.fromRGB(200, 10, 28) else C.bone
 		local line = `HUMANS LEFT: {view.humansLeft}`
 		if next(view.towers) ~= nil then
 			line ..= `   TOWERS {view.towersDone}/{view.towersNeeded}`
@@ -570,24 +739,30 @@ local function render()
 	elseif phase == "Results" then
 		ui.timer.Text = "ROUND OVER"
 		ui.timer.TextColor3 = C.lavender
-		ui.sub.Text = `BACK TO THE SAFEHOUSE IN {math.ceil(left)}`
+		ui.sub.Text = "SAFE IN THE SAFEHOUSE  -  REST UP"
 	end
-	ui.top.Position = UDim2.new(0.5, 0, 0, 44) + shake
 
 	-- health / wounds
 	ui.healthBack.Visible = inRound == true
 	if inRound and mine then
-		if role == "Alpha" or role == "Zombie" then
+		local zombie = role == "Alpha" or role == "Zombie"
+		local target
+		if zombie then
 			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			local frac = if hum and hum.MaxHealth > 0 then hum.Health / hum.MaxHealth else 0
-			ui.healthFill.Size = UDim2.fromScale(math.clamp(frac, 0, 1), 1)
-			ui.healthFill.BackgroundColor3 = Theme.roleColor[role]
+			target = if hum and hum.MaxHealth > 0 then hum.Health / hum.MaxHealth else 0
 			ui.healthText.Text = if hum then `{math.ceil(hum.Health)} HP` else ""
 		else
-			local frac = 1 - mine.hitsTaken / 3
-			ui.healthFill.Size = UDim2.fromScale(math.clamp(frac, 0, 1), 1)
-			ui.healthFill.BackgroundColor3 = Theme.roleColor[role] or C.baby
-			ui.healthText.Text = if mine.hitsTaken == 0 then "HEALTHY" else `WOUNDED x{mine.hitsTaken}`
+			target = 1 - mine.hitsTaken / 3
+			ui.healthText.Text = if mine.hitsTaken == 0 then "HEALTHY" else `WOUNDED  x{mine.hitsTaken}`
+		end
+		-- ease toward the new value so hits slide instead of jumping
+		ui.healthShown += (math.clamp(target, 0, 1) - ui.healthShown) * 0.2
+		ui.healthFill.Size = UDim2.fromScale(ui.healthShown, 1)
+		local color = Theme.roleColor[role] or C.baby
+		ui.healthFill.BackgroundColor3 = if not zombie and mine.hitsTaken >= 2 then C.blood else color
+		ui.healthText.TextColor3 = if not zombie and mine.hitsTaken > 0 then C.blood else C.bone
+		for _, mark in ui.healthMarks do
+			mark.Visible = not zombie
 		end
 	end
 
@@ -600,7 +775,13 @@ local function render()
 		and (char:FindFirstChildWhichIsA("Tool") :: Tool):GetAttribute("Gun") == true
 	ui.ammo.Visible = hasGun == true
 	ui.ammo.Text = `{ammo.mag} / {ammo.reserve}`
+	-- the crosshair sits exactly where the shot goes (mouse cursor, or screen centre on touch)
 	ui.crosshair.Visible = holdingGun == true
+	if holdingGun then
+		local at = Aim.screenPoint()
+		ui.crosshair.Position = UDim2.fromOffset(at.X, at.Y)
+	end
+	UserInputService.MouseIconEnabled = not (holdingGun and Aim.usesMouse())
 	ui.reload.Visible = hasGun == true and UserInputService.TouchEnabled
 
 	-- downed
@@ -621,7 +802,8 @@ local function render()
 	-- repairing a tower
 	local towerId = inRound and view.repairing
 	local tower = towerId and view.towers[tostring(towerId)]
-	ui.repairBack.Visible = tower ~= nil
+	-- (tower can be false here, not just nil: only a real tower shows the bar)
+	ui.repairBack.Visible = if tower then true else false
 	if tower then
 		ui.repairFill.Size = UDim2.fromScale(math.clamp(tower.progress, 0, 1), 1)
 		ui.repairText.Text = `REPAIRING  {math.floor(tower.progress * 100)}%`
@@ -631,8 +813,9 @@ local function render()
 	ui.medkit.Text = if inRound
 			and role == "Survivor"
 			and (view.medkits or 0) > 0
-		then `MEDKIT x{view.medkits}  (click to heal)`
+		then `MEDKIT x{view.medkits}  -  click to heal`
 		else ""
+	ui.medkit.Visible = ui.medkit.Text ~= ""
 
 	-- Alpha ability
 	local showAbility = inRound and phase == "Active" and role == "Alpha" and view.alphaClass ~= nil
@@ -644,16 +827,41 @@ local function render()
 		ui.ability.Text = if wait > 0
 			then `{string.upper(class.ability)} {math.ceil(wait)}s`
 			else string.upper(class.ability) .. key
-		ui.ability.BackgroundColor3 = if wait > 0 then C.dusk else C.blood
-		ui.ability.TextColor3 = if wait > 0 then C.lavender else C.ink
+		-- ready: glowing red pill; cooling down: quiet glass
+		ui.ability.BackgroundColor3 = if wait > 0 then C.plum else Color3.fromRGB(150, 20, 40)
+		ui.ability.BackgroundTransparency = if wait > 0 then 0.3 else 0.1
+		ui.ability.TextColor3 = if wait > 0 then C.lavender else C.bone
 	end
 
 	-- lobby: your Alpha class
 	local lobby = not inRound
-		and (phase == "Waiting" or phase == "Intermission" or (mine and mine.life == "Out"))
+		and (
+			phase == "Waiting"
+			or phase == "Intermission"
+			or (mine and (mine.life == "Out" or mine.life == "Dead"))
+		)
 	ui.alphaPref.Text = if lobby
-		then `IF YOU ARE THE ALPHA: {AlphaClasses.get(view.alphaPref).name}  (change it at the pedestals)`
+		then `IF YOU ARE THE ALPHA: {AlphaClasses.get(view.alphaPref).name}  -  change it at the pedestals`
 		else ""
+	ui.alphaPref.Visible = ui.alphaPref.Text ~= ""
+
+	-- role help icon: in a round, for your own role (pulses for the first seconds)
+	local knowsRole = inRound
+		and (role == "Survivor" or role == "Hunter" or role == "Alpha" or role == "Zombie")
+	ui.help.Visible = knowsRole == true
+	ui.helpLabel.Visible = knowsRole == true
+	if knowsRole then
+		local color = Theme.roleColor[role] or C.baby
+		ui.help.BackgroundColor3 = color
+		local guide = RoleGuide.get(role, view.mode)
+		ui.helpLabel.Text = if guide then guide.title else ""
+		ui.helpLabel.TextColor3 = color
+		fillHelp(role, view.mode or "Classic")
+		local pulse = phase == "HeadStart" or (phase == "Active" and left > view.roundLength - 8)
+		ui.helpStroke.Thickness = if pulse then 3 + 2 * math.abs(math.sin(os.clock() * 4)) else 3
+	else
+		ui.helpPanel.Visible = false
+	end
 
 	-- hiding
 	ui.hiding.Visible = inRound and view.hidden == true or false
@@ -682,6 +890,7 @@ function HudController.start()
 	Remotes.get("RevealHumans").OnClientEvent:Connect(revealHumans)
 	Remotes.get("ProfileChanged").OnClientEvent:Connect(function(profile)
 		ui.coins.Text = `Z-COINS  {profile.coins}`
+		ui.coins.Visible = true
 	end)
 	Remotes.get("RequestProfile"):FireServer()
 	for _, tag in
@@ -700,6 +909,7 @@ function HudController.start()
 	-- Tab shows / hides our player list. Roblox's own big player list is turned off.
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false) -- our own bar replaces Roblox's green one
 	end)
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not processed and input.KeyCode == Enum.KeyCode.Tab then
@@ -708,6 +918,8 @@ function HudController.start()
 			Remotes.get("LockerLeave"):FireServer()
 		elseif not processed and input.KeyCode == Enum.KeyCode.Q and ui.ability.Visible then
 			Remotes.get("UseAbility"):FireServer()
+		elseif not processed and input.KeyCode == Enum.KeyCode.H and ui.help.Visible then
+			ui.helpPanel.Visible = not ui.helpPanel.Visible
 		end
 	end)
 end

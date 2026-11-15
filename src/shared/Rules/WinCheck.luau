@@ -8,8 +8,8 @@ local WinCheck = {}
 function WinCheck.check(s: Types.RoundState): Types.Winner?
 	local humans, zombies, escaped = 0, 0, 0
 	for _, p in s.players do
-		if p.life == "Out" then
-			continue
+		if p.life == "Out" or p.life == "Dead" then
+			continue -- not playing (any more)
 		elseif p.life == "Escaped" then
 			escaped += 1
 		elseif Util.isHumanRole(p.role) then

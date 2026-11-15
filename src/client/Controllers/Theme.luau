@@ -36,7 +36,7 @@ function Theme.label(parent: Instance, props: { [string]: any }): TextLabel
 	l.Font = Theme.uiFont
 	l.TextColor3 = Theme.colors.bone
 	l.TextStrokeColor3 = Theme.colors.ink
-	l.TextStrokeTransparency = 0
+	l.TextStrokeTransparency = 0.55 -- a soft outline: readable over the dark world, not heavy
 	l.TextScaled = true
 	for k, v in props do
 		(l :: any)[k] = v
@@ -45,23 +45,67 @@ function Theme.label(parent: Instance, props: { [string]: any }): TextLabel
 	return l
 end
 
+-- Glass look for every HUD box: dark see-through plum, soft corners, a thin lavender edge.
+function Theme.glass(g: GuiObject, round: boolean?): GuiObject
+	g.BackgroundColor3 = Theme.colors.plum
+	g.BackgroundTransparency = 0.3
+	g.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = if round then UDim.new(1, 0) else UDim.new(0, 10)
+	corner.Parent = g
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "Edge"
+	stroke.Color = Theme.colors.lavender
+	stroke.Thickness = 1
+	stroke.Transparency = 0.65
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = g
+	return g
+end
+
 function Theme.panel(parent: Instance, props: { [string]: any }): Frame
 	local f = Instance.new("Frame")
-	f.BackgroundColor3 = Theme.colors.plum
-	f.BackgroundTransparency = 0.15
-	f.BorderSizePixel = 0
+	Theme.glass(f)
 	for k, v in props do
 		(f :: any)[k] = v
 	end
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
-	corner.Parent = f
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Theme.colors.ink
-	stroke.Thickness = 3
-	stroke.Parent = f
 	f.Parent = parent
 	return f
+end
+
+-- A small pill with text (grows with its text). Returns the TextLabel itself.
+function Theme.chip(parent: Instance, props: { [string]: any }): TextLabel
+	local l = Theme.label(parent, {
+		Size = UDim2.fromOffset(0, 26),
+		AutomaticSize = Enum.AutomaticSize.X,
+		TextScaled = false,
+		TextSize = 14,
+	})
+	Theme.glass(l, true)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 12)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.Parent = l
+	for k, v in props do
+		(l :: any)[k] = v
+	end
+	return l
+end
+
+-- A pill button in the glass style.
+function Theme.button(parent: Instance, props: { [string]: any }): TextButton
+	local b = Instance.new("TextButton")
+	Theme.glass(b, true)
+	b.Font = Theme.uiFont
+	b.TextScaled = false
+	b.TextSize = 13
+	b.TextColor3 = Theme.colors.lavender
+	b.AutoButtonColor = true
+	for k, v in props do
+		(b :: any)[k] = v
+	end
+	b.Parent = parent
+	return b
 end
 
 function Theme.bar(parent: Instance, props: { [string]: any }, fillColor: Color3): (Frame, Frame)

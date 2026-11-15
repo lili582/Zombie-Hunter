@@ -29,10 +29,47 @@ local function stopRevivesBy(s: State, reviverId: number, fx: { Effect })
 	end
 end
 
-local function dropGun(s: State, fromId: number, fx: { Effect })
+local function dropGun(s: State, fromId: number, fx: { Effect }, reason: string?)
 	s.gunDropped = true
 	table.insert(fx, { type = "GunDropped", fromId = fromId })
-	table.insert(fx, { type = "Announce", card = "HunterFallen" })
+	table.insert(fx, { type = "Announce", card = "HunterFallen", data = { reason = reason } })
+end
+
+-- A player dies for good this round (friendly fire): out of the game until the next round.
+local function kill(s: State, p: Types.PlayerState, byId: number?, fx: { Effect })
+	p.life = "Dead"
+	p.bleedLeft = nil
+	p.downedBy = nil
+	p.reviverId = nil
+	p.reviveProgress = 0
+	p.repairing = nil
+	p.hiddenIn = nil
+	stopRevivesBy(s, p.id, fx)
+	table.insert(fx, { type = "Killed", playerId = p.id, byId = byId })
+end
+
+-- The Hunter shot a human. The innocent dies, and so does the Hunter: the gun drops for anyone
+-- to pick up. (Shooting a zombie, even a disguised one, is the job: CombatService damages it.)
+local function onFriendlyFire(s: State, shooterId: number, victimId: number, fx: { Effect })
+	local hunter, victim = s.players[shooterId], s.players[victimId]
+	if not hunter or not victim or shooterId == victimId then
+		return
+	end
+	if hunter.role ~= "Hunter" or hunter.life ~= "Alive" then
+		return
+	end
+	if
+		not Util.isHumanRole(victim.role)
+		or (victim.life ~= "Alive" and victim.life ~= "Downed")
+		or victim.hiddenIn
+	then
+		return
+	end
+	kill(s, victim, shooterId, fx)
+	table.insert(fx, { type = "Announce", card = "ShotByHunter", toPlayerId = victimId })
+	kill(s, hunter, nil, fx)
+	table.insert(fx, { type = "Announce", card = "ShotInnocent", toPlayerId = shooterId })
+	dropGun(s, shooterId, fx, "innocent")
 end
 
 local function turn(s: State, p: Types.PlayerState, fx: { Effect })
@@ -150,6 +187,8 @@ function Infection.step(s: State, event: Types.Event, fx: { Effect })
 		stopRevivesBy(s, event.reviverId, fx)
 	elseif event.type == "PickUpGun" then
 		onPickUpGun(s, event.playerId, fx)
+	elseif event.type == "FriendlyFire" then
+		onFriendlyFire(s, event.shooterId, event.victimId, fx)
 	elseif event.type == "Tick" then
 		onTick(s, event.dt, fx)
 	elseif event.type == "Dodged" then
@@ -170,7 +209,7 @@ end
 -- Called after `leaver` was removed from s.players, during HeadStart or Active.
 function Infection.onPlayerLeft(s: State, leaver: Types.PlayerState, fx: { Effect })
 	stopRevivesBy(s, leaver.id, fx)
-	if leaver.role == "Hunter" and leaver.life ~= "Out" then
+	if leaver.role == "Hunter" and leaver.life ~= "Out" and leaver.life ~= "Dead" then
 		dropGun(s, leaver.id, fx)
 	end
 
@@ -178,7 +217,7 @@ function Infection.onPlayerLeft(s: State, leaver: Types.PlayerState, fx: { Effec
 	local hasAlpha = false
 	for _, id in Util.sortedIds(s.players) do
 		local p = s.players[id]
-		if p.life == "Out" then
+		if p.life == "Out" or p.life == "Dead" then
 			continue
 		end
 		if Util.isZombieRole(p.role) then

@@ -91,7 +91,7 @@ test("survivors start each round with a medkit", function()
 	local RoundRules = require("../src/shared/Rules/RoundRules")
 	local Rng = require("../src/shared/Rng")
 	local s = H.run(RoundRules.new(Classic, Rng.new(2), H.mapMeta), H.join(6))
-	s = H.run(s, { H.tick(20) })
+	s = H.run(s, { H.tick(Classic.intermission) })
 	for _, p in s.players do
 		expect(p.medkits).toBe(if p.role == "Survivor" then 1 else 0)
 	end

@@ -190,6 +190,24 @@ local function towerPosition(towerId: number): Vector3?
 	return if box then box.Position else nil
 end
 
+-- Repair animation: clients animate every character with the "Repairing" attribute
+-- (RepairAnimController). On start the character turns to face the radio box.
+local function setRepairing(player: Player, towerId: number?)
+	local char = player.Character
+	if not char then
+		return
+	end
+	char:SetAttribute("Repairing", towerId ~= nil)
+	local at = towerId and towerPosition(towerId)
+	local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if at and root then
+		local flat = Vector3.new(at.X, root.Position.Y, at.Z)
+		if (flat - root.Position).Magnitude > 0.5 then
+			root.CFrame = CFrame.lookAt(root.Position, flat)
+		end
+	end
+end
+
 ----------------------------------------------------------------------------- helicopter
 
 local function buildHeli(at: Vector3): Model
@@ -449,11 +467,13 @@ function ObjectiveService.onEffect(f: any)
 		if player then
 			local every = Weapons.Dodge.skillEvery
 			nextSkillCheck[player] = os.clock() + math.random(every[1] * 10, every[2] * 10) / 10
+			setRepairing(player, f.towerId)
 		end
 	elseif f.type == "RepairStopped" then
 		local player = Players:GetPlayerByUserId(f.playerId)
 		if player then
 			nextSkillCheck[player] = nil
+			setRepairing(player, nil)
 		end
 	elseif f.type == "TowerRepaired" then
 		local model = towerModels[f.towerId]
@@ -481,6 +501,7 @@ function ObjectiveService.onEffect(f: any)
 			local player = Players:GetPlayerByUserId(id)
 			if player then
 				nextSkillCheck[player] = nil
+				setRepairing(player, nil)
 			end
 		end
 	elseif f.type == "NoiseAlert" then

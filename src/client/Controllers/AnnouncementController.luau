@@ -2,7 +2,7 @@
 -- Full-screen cards (round start / end) and top banners (mid-round). Horror style:
 -- VHS scanlines, flicker, glitching text, typed subtitles, and the players' own characters
 -- shown as black silhouettes in the dark while roles are "chosen". No emoji, no names leaked.
--- Card times for the intro must add up to Classic.introLength (16s).
+-- Card times for the intro must add up to Classic.introLength (32s).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -12,6 +12,8 @@ local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Maps = require(Shared.Config.Maps)
 local Theme = require(script.Parent.Theme)
+local RoleEmote = require(script.Parent.RoleEmote)
+local RoleGuide = require(Shared.Config.RoleGuide)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -19,19 +21,22 @@ local player = Players.LocalPlayer
 local AnnouncementController = {}
 
 local CARD_TIME = {
-	-- intro (16s total)
+	-- intro (32s total): slow on purpose, the role pick is the scary part and needs time to read
 	Map = 2.5,
-	Mode = 2.5,
-	SomeoneInfected = 4,
-	YourRole = 3.5,
-	YourRules = 2,
-	HunterChosen = 1.5,
-	EveryoneArmed = 1.5, -- replaces HunterChosen in modes without a Hunter
+	Mode = 3,
+	SomeoneInfected = 8.5,
+	YourRole = 8.5,
+	YourRules = 7,
+	HunterChosen = 2.5,
+	EveryoneArmed = 2.5, -- replaces HunterChosen in modes without a Hunter
 	-- round end / other
-	Result = 3,
-	YourCoins = 2,
+	Result = 4,
+	Recap = 8, -- the real length is set per round (recapDuration)
+	YourCoins = 3,
 	Infected = 2.5,
 	Escaped = 3,
+	ShotInnocent = 3.5, -- private: you (the Hunter) shot a human
+	ShotByHunter = 3.5, -- private: the Hunter shot you
 }
 local BANNERS = {
 	AlphaAwakened = true,
@@ -52,15 +57,15 @@ local ROLE_TITLE = {
 }
 local ROLE_RULES = {
 	Survivor = "No weapons  -  Repair 3 radio towers  -  Hide in lockers  -  Revive friends\nZombie attack? CLICK IN TIME to escape!",
-	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
-	Alpha = "You look like them. Blend in.\nClaws wake up at release  -  every attack shows your face for 3s",
-	Zombie = "Infect everyone  -  3 hits downs a human",
+	Hunter = "Your role is SECRET  -  Only you have a gun\nShoot a HUMAN and you both die  -  Ammo boxes  -  [R] reload",
+	Alpha = "You look like them. Blend in.\nClaws wake up at release  -  [1] takes them out: your face shows until you put them away",
+	Zombie = "You still look human. Blend in.\n[1] takes your claws out: your face shows until you put them away  -  3 hits downs a human",
 }
 -- Rules that change in a mode (role -> text)
 local MODE_RULES = {
 	Outbreak = {
 		Survivor = "You have a PISTOL  -  [R] reload  -  Survive 4:00\nZombie attack? CLICK IN TIME to escape!",
-		Alpha = "There are more of you. Blend in.\nClaws wake up at release  -  every attack shows your face",
+		Alpha = "There are more of you. Blend in.\nClaws wake up at release  -  claws out = your face shows",
 	},
 }
 local RESULT_TEXT = {
@@ -69,6 +74,10 @@ local RESULT_TEXT = {
 	ZombiesWin = { "ZOMBIES WIN!", C.mint },
 	NoWinner = { "NOBODY WINS", C.lavender },
 }
+
+-- YourRole: heartbeat gaps (seconds), slow then faster; the reveal comes right after.
+local HEARTBEAT = { 0.85, 0.8, 0.72, 0.65, 0.6 }
+local ROLE_REVEAL = 0.85 + 0.8 + 0.72 + 0.65 + 0.6 -- when the light comes on (emote starts)
 
 local BLOOD_DARK = Color3.fromRGB(60, 8, 22)
 
@@ -240,11 +249,20 @@ local function doFlash(color: Color3, strength: number)
 	TweenService:Create(ui.flash, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
 end
 
+-- When the last text on the current card finishes typing. A card never switches before that
+-- plus READ_HOLD, so there is always time to read it.
+local READ_HOLD = 1.2
+local textDoneAt = 0
+local typingOn: { [TextLabel]: number } = {} -- newest typing job per label (older ones stop)
+
 local function typeText(label: TextLabel, text: string, perChar: number, token: number)
+	typingOn[label] = (typingOn[label] or 0) + 1
+	local job = typingOn[label]
+	textDoneAt = math.max(textDoneAt, os.clock() + #text * perChar)
 	task.spawn(function()
 		label.Text = ""
 		for i = 1, #text do
-			if cardToken ~= token then
+			if cardToken ~= token or typingOn[label] ~= job then
 				return
 			end
 			label.Text = string.sub(text, 1, i)
@@ -335,12 +353,31 @@ local function stage(vp: ViewportFrame, model: Model)
 	vp.LightDirection = Vector3.new(0.6, -0.4, 1)
 end
 
+-- The role emote playing in the big viewport (your character acting out its role).
+local emote: any = nil
+local emoteRole: string? = nil
+local emoteStart = 0
+
+-- Starts (or, for the next card of the same role, continues) the emote on a staged model.
+local emoteReveal = 0
+local function playEmote(model: Model, role: string, continueIt: boolean, revealAt: number?)
+	if not (continueIt and emoteRole == role and os.clock() - emoteStart < 12) then
+		emoteStart = os.clock()
+		emoteReveal = revealAt or 0
+	end
+	emoteRole = role
+	emote = RoleEmote.new(model, role, emoteReveal)
+end
+
 local function clearStage()
+	emote = nil
 	ui.big.Visible = false
 	ui.big:ClearAllChildren()
 	ui.row.Visible = false
+	ui.row.Size = UDim2.fromScale(0.9, 0.32)
+	ui.row.Position = UDim2.fromScale(0.5, 0.36)
 	for _, child in ui.row:GetChildren() do
-		if child:IsA("ViewportFrame") then
+		if child:IsA("ViewportFrame") or child:IsA("Frame") then
 			child:Destroy()
 		end
 	end
@@ -371,6 +408,154 @@ local function silhouetteRow(): { ViewportFrame }
 	return frames
 end
 
+-- Round recap: everyone who played, lined up in the dark. One by one a light comes on over each
+-- character with their name, the role they really had, and what happened to them.
+local OUTCOME_LOOK = {
+	SURVIVED = { "SURVIVED", Theme.colors.baby },
+	ESCAPED = { "ESCAPED", Theme.colors.butter },
+	INFECTED = { "INFECTED", Theme.colors.mint },
+	ZOMBIE = { "ZOMBIE", Theme.colors.mint },
+	ALPHA = { "THE ALPHA", Theme.colors.blood },
+	KILLED = { "KILLED", Theme.colors.lavender },
+}
+local RECAP_STEP = 0.55 -- seconds between two reveals (slow on purpose)
+local RECAP_MAX = 12
+
+-- Turns a character copy into its zombie self: rotten skin, glowing eyes.
+local function zombify(model: Model, eyeColor: Color3)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and d.Parent == model and d.Name ~= "HumanoidRootPart" then
+			d.Color = Color3.fromRGB(118, 156, 96)
+		elseif d:IsA("BodyColors") then
+			d:Destroy()
+		end
+	end
+	local head = model:FindFirstChild("Head") :: BasePart?
+	if head then
+		for _, x in { -0.22, 0.22 } do
+			local eye = Instance.new("Part")
+			eye.Name = "Eye"
+			eye.Shape = Enum.PartType.Ball
+			eye.Size = Vector3.new(0.26, 0.26, 0.26)
+			eye.Material = Enum.Material.Neon
+			eye.Color = eyeColor
+			eye.Anchored = true
+			eye.CanCollide = false
+			eye.CFrame = head.CFrame * CFrame.new(x, 0.15, -head.Size.Z / 2 - 0.02)
+			eye.Parent = model
+		end
+	end
+end
+
+local function recapDuration(count: number): number
+	return 2.2 + math.min(count, RECAP_MAX) * RECAP_STEP + 3.5
+end
+
+local function playRecap(data: any, token: number)
+	local entries = data.players or {}
+	local zombiesWon = data.winner == "ZombiesWin"
+	setTitle("", C.bone)
+	typeText(
+		ui.title,
+		if zombiesWon then "THE NIGHT BELONGS TO THEM" else "WHO MADE IT THROUGH THE NIGHT",
+		0.06,
+		token
+	)
+	ui.kicker.Text = "THE ROUND"
+	ui.row.Size = UDim2.fromScale(0.94, 0.46)
+	ui.row.Position = UDim2.fromScale(0.5, 0.42)
+	local slots = {}
+	for i = 1, math.min(#entries, RECAP_MAX) do
+		local e = entries[i]
+		local who = Players:GetPlayerByUserId(e.id)
+		local look = OUTCOME_LOOK[e.outcome] or OUTCOME_LOOK.SURVIVED
+		local slot = Instance.new("Frame")
+		slot.Name = "RecapSlot"
+		slot.LayoutOrder = i
+		slot.Size = UDim2.fromScale(math.min(0.15, 0.9 / math.max(#entries, 1)), 1)
+		slot.BackgroundTransparency = 1
+		slot.Parent = ui.row
+		local vp = Instance.new("ViewportFrame")
+		vp.Size = UDim2.fromScale(1, 0.72)
+		vp.BackgroundColor3 = Color3.fromRGB(12, 8, 18)
+		vp.BackgroundTransparency = 0.4
+		vp.Parent = slot
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = vp
+		local model = if who then cloneCharacter(who) else nil
+		if model then
+			if e.outcome == "INFECTED" or e.outcome == "ZOMBIE" then
+				zombify(model, Theme.colors.mint)
+			elseif e.outcome == "ALPHA" then
+				zombify(model, Color3.fromRGB(255, 40, 60))
+			end
+			stage(vp, model)
+		end
+		local function caption(y: number, height: number, text: string, color: Color3, size: number)
+			return Theme.label(slot, {
+				Position = UDim2.new(0, 0, 0.72, y),
+				Size = UDim2.new(1, 0, 0, height),
+				TextScaled = false,
+				TextSize = size,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				TextColor3 = color,
+				TextTransparency = 1,
+				TextStrokeTransparency = 1,
+				Text = text,
+			})
+		end
+		local name = caption(4, 16, if who then who.DisplayName else "?", C.bone, 14)
+		local role =
+			caption(20, 13, Theme.roleText[e.role] or e.role, Theme.roleColor[e.role] or C.lavender, 11)
+		local outcome = caption(34, 16, look[1], look[2], 14)
+		local winner = caption(52, 14, if e.won then "WINNER" else "", C.butter, 12)
+		table.insert(
+			slots,
+			{ vp = vp, labels = { name, role, outcome, winner }, color = look[2], won = e.won }
+		)
+	end
+	ui.row.Visible = #slots > 0
+	task.spawn(function()
+		task.wait(1.6)
+		for _, slot in slots do
+			if cardToken ~= token then
+				return
+			end
+			-- the light comes on over this one
+			slot.vp.LightColor = slot.color
+			slot.vp.Ambient = Color3.fromRGB(45, 38, 60)
+			slot.vp.BackgroundColor3 = if slot.won
+				then Color3.fromRGB(40, 32, 12)
+				else Color3.fromRGB(18, 12, 26)
+			slot.vp.BackgroundTransparency = 0.15
+			for _, label in slot.labels do
+				TweenService
+					:Create(
+						label,
+						TweenInfo.new(0.35),
+						{ TextTransparency = 0, TextStrokeTransparency = 0.55 }
+					)
+					:Play()
+			end
+			task.wait(RECAP_STEP)
+		end
+		if cardToken ~= token then
+			return
+		end
+		-- the losers fade back into the dark; the winners stay lit
+		for _, slot in slots do
+			if not slot.won then
+				TweenService:Create(slot.vp, TweenInfo.new(0.8), { BackgroundTransparency = 0.6 }):Play()
+				slot.vp.LightColor = Color3.fromRGB(60, 60, 70)
+			end
+		end
+		local r = RESULT_TEXT[data.winner] or RESULT_TEXT.NoWinner
+		ui.subtitle.Text = ""
+		typeText(ui.subtitle, r[1], 0.05, token)
+	end)
+end
+
 ----------------------------------------------------------------------------- the cards
 
 local function play(name: string, data: any, token: number)
@@ -398,17 +583,32 @@ local function play(name: string, data: any, token: number)
 		doFlash(C.blood, 0.35)
 		typeText(ui.subtitle, data.line or "", 0.03, token)
 	elseif name == "SomeoneInfected" then
-		setTitle("SOMEONE IS INFECTED...", C.blood)
-		slam()
+		local cardStart = os.clock()
+		-- slow and quiet: the title creeps in, whispers, and a red light searches the crowd
+		setTitle("", C.blood)
+		typeText(ui.title, "SOMEONE IS INFECTED...", 0.09, token)
 		local frames = silhouetteRow()
-		-- a red light jumps between the silhouettes, slower and slower... then goes out.
-		-- It never stops on anyone: the Alpha stays secret.
+		task.spawn(function()
+			-- two slow whispers, each left up long enough to read
+			local whispers = { { 1.0, "who is it..." }, { 3.2, "they're standing right next to you" } }
+			for _, w in whispers do
+				task.wait(math.max(0, w[1] - (os.clock() - cardStart)))
+				if cardToken ~= token then
+					return
+				end
+				typeText(ui.subtitle, w[2], 0.06, token)
+			end
+		end)
+		-- the red light drifts from shadow to shadow, slower and slower. Sometimes it lingers on
+		-- someone... then moves on. It never stops on anyone: the Alpha stays secret.
 		task.spawn(function()
 			if #frames == 0 then
 				return
 			end
+			task.wait(0.8)
 			local last = 0
-			for i = 1, 16 do
+			local steps = 14
+			for i = 1, steps do
 				if cardToken ~= token then
 					return
 				end
@@ -420,38 +620,50 @@ local function play(name: string, data: any, token: number)
 				for j, vp in frames do
 					vp.LightColor = if j == pick then C.blood else Color3.new(0, 0, 0)
 					vp.Ambient = if j == pick then Color3.fromRGB(40, 0, 10) else Color3.new(0, 0, 0)
-					vp.BackgroundTransparency = if j == pick then 0.2 else 0.6
+					vp.BackgroundTransparency = if j == pick then 0.2 else 0.7
 				end
-				task.wait(0.06 + i * 0.012)
+				local linger = math.random() < 0.2 and i > 4
+				task.wait((0.1 + (i / steps) * 0.3) * (if linger then 2.6 else 1))
+			end
+			if cardToken ~= token then
+				return
 			end
 			for _, vp in frames do
 				vp.LightColor = Color3.new(0, 0, 0)
 				vp.Ambient = Color3.new(0, 0, 0)
-				vp.BackgroundTransparency = 0.85
+				vp.BackgroundTransparency = 0.9
+			end
+			-- the last line only after the second whisper has had time to be read
+			task.wait(math.max(0, 6 - (os.clock() - cardStart)))
+			if cardToken ~= token then
+				return
 			end
 			doFlash(Color3.new(0, 0, 0), 1)
-			typeText(ui.subtitle, "...and it could be you.", 0.05, token)
+			typeText(ui.subtitle, "...and it could be you.", 0.08, token)
 		end)
 	elseif name == "YourRole" then
 		local role = data.role
 		local color = Theme.roleColor[role] or C.bone
+		local guide = RoleGuide.get(role, data.mode)
 		setTitle("", color)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
+			playEmote(model, role, false, ROLE_REVEAL)
 			ui.big.Visible = true
 		end
-		ui.subtitle.Text = "who are you?"
-		-- heartbeat in the dark, the light stutters on, then the reveal
+		ui.subtitle.Text = ""
+		typeText(ui.subtitle, "who are you...?", 0.08, token)
+		-- a slow heartbeat in the dark, getting faster; the light stutters... then the reveal
 		task.spawn(function()
-			for beat = 1, 3 do
+			for beat, gap in HEARTBEAT do
 				if cardToken ~= token then
 					return
 				end
 				ui.big.Size = UDim2.fromScale(0.28, 0.54)
-				TweenService:Create(ui.big, TweenInfo.new(0.25), { Size = UDim2.fromScale(0.26, 0.5) }):Play()
-				if beat == 3 then
-					for _ = 1, 3 do -- flicker
+				TweenService:Create(ui.big, TweenInfo.new(0.3), { Size = UDim2.fromScale(0.26, 0.5) }):Play()
+				if beat >= #HEARTBEAT - 1 then
+					for _ = 1, 3 do -- the light tries to come on
 						ui.big.LightColor = color
 						ui.big.Ambient = Color3.fromRGB(50, 40, 60)
 						task.wait(0.05)
@@ -459,17 +671,23 @@ local function play(name: string, data: any, token: number)
 						ui.big.Ambient = Color3.new(0, 0, 0)
 						task.wait(0.07)
 					end
+					task.wait(math.max(0, gap - 0.36))
+				else
+					task.wait(gap)
 				end
-				task.wait(0.4)
 			end
 			if cardToken ~= token then
 				return
 			end
 			ui.big.LightColor = color
 			ui.big.Ambient = Color3.fromRGB(55, 45, 70)
-			ui.subtitle.Text = ""
 			setTitle(ROLE_TITLE[role] or "", color)
 			slam()
+			-- the quick explanation of the role, typed under the title
+			ui.subtitle.Text = ""
+			if guide then
+				typeText(ui.subtitle, guide.quick, 0.08, token) -- slow enough to read
+			end
 			if role == "Alpha" then
 				doFlash(Color3.fromRGB(255, 30, 50), 0.8) -- red flash + shake
 				for _ = 1, 10 do
@@ -486,6 +704,7 @@ local function play(name: string, data: any, token: number)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
+			playEmote(model, role, true) -- keeps going from the role card
 			ui.big.LightColor = Theme.roleColor[role] or C.bone
 			ui.big.Ambient = Color3.fromRGB(55, 45, 70)
 			ui.big.Visible = true
@@ -499,7 +718,7 @@ local function play(name: string, data: any, token: number)
 		else
 			setTitle(Theme.roleText[role] or "", Theme.roleColor[role] or C.bone)
 		end
-		typeText(ui.subtitle, rules, 0.015, token)
+		typeText(ui.subtitle, rules, 0.035, token)
 	elseif name == "HunterChosen" then
 		setTitle("A HUNTER WALKS AMONG YOU", C.peach)
 		slam()
@@ -516,6 +735,8 @@ local function play(name: string, data: any, token: number)
 		slam()
 		silhouetteRow()
 		ui.subtitle.Text = "No Hunter tonight. Shoot anything that bites."
+	elseif name == "Recap" then
+		playRecap(data, token)
 	elseif name == "Result" then
 		local r = RESULT_TEXT[data.winner] or RESULT_TEXT.NoWinner
 		setTitle(r[1], r[2])
@@ -525,6 +746,28 @@ local function play(name: string, data: any, token: number)
 		setTitle(`+{data.coins} Z-COINS`, C.butter)
 		slam()
 		typeText(ui.subtitle, `{data.points} points this round`, 0.03, token)
+	elseif name == "ShotInnocent" then
+		ui.card.BackgroundColor3 = Color3.fromRGB(30, 4, 8)
+		setTitle("YOU SHOT AN INNOCENT", C.blood)
+		slam()
+		doFlash(Color3.fromRGB(255, 30, 50), 0.8)
+		typeText(
+			ui.subtitle,
+			"They were human. The guilt takes you too... your gun lies in the dirt.",
+			0.03,
+			token
+		)
+	elseif name == "ShotByHunter" then
+		ui.card.BackgroundColor3 = Color3.fromRGB(14, 10, 20)
+		setTitle("THE HUNTER SHOT YOU", C.peach)
+		slam()
+		doFlash(Color3.new(1, 1, 1), 0.6)
+		typeText(
+			ui.subtitle,
+			"You were human. They didn't believe it. Watch from the safehouse.",
+			0.03,
+			token
+		)
 	elseif name == "Escaped" then
 		ui.card.BackgroundColor3 = Color3.fromRGB(10, 14, 30)
 		setTitle("YOU ESCAPED", C.baby)
@@ -540,11 +783,17 @@ local function play(name: string, data: any, token: number)
 		local model = cloneCharacter(player)
 		if model then
 			stage(ui.big, model)
+			playEmote(model, "Zombie", false, 0) -- no build-up: you're already one of them
 			ui.big.LightColor = C.mint
 			ui.big.Ambient = Color3.fromRGB(20, 60, 35)
 			ui.big.Visible = true
 		end
-		typeText(ui.subtitle, "You're one of them now. Keep scoring points.", 0.03, token)
+		typeText(
+			ui.subtitle,
+			"You're one of them now. You look human... until your claws come out.",
+			0.03,
+			token
+		)
 	end
 end
 
@@ -581,10 +830,14 @@ local function animate(dt: number)
 	ui.ghostA.Size = ui.title.Size
 	ui.ghostB.Size = ui.title.Size
 
-	-- the character sways slowly, as if breathing
+	-- the character sways slowly, as if breathing, and acts out its role (RoleEmote)
 	local model = ui.big:FindFirstChildOfClass("Model")
 	if ui.big.Visible and model then
-		model:PivotTo(CFrame.Angles(0, math.sin(t * 0.7) * 0.5, 0))
+		if emote and emote.model == model then
+			emote:step(os.clock() - emoteStart, CFrame.Angles(0, math.sin(t * 0.7) * 0.25, 0))
+		else
+			model:PivotTo(CFrame.Angles(0, math.sin(t * 0.7) * 0.5, 0))
+		end
 	end
 end
 
@@ -597,9 +850,19 @@ local function playQueue()
 		while #queue > 0 do
 			local item = table.remove(queue, 1) :: any
 			cardToken += 1
+			textDoneAt = 0
 			ui.card.Visible = true
 			play(item.card, item.data or {}, cardToken)
-			task.wait(CARD_TIME[item.card] or 2)
+			local seconds = CARD_TIME[item.card] or 2
+			if item.card == "Recap" then
+				seconds = recapDuration(#((item.data or {}).players or {}))
+			end
+			task.wait(seconds)
+			-- still typing? let it finish, then leave it up a moment to be read (max 4s more)
+			local extra = 0
+			while os.clock() < textDoneAt + READ_HOLD and extra < 4 do
+				extra += task.wait(0.1)
+			end
 		end
 		cardToken += 1
 		clearStage()
@@ -616,7 +879,9 @@ local function showBanner(name: string, data: any)
 	if name == "AlphaAwakened" then
 		text = "THE ALPHA HAS AWAKENED - it could be anyone"
 	elseif name == "HunterFallen" then
-		text = "THE HUNTER HAS FALLEN - GRAB THE GUN!"
+		text = if data.reason == "innocent"
+			then "THE HUNTER SHOT AN INNOCENT - BOTH ARE DEAD. GRAB THE GUN!"
+			else "THE HUNTER HAS FALLEN - GRAB THE GUN!"
 		color = C.peach
 	elseif name == "NewHunter" then
 		text = "SOMEONE PICKED UP THE GUN"

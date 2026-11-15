@@ -90,8 +90,8 @@ function Scoring.award(s: State, effects: { Effect }): { Effect }
 		elseif f.type == "RoundOver" then
 			for _, id in Util.sortedIds(s.players) do
 				local p = s.players[id]
-				if p.life == "Out" then
-					continue
+				if p.life == "Out" or p.life == "Dead" then
+					continue -- no win bonus for players who sat out or were killed
 				end
 				if f.winner == "ZombiesWin" and Util.isZombieRole(p.role) then
 					give(s, id, Points.teamWin, "ZOMBIES WIN", out)

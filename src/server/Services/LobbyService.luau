@@ -2,12 +2,11 @@
 -- The safehouse lobby's interactive spots. Prompts become rule events; the boards show the state.
 --   * Alpha class pedestals -> SetAlphaClass
 --   * Map vote pads (3)     -> VoteMap (only during the countdown)
---   * Mode sign             -> what's next
+--   * Sign                  -> waiting / starting soon / round in progress (never the mode)
 local CollectionService = game:GetService("CollectionService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Maps = require(Shared.Config.Maps)
-local Modes = require(Shared.Config.Modes)
 local MapService = require(script.Parent.MapService)
 
 local LobbyService = {}
@@ -71,12 +70,13 @@ function LobbyService.refresh(state: any)
 		end
 		slot.prompt.Enabled = voting and map ~= nil
 	end
+	-- The mode stays a surprise until the MODE card in the intro.
 	if state.phase == "Waiting" then
 		refs.modeLabel.Text = "WAITING FOR PLAYERS"
 	elseif voting then
-		refs.modeLabel.Text = `NEXT ROUND: {Modes.get(state.nextMode).overrides.modeName or "CLASSIC"}`
+		refs.modeLabel.Text = "NEXT ROUND STARTING SOON"
 	else
-		refs.modeLabel.Text = `NOW PLAYING: {state.config.modeName or "CLASSIC"}`
+		refs.modeLabel.Text = "ROUND IN PROGRESS"
 	end
 end
 

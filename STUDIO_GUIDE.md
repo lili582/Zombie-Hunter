@@ -91,23 +91,30 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 ## Playtest checklist (3 players in Studio)
 
 - [ ] Lobby (pink spawn, purple room in the sky) shows **WAITING FOR PLAYERS x/2** until enough join.
-- [ ] 20s countdown → everyone frozen in the dark while the intro plays (~16s): map name types in → **MODE: CLASSIC** (red flash) → **SOMEONE IS INFECTED...** with every player shown as a faceless shadow while a red light jumps between them and goes out on nobody → **your own character** in the dark, heartbeat, light flickers on in your role colour → your rules → **A HUNTER WALKS AMONG YOU** over all the shadows. Then humans get 10s to run before the Alpha is released.
+- [ ] 60s countdown → everyone frozen in the dark while the intro plays (~32s, slow on purpose): map name types in → **MODE: CLASSIC** (red flash) → **SOMEONE IS INFECTED...** creeps in letter by letter, whispers (*who is it... they're standing right next to you*), every player a faceless shadow while a red light drifts between them, lingering on some, and goes out on nobody → **your own character** in the dark, a slow heartbeat getting faster, the light stutters on in your role colour with your role emote and a one-line explanation (*Stay alive. Fix the towers. Escape.*) → your rules → **A HUNTER WALKS AMONG YOU** over all the shadows. Then humans get 10s to run before the Alpha is released.
+- [ ] **Group starts:** with 2 players you start at 2 different places; with 3, one alone and a pair; with 4, 2 pairs. Never everyone in one place. Who is with whom changes every round.
+- [ ] **Role help icon:** in a round a round **?** icon in your role colour sits top left with your role name (it pulses at the start). Click it, tap it or press **H**: a panel explains your goal and how to play (keys included). It changes when you're infected, and Outbreak survivors get the pistol version.
+- [ ] **Role emote:** on YOUR ROLE / rules cards your character moves: Survivor cowers and shakes, Hunter aims and fires with a flash, Alpha hangs limp then snaps up crooked with red eyes and glitches. Getting infected: the infected card shows your character shambling with mint eyes.
 - [ ] **Secret roles:** the player list shows no role for any other player for the whole round, not even ZOMBIE or DOWN (only WAITING for people sitting out). Your own row shows your role. No floating player names, health bars, name tags or Hunter hat over heads.
-- [ ] **The Alpha is disguised**: starts with the survivors, looks exactly like one (own skin, flashlight, normal speed). After the 10s run his claws wake up + banner **THE ALPHA HAS AWAKENED — it could be anyone**. Every claw swing shows his zombie face (grey-green skin, red eyes, faster) for 3s, then he blends in again.
+- [ ] **The Alpha is disguised**: starts with the survivors, looks exactly like one (own skin, flashlight, normal speed). After the 10s run his claws wake up + banner **THE ALPHA HAS AWAKENED — it could be anyone**. Taking the claws out (**1**) shows his zombie face (zombie skin, red eyes, faster) until he puts them away.
 - [ ] Alpha: 2 claw hits downs a human (grey BLEEDING OUT screen, crawl speed). Basic zombie needs 3.
 - [ ] Another human holds **E** for 4s on the downed body → revived ("Name is coming!" + bar).
 - [ ] Not revived in 20s → **YOU'VE BEEN INFECTED!** → green zombie with mint eyes, claws equipped.
 - [ ] Hunter: click shoots (yellow tracer), ammo `6 / 36`, R reloads; 3 shots kill a basic zombie → respawns in 5s at a corner; +10 for the Hunter.
 - [ ] Survivors have **no weapons**. When a zombie claws a Survivor, an **ESCAPE!** bar appears: click/tap/Space while the needle is in the green → ESCAPED! (speed burst, +5); miss or wait → CAUGHT! and the hit counts. Hunters get no escape bar.
+- [ ] **Friendly fire:** as the Hunter, shoot a survivor: they fall dead and so do you (cards YOU SHOT AN INNOCENT / THE HUNTER SHOT YOU), both go to the safehouse, banner THE HUNTER SHOT AN INNOCENT, the glowing gun lies where you fell; another survivor presses E on it and is the new Hunter. Shooting a (disguised) zombie still just damages it.
 - [ ] Hunter turned → banner **THE HUNTER HAS FALLEN — GRAB THE GUN!**, glowing peach gun; first Survivor to press E becomes Hunter (banner: SOMEONE PICKED UP THE GUN, no name); nobody else can.
 - [ ] Last human turns → ZOMBIES WIN! → +coins card → back to the lobby → next round.
-- [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; timer turns pink and shakes under 1:00.
+- [ ] Timer to 0:00 with a human alive (even downed) → SURVIVORS SURVIVED!; under 1:00 the timer is deep red (it doesn't shake).
+- [ ] **Recap:** after the result card, every player's character in a row in the dark; lights come on one by one with name, real role (ALPHA / HUNTER revealed), SURVIVED / ESCAPED / INFECTED / THE ALPHA and WINNER. Infected players look like zombies. Winners first and stay lit.
+- [ ] When a round ends everyone appears in the safehouse right away (ROUND OVER - SAFE IN THE SAFEHOUSE), the result + coins cards play there, then the 20s countdown starts.
 - [ ] Phone emulator (Test → Device): Hunter sees a RELOAD button; tapping attacks with claws/bat (Hunter); Survivors tap to escape; prompts show a tap button.
 
 ## Phase 2 checklist
 
 - [ ] 5 radio towers with blinking red beacons (seen far through the fog). Hold **E** at the box to repair; a bar shows %. Two players repair faster.
 - [ ] While repairing, a **SKILL CHECK!** bar pops up every 6-12s: click in the green = small boost; miss = progress lost and zombies see a red ripple at that tower.
+- [ ] Repairing: your character faces the box, a wrench appears in the right hand and hammers with sparks (check from another player's window too). It stops the moment the repair stops.
 - [ ] Walking away, being clawed, getting downed or hiding stops the repair.
 - [ ] 3 towers done → banner **HELICOPTER INCOMING - 45s**, a glowing yellow ring + HELICOPTER label appears, the helicopter slowly comes down from the sky.
 - [ ] It lands → **GET TO THE ZONE!**; step into the ring → **YOU ESCAPED** card and you're sent to the safehouse. It leaves after 20s; if anyone got on → SURVIVORS ESCAPED.
@@ -121,10 +128,10 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Runner DASH: face shows, very fast for 2.5s. Tank SLAM: humans within 14 studs fly back and are slow for 1.5s. Screamer SCREAM: every zombie sees nearby humans glow red through walls for 5s (humans hiding in lockers don't glow).
 - [ ] Tank has 600 HP, Runner 300, Screamer 350 (zombie HP bar).
 
-- [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. Lobby countdown shows **NEXT ROUND: OUTBREAK**; the MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
+- [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. The MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
 
 - [ ] Safehouse: you spawn on the pink pad in a warm room with string lights, a couch and TV, a zombie face with mint eyes in the right window, SHOP and CATALOG signs (soon), the Alpha pedestals on the east wall and the vote board on the north wall.
-- [ ] During the countdown the HUD says **NEXT ROUND: CLASSIC - VOTE FOR A MAP AT THE BOARD** and the sign over the windows says the same mode. Step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
+- [ ] During the countdown step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
 - [ ] The intro's map card shows the voted map; the sign says **NOW PLAYING: CLASSIC** during the round.
 
 ## v0.4 checklist
@@ -137,10 +144,14 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Equip **Lever Rifle** + **Shovel**, become the Hunter: you hold a long brown rifle (5 / 30 ammo) and a shovel. Equip **Candy Corpse**, get infected: pink zombie with mint eyes.
 - [ ] During a round the SHOP button is hidden and the counter doesn't open the shop (unless you're sitting out or escaped).
 
+- [ ] Aim: hold the gun, the **+** crosshair follows the mouse (no mouse pointer). Shoot a wall: the yellow tracer ends at the crosshair. Shift-lock / phone: crosshair in the centre.
+- [ ] Get infected: you still look like yourself (other players see you that way, with a flashlight), claws in the toolbar. Press **1**: zombie skin + glowing eyes, and they stay while the claws are out. Press **1** again (put them away): you look human again. The Alpha's eyes are red when revealed. During the head start the Alpha's claws won't come out.
+- [ ] Lobby countdown: HUD says **NEXT ROUND STARTING - VOTE FOR A MAP AT THE BOARD**, the sign says **NEXT ROUND STARTING SOON**. The mode only shows on the MODE card.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:
-`HumanStart` (1), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
+`HumanStart` (1+; with several, players start in spread-out groups of 2-3, ideally 6-8 spots), `AlphaStart` (1, inside a room), `ZombieSpawn` (3+), `AmmoSpawn` (any), `TowerSpot` (8; 5 are used per round), `HeliZone` (3, open ground). Tag your locker parts themselves with `Locker`. Name the Alpha room's door part **`AlphaDoor`** — it is closed during the head start and opens at release. Tag lamp parts with a light inside as `FlickerLight` to make them flicker. If `Workspace.Map` exists, the greybox is not built.
 
 ## Where to change numbers
 

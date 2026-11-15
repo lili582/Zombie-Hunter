@@ -28,7 +28,7 @@ function ShopService.canShop(player: Player): boolean
 		return true
 	end
 	local p = s.players[player.UserId]
-	return p == nil or p.life == "Out" or p.life == "Escaped"
+	return p == nil or p.life == "Out" or p.life == "Escaped" or p.life == "Dead"
 end
 
 local function handle(player: Player, itemId: any, action: (any, string) -> (boolean, string?))

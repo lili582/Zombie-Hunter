@@ -48,6 +48,7 @@ function RoundRules.new(config: any, rng: Types.Rng, mapMeta: Types.MapMeta?): S
 		votes = {},
 		mapHistory = {},
 		mapId = nil,
+		startRoles = {},
 	}
 end
 
@@ -125,6 +126,7 @@ local function enterHeadStart(s: State, fx: { Effect })
 	end
 	s.votes = {}
 	local ids = Util.sortedIds(s.players)
+	s.startRoles = {}
 	local roles = RolePicker.pick(ids, s.sinceSpecial, s.rng, s.config.alphaCount, s.config.hunterCount)
 	for _, id in ids do
 		local fresh = Util.newPlayer(id)
@@ -135,6 +137,7 @@ local function enterHeadStart(s: State, fx: { Effect })
 			Abilities.makeAlpha(s, fresh)
 		end
 		s.players[id] = fresh
+		s.startRoles[id] = fresh.role
 		if fresh.role == "Survivor" then
 			s.sinceSpecial[id] = (s.sinceSpecial[id] or 0) + 1
 		else
@@ -162,7 +165,12 @@ local function enterHeadStart(s: State, fx: { Effect })
 	table.insert(fx, { type = "Announce", card = "SomeoneInfected" })
 	for _, id in ids do
 		local role = s.players[id].role
-		table.insert(fx, { type = "Announce", card = "YourRole", toPlayerId = id, data = { role = role } })
+		table.insert(fx, {
+			type = "Announce",
+			card = "YourRole",
+			toPlayerId = id,
+			data = { role = role, mode = s.config.modeId },
+		})
 		table.insert(fx, {
 			type = "Announce",
 			card = "YourRules",
@@ -184,11 +192,63 @@ local function enterActive(s: State, fx: { Effect })
 	table.insert(fx, { type = "Announce", card = "AlphaAwakened" }) -- secret: no name
 end
 
+-- End-of-round recap: every player who played, their real role (secrets are over), what
+-- happened to them and whether their side won. Winners first, then by points.
+--   outcome: "ESCAPED" | "SURVIVED" | "INFECTED" (turned) | "ALPHA" | "ZOMBIE" | "KILLED"
+function RoundRules.recap(s: State, winner: Types.Winner): { { [string]: any } }
+	local list = {}
+	for _, id in Util.sortedIds(s.players) do
+		local p = s.players[id]
+		if p.life == "Out" then
+			continue -- sat this round out
+		end
+		local outcome
+		if p.life == "Dead" then
+			outcome = "KILLED"
+		elseif p.role == "Alpha" then
+			outcome = "ALPHA"
+		elseif p.role == "Zombie" then
+			outcome = if p.wasInfected then "INFECTED" else "ZOMBIE"
+		elseif p.life == "Escaped" then
+			outcome = "ESCAPED"
+		else
+			outcome = "SURVIVED"
+		end
+		local zombieSide = Util.isZombieRole(p.role)
+		local won = p.life ~= "Dead"
+			and (
+				(winner == "ZombiesWin" and zombieSide)
+				or ((winner == "SurvivorsSurvived" or winner == "SurvivorsEscaped") and not zombieSide)
+			)
+		-- the role they started with: an infected Hunter was a Hunter
+		local role: string = p.role
+		if p.wasInfected and s.startRoles[id] then
+			role = s.startRoles[id]
+		end
+		table.insert(list, { id = id, role = role, outcome = outcome, won = won, points = p.points })
+	end
+	table.sort(list, function(a, b)
+		if a.won ~= b.won then
+			return a.won
+		end
+		if a.points ~= b.points then
+			return a.points > b.points
+		end
+		return a.id < b.id
+	end)
+	return list
+end
+
 local function endRound(s: State, winner: Types.Winner, fx: { Effect })
 	s.winner = winner
 	setPhase(s, "Results", s.config.results, fx)
 	table.insert(fx, { type = "RoundOver", winner = winner })
 	table.insert(fx, { type = "Announce", card = "Result", data = { winner = winner } })
+	table.insert(fx, {
+		type = "Announce",
+		card = "Recap",
+		data = { winner = winner, players = RoundRules.recap(s, winner) },
+	})
 end
 
 local function checkWin(s: State, fx: { Effect })
@@ -406,10 +466,10 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		hidden = me ~= nil and me.hiddenIn ~= nil,
 		repairing = if me then me.repairing else nil,
 		medkits = if me then me.medkits else 0,
-		-- game mode: this round's, and the next one (lobby)
+		-- game mode of the round being played (the next round's mode is never sent: it's a
+		-- surprise until the MODE card)
 		mode = s.config.modeId or "Classic",
-		modeName = s.config.modeName,
-		nextMode = s.nextMode,
+		roundLength = s.config.roundLength,
 		humanWeapon = s.config.humanWeapon,
 		-- map vote (lobby): the board and your vote; the map being played
 		mapChoices = s.mapChoices,
