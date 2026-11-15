@@ -60,7 +60,7 @@ end)
 test("no mode pool: always Classic", function()
 	local s = H.run(RoundRules.new(Classic, Rng.new(1)), H.join(8))
 	expect(s.nextMode).toBe("Classic")
-	expect(RoundRules.viewFor(s, 1).nextMode).toBe("Classic")
+	expect(RoundRules.viewFor(s, 1).nextMode).toBeNil() -- the lobby never learns the next mode
 end)
 
 test("Outbreak round: 2 Alphas, no Hunter, armed survivors, 4:00, 10s bleed-out", function()

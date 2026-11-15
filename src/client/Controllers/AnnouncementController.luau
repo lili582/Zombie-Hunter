@@ -54,7 +54,7 @@ local ROLE_RULES = {
 	Survivor = "No weapons  -  Repair 3 radio towers  -  Hide in lockers  -  Revive friends\nZombie attack? CLICK IN TIME to escape!",
 	Hunter = "Your role is SECRET  -  Only you have a gun\nProtect the survivors  -  Ammo boxes  -  [R] reload",
 	Alpha = "You look like them. Blend in.\nClaws wake up at release  -  every attack shows your face for 3s",
-	Zombie = "Infect everyone  -  3 hits downs a human",
+	Zombie = "You still look human. Blend in.\nEvery claw swing shows your face for 3s  -  3 hits downs a human",
 }
 -- Rules that change in a mode (role -> text)
 local MODE_RULES = {
@@ -544,7 +544,7 @@ local function play(name: string, data: any, token: number)
 			ui.big.Ambient = Color3.fromRGB(20, 60, 35)
 			ui.big.Visible = true
 		end
-		typeText(ui.subtitle, "You're one of them now. Keep scoring points.", 0.03, token)
+		typeText(ui.subtitle, "You're one of them now. You still look human... until you claw.", 0.03, token)
 	end
 end
 

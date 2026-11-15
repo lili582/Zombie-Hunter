@@ -48,7 +48,7 @@ local function humansNear(from: Vector3, radius: number): { Player }
 end
 
 local function dash(player: Player, class: any)
-	CharacterService.revealAlpha(
+	CharacterService.revealZombie(
 		player,
 		math.max(class.dashTime, Weapons.AlphaReveal.seconds),
 		class.dashSpeed
@@ -56,7 +56,7 @@ local function dash(player: Player, class: any)
 end
 
 local function slam(player: Player, class: any)
-	CharacterService.revealAlpha(player, Weapons.AlphaReveal.seconds)
+	CharacterService.revealZombie(player, Weapons.AlphaReveal.seconds)
 	local me = rootOf(player)
 	if not me then
 		return
@@ -79,7 +79,7 @@ local function slam(player: Player, class: any)
 end
 
 local function scream(player: Player, class: any)
-	CharacterService.revealAlpha(player, Weapons.AlphaReveal.seconds)
+	CharacterService.revealZombie(player, Weapons.AlphaReveal.seconds)
 	local me = rootOf(player)
 	if not me then
 		return

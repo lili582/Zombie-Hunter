@@ -121,10 +121,10 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Runner DASH: face shows, very fast for 2.5s. Tank SLAM: humans within 14 studs fly back and are slow for 1.5s. Screamer SCREAM: every zombie sees nearby humans glow red through walls for 5s (humans hiding in lockers don't glow).
 - [ ] Tank has 600 HP, Runner 300, Screamer 350 (zombie HP bar).
 
-- [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. Lobby countdown shows **NEXT ROUND: OUTBREAK**; the MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
+- [ ] Outbreak: on Workspace add a String attribute **ForceMode = Outbreak**, press Play. The MODE card says OUTBREAK; the last intro card is **EVERYONE IS ARMED**; with 3+ players there are 2 Alphas. Survivors hold a **Pistol** (click to shoot, `8 / 24`, R reloads, ammo boxes refill it). No towers or helicopter; timer 4:00; a downed survivor turns after 10s. Remove the attribute to go back to random modes.
 
 - [ ] Safehouse: you spawn on the pink pad in a warm room with string lights, a couch and TV, a zombie face with mint eyes in the right window, SHOP and CATALOG signs (soon), the Alpha pedestals on the east wall and the vote board on the north wall.
-- [ ] During the countdown the HUD says **NEXT ROUND: CLASSIC - VOTE FOR A MAP AT THE BOARD** and the sign over the windows says the same mode. Step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
+- [ ] During the countdown step on the glowing pad under **ABANDONED TOWN** and press **E**: banner **YOU VOTED**, poster shows **1 VOTE**. The other two posters say MORE MAPS COMING SOON and have no prompt. Pads don't work outside the countdown.
 - [ ] The intro's map card shows the voted map; the sign says **NOW PLAYING: CLASSIC** during the round.
 
 ## v0.4 checklist
@@ -136,6 +136,10 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Shop: walk to the counter by the west wall (sign **Z-SHOP**), press **E** (or the **SHOP** button top right). Coins top right of the window. BUY on something you can't afford: toast **YOU NEED n MORE Z-COINS**. With enough coins: BUY → coins drop, card says **EQUIPPED**. Tip: to test without playing many rounds, set `minCoins = 1000` in `Config/Points` for one round, then put it back to 10.
 - [ ] Equip **Lever Rifle** + **Shovel**, become the Hunter: you hold a long brown rifle (5 / 30 ammo) and a shovel. Equip **Candy Corpse**, get infected: pink zombie with mint eyes.
 - [ ] During a round the SHOP button is hidden and the counter doesn't open the shop (unless you're sitting out or escaped).
+
+- [ ] Aim: hold the gun, the **+** crosshair follows the mouse (no mouse pointer). Shoot a wall: the yellow tracer ends at the crosshair. Shift-lock / phone: crosshair in the centre.
+- [ ] Get infected: you still look like yourself (and other players see you that way, with a flashlight). Swing your claws: zombie skin + glowing eyes for 3s, then you look human again. The Alpha's eyes are red when revealed.
+- [ ] Lobby countdown: HUD says **NEXT ROUND STARTING - VOTE FOR A MAP AT THE BOARD**, the sign says **NEXT ROUND STARTING SOON**. The mode only shows on the MODE card.
 
 ## Your own map
 

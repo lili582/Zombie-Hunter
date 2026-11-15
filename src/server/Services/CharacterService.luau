@@ -237,17 +237,15 @@ function CharacterService.applyRole(player: Player, role: string)
 	if not char or not hum then
 		return
 	end
+	-- Every zombie is disguised: own skin and clothes, a flashlight like everyone else. Only a
+	-- claw swing (or an Alpha ability) shows the zombie face, for a moment (revealZombie).
 	if role == "Alpha" then
-		-- Disguised: looks, moves and lights up exactly like a survivor (own skin, flashlight,
-		-- human speed). Only an attack shows the zombie face, for a moment (revealAlpha).
 		local class = AlphaClasses.get(CharacterService.alphaClassOf(player))
 		setStats(hum, class.health, Weapons.speed.human)
 		flashlight(char)
 	elseif role == "Zombie" then
-		local body, eyeColor = zombieLook(player)
-		skin(char, body)
-		eyes(char, eyeColor, 0.25)
 		setStats(hum, Weapons.health.basic, Weapons.speed.basic)
+		flashlight(char)
 	else
 		setStats(hum, Weapons.health.human, Weapons.speed.human)
 		flashlight(char)
@@ -256,16 +254,17 @@ function CharacterService.applyRole(player: Player, role: string)
 	CharacterService.giveTools(player, role)
 end
 
--- The Alpha's true face, shown for `seconds` when he attacks or uses his ability, then hidden
--- again. Attacking again while revealed keeps the face on longer. `speed` (a dash) overrides the
--- class speed while revealed.
+-- A zombie's true face, shown for `seconds` when it claws (or the Alpha uses an ability), then
+-- hidden again. Attacking again while revealed keeps the face on longer.
+--   Alpha: zombie skin + RED eyes, faster (class speed) while unmasked; `speed` (a dash) overrides.
+--   Basic zombie: zombie skin + its skin's eye colour, same speed.
 local revealToken: { [Model]: number } = {}
 local savedLook: { [Model]: { [Instance]: { [string]: any } } } = {}
 local LIMBS = { "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
 local BODY_COLOR_PROPS =
 	{ "HeadColor3", "TorsoColor3", "LeftArmColor3", "RightArmColor3", "LeftLegColor3", "RightLegColor3" }
 
-function CharacterService.revealAlpha(player: Player, seconds: number, speed: number?)
+function CharacterService.revealZombie(player: Player, seconds: number, speed: number?)
 	local char = player.Character
 	local hum = humanoidOf(player)
 	if not char or not hum then
@@ -289,14 +288,22 @@ function CharacterService.revealAlpha(player: Player, seconds: number, speed: nu
 			end
 		end
 		savedLook[char] = saved
-		skin(char, (zombieLook(player))) -- the Alpha's eyes stay red: that's how you know
-		eyes(char, Color3.fromRGB(255, 40, 60), 0.35)
+		local isAlpha = CharacterService.alphaClassOf(player) ~= nil
+		local body, eyeColor = zombieLook(player)
+		skin(char, body)
+		if isAlpha then
+			eyes(char, Color3.fromRGB(255, 40, 60), 0.35) -- the Alpha's eyes are red: that's how you know
+		else
+			eyes(char, eyeColor, 0.25)
+		end
 		local head = char:FindFirstChild("Head")
 		local light = head and head:FindFirstChild("Flashlight") :: SpotLight?
 		if light then
 			light.Enabled = false
 		end
-		hum.WalkSpeed = AlphaClasses.get(CharacterService.alphaClassOf(player)).speed -- faster unmasked
+		if isAlpha then
+			hum.WalkSpeed = AlphaClasses.get(CharacterService.alphaClassOf(player)).speed -- faster unmasked
+		end
 	end
 	if speed then
 		hum.WalkSpeed = speed
@@ -331,8 +338,10 @@ function CharacterService.revealAlpha(player: Player, seconds: number, speed: nu
 				light.Enabled = true
 			end
 		end
-		if hum.Parent and hum.WalkSpeed > 0 then
-			hum.WalkSpeed = Weapons.speed.human -- the mask is back on
+		if hum.Parent and hum.WalkSpeed > 0 then -- the mask is back on
+			hum.WalkSpeed = if CharacterService.alphaClassOf(player) ~= nil
+				then Weapons.speed.human
+				else Weapons.speed.basic
 		end
 	end)
 end

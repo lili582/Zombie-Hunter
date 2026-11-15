@@ -10,6 +10,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Theme = require(script.Parent.Theme)
+local Aim = require(script.Parent.Aim)
 
 local C = Theme.colors
 local player = Players.LocalPlayer
@@ -542,7 +543,7 @@ local function render()
 	elseif phase == "Intermission" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.bone
-		ui.sub.Text = `NEXT ROUND: {string.upper(view.nextMode or "Classic")}  -  VOTE FOR A MAP AT THE BOARD`
+		ui.sub.Text = "NEXT ROUND STARTING  -  VOTE FOR A MAP AT THE BOARD"
 	elseif phase == "HeadStart" then
 		ui.timer.Text = Theme.timeText(left)
 		ui.timer.TextColor3 = C.blood
@@ -600,7 +601,13 @@ local function render()
 		and (char:FindFirstChildWhichIsA("Tool") :: Tool):GetAttribute("Gun") == true
 	ui.ammo.Visible = hasGun == true
 	ui.ammo.Text = `{ammo.mag} / {ammo.reserve}`
+	-- the crosshair sits exactly where the shot goes (mouse cursor, or screen centre on touch)
 	ui.crosshair.Visible = holdingGun == true
+	if holdingGun then
+		local at = Aim.screenPoint()
+		ui.crosshair.Position = UDim2.fromOffset(at.X, at.Y)
+	end
+	UserInputService.MouseIconEnabled = not (holdingGun and Aim.usesMouse())
 	ui.reload.Visible = hasGun == true and UserInputService.TouchEnabled
 
 	-- downed

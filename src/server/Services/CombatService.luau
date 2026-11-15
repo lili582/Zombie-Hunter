@@ -165,11 +165,22 @@ local function onFire(player: Player, direction: any)
 	g.lastShot = now
 	g.mag -= 1
 
+	-- the bullet flies through parts you can't see (zone rings, markers), not through walls
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { char }
+	local ignore: { Instance } = { char }
 	local origin = head.Position
-	local result = workspace:Raycast(origin, direction.Unit * w.range, params)
+	local result: RaycastResult? = nil
+	for _ = 1, 8 do
+		params.FilterDescendantsInstances = ignore
+		result = workspace:Raycast(origin, direction.Unit * w.range, params)
+		local hitPart = result and result.Instance
+		if not hitPart or hitPart.Transparency < 0.95 or CharacterService.playerFromPart(hitPart) then
+			break
+		end
+		table.insert(ignore, hitPart)
+		result = nil
+	end
 	local hitPos = if result then result.Position else origin + direction.Unit * w.range
 	if result then
 		local victim = CharacterService.playerFromPart(result.Instance)
@@ -268,9 +279,8 @@ local function onClaw(player: Player)
 		return
 	end
 	lastSwing[player] = now
-	if roleOf(player) == "Alpha" then
-		CharacterService.revealAlpha(player, Weapons.AlphaReveal.seconds) -- the mask slips
-	end
+	-- every claw swing shows the zombie's face for a moment (they look human otherwise)
+	CharacterService.revealZombie(player, Weapons.AlphaReveal.seconds)
 	if not target then
 		return
 	end

@@ -406,10 +406,9 @@ function RoundRules.viewFor(s: State, viewerId: number): { [string]: any }
 		hidden = me ~= nil and me.hiddenIn ~= nil,
 		repairing = if me then me.repairing else nil,
 		medkits = if me then me.medkits else 0,
-		-- game mode: this round's, and the next one (lobby)
+		-- game mode of the round being played (the next round's mode is never sent: it's a
+		-- surprise until the MODE card)
 		mode = s.config.modeId or "Classic",
-		modeName = s.config.modeName,
-		nextMode = s.nextMode,
 		humanWeapon = s.config.humanWeapon,
 		-- map vote (lobby): the board and your vote; the map being played
 		mapChoices = s.mapChoices,

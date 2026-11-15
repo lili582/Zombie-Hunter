@@ -1,14 +1,14 @@
 --!strict
--- Input -> intents. Click/tap with the Revolver (or an Outbreak Pistol) sends an aim direction; R reloads.
--- Bat and Claws need no code here: Tool.Activated already reaches the server.
+-- Input -> intents. Click/tap with a gun sends the direction from your head to the point under
+-- the crosshair (Aim); R reloads. Melee and Claws need no code here: Tool.Activated reaches the server.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Remotes = require(Shared.Net.Remotes)
+local Aim = require(script.Parent.Aim)
 
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
 
 local WeaponController = {}
 
@@ -22,7 +22,10 @@ local function hookTool(tool: Instance)
 		local char = player.Character
 		local head = char and char:FindFirstChild("Head") :: BasePart?
 		if head then
-			Remotes.get("FireWeapon"):FireServer((mouse.Hit.Position - head.Position).Unit)
+			local direction = Aim.worldPoint() - head.Position
+			if direction.Magnitude > 0.01 then
+				Remotes.get("FireWeapon"):FireServer(direction.Unit)
+			end
 		end
 	end)
 end
