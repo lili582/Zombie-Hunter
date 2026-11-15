@@ -108,6 +108,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 
 - [ ] 5 radio towers with blinking red beacons (seen far through the fog). Hold **E** at the box to repair; a bar shows %. Two players repair faster.
 - [ ] While repairing, a **SKILL CHECK!** bar pops up every 6-12s: click in the green = small boost; miss = progress lost and zombies see a red ripple at that tower.
+- [ ] Repairing: your character faces the box, a wrench appears in the right hand and hammers with sparks (check from another player's window too). It stops the moment the repair stops.
 - [ ] Walking away, being clawed, getting downed or hiding stops the repair.
 - [ ] 3 towers done → banner **HELICOPTER INCOMING - 45s**, a glowing yellow ring + HELICOPTER label appears, the helicopter slowly comes down from the sky.
 - [ ] It lands → **GET TO THE ZONE!**; step into the ring → **YOU ESCAPED** card and you're sent to the safehouse. It leaves after 20s; if anyone got on → SURVIVORS ESCAPED.
