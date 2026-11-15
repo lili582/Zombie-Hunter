@@ -2,7 +2,7 @@
 -- Full-screen cards (round start / end) and top banners (mid-round). Horror style:
 -- VHS scanlines, flicker, glitching text, typed subtitles, and the players' own characters
 -- shown as black silhouettes in the dark while roles are "chosen". No emoji, no names leaked.
--- Card times for the intro must add up to Classic.introLength (22s).
+-- Card times for the intro must add up to Classic.introLength (29s).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -21,14 +21,14 @@ local player = Players.LocalPlayer
 local AnnouncementController = {}
 
 local CARD_TIME = {
-	-- intro (22s total): slow on purpose, the role pick is the scary part
+	-- intro (29s total): slow on purpose, the role pick is the scary part and needs time to read
 	Map = 2.5,
 	Mode = 2.5,
 	SomeoneInfected = 6.5,
-	YourRole = 6,
-	YourRules = 3,
-	HunterChosen = 1.5,
-	EveryoneArmed = 1.5, -- replaces HunterChosen in modes without a Hunter
+	YourRole = 8,
+	YourRules = 7,
+	HunterChosen = 2.5,
+	EveryoneArmed = 2.5, -- replaces HunterChosen in modes without a Hunter
 	-- round end / other
 	Result = 4,
 	Recap = 8, -- the real length is set per round (recapDuration)
@@ -675,7 +675,7 @@ local function play(name: string, data: any, token: number)
 			-- the quick explanation of the role, typed under the title
 			ui.subtitle.Text = ""
 			if guide then
-				typeText(ui.subtitle, guide.quick, 0.04, token)
+				typeText(ui.subtitle, guide.quick, 0.08, token) -- slow enough to read
 			end
 			if role == "Alpha" then
 				doFlash(Color3.fromRGB(255, 30, 50), 0.8) -- red flash + shake
@@ -707,7 +707,7 @@ local function play(name: string, data: any, token: number)
 		else
 			setTitle(Theme.roleText[role] or "", Theme.roleColor[role] or C.bone)
 		end
-		typeText(ui.subtitle, rules, 0.015, token)
+		typeText(ui.subtitle, rules, 0.035, token)
 	elseif name == "HunterChosen" then
 		setTitle("A HUNTER WALKS AMONG YOU", C.peach)
 		slam()

@@ -62,7 +62,7 @@ test("hits during head start are ignored", function()
 		),
 		H.join(6)
 	)
-	s = H.run(s, { tick(20) })
+	s = H.run(s, { tick(require("../src/shared/Config/Classic").intermission) })
 	expect(s.phase).toBe("HeadStart")
 	s = H.run(s, { hit(1, 2), hit(2, 1) })
 	expect(s.players[1].hitsTaken + s.players[2].hitsTaken).toBe(0)
@@ -103,7 +103,7 @@ test("Alpha leaving during head start picks a new Alpha", function()
 		RoundRules.new(require("../src/shared/Config/Classic"), require("../src/shared/Rng").new(1)),
 		H.join(6)
 	)
-	s = H.run(s, { tick(20) })
+	s = H.run(s, { tick(require("../src/shared/Config/Classic").intermission) })
 	local alpha
 	for id, p in s.players do
 		if p.role == "Alpha" then

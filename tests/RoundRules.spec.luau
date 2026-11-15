@@ -18,16 +18,16 @@ test("4 players keep waiting and announce 4/5", function()
 	expect(cards[#cards].data).toEqual({ count = 4, needed = 5 })
 end)
 
-test("5 players start intermission, then head start after 20s", function()
+test("5 players start intermission, then head start after the countdown", function()
 	local s = H.run(fresh(), H.join(5))
 	expect(s.phase).toBe("Intermission")
-	s = H.run(s, { H.tick(20) })
+	s = H.run(s, { H.tick(Classic.intermission) })
 	expect(s.phase).toBe("HeadStart")
 end)
 
 test("small ticks add up the same as one big tick", function()
 	local s = H.run(fresh(), H.join(5))
-	for _ = 1, 200 do
+	for _ = 1, Classic.intermission * 10 do
 		s = H.run(s, { H.tick(0.1) })
 	end
 	expect(s.phase).toBe("HeadStart")
@@ -42,7 +42,7 @@ end)
 
 test("Alpha id never appears in a public announce before Active", function()
 	local s, fx = H.run(fresh(), H.join(8))
-	s, fx = H.run(s, { H.tick(20) })
+	s, fx = H.run(s, { H.tick(Classic.intermission) })
 	local alpha
 	for id, p in s.players do
 		if p.role == "Alpha" then
@@ -61,7 +61,7 @@ end)
 
 test("secret roles: others see Alpha, Hunter and Survivors as ? for the whole round", function()
 	local s = H.run(fresh(), H.join(8))
-	s = H.run(s, { H.tick(20) })
+	s = H.run(s, { H.tick(Classic.intermission) })
 	local alpha, hunter, other
 	for id, p in s.players do
 		if p.role == "Alpha" then
@@ -88,7 +88,7 @@ end)
 test("secret roles: no public announcement ever carries a player id", function()
 	local s, fx = H.run(fresh(), H.join(8))
 	local all = {}
-	s, fx = H.run(s, { H.tick(20), H.tick(Classic.headStart) })
+	s, fx = H.run(s, { H.tick(Classic.intermission), H.tick(Classic.headStart) })
 	for _, f in fx do
 		table.insert(all, f)
 	end
@@ -138,7 +138,7 @@ end)
 
 test("intro order: map, mode, someone infected, then private role cards", function()
 	local s, fx = H.run(fresh(), H.join(5))
-	s, fx = H.run(s, { H.tick(20) })
+	s, fx = H.run(s, { H.tick(Classic.intermission) })
 	local order = {}
 	for _, f in fx do
 		if f.type == "Announce" and (f.toPlayerId == nil or f.toPlayerId == 1) then
@@ -154,7 +154,7 @@ end)
 
 test("every player gets a private role card", function()
 	local s, fx = H.run(fresh(), H.join(6))
-	s, fx = H.run(s, { H.tick(20) })
+	s, fx = H.run(s, { H.tick(Classic.intermission) })
 	local roleCards = H.find(fx, function(f)
 		return f.card == "YourRole"
 	end)
@@ -166,7 +166,7 @@ end)
 
 test("after 10s head start the round is Active with 360s and alpha revealed", function()
 	local s = H.run(fresh(), H.join(8))
-	s = H.run(s, { H.tick(20), H.tick(Classic.headStart) })
+	s = H.run(s, { H.tick(Classic.intermission), H.tick(Classic.headStart) })
 	expect(s.phase).toBe("Active")
 	expect(s.timeLeft).toBe(360)
 	expect(s.alphaRevealed).toBe(true)
@@ -174,7 +174,7 @@ end)
 
 test("dropping below 2 players mid-round ends with NoWinner", function()
 	local s = H.run(fresh(), H.join(5))
-	s = H.run(s, { H.tick(20 + Classic.headStart) })
+	s = H.run(s, { H.tick(Classic.intermission + Classic.headStart) })
 	s = H.run(s, { H.left(1), H.left(2), H.left(3), H.left(4) })
 	expect(s.phase).toBe("Results")
 	expect(s.winner).toBe("NoWinner")
