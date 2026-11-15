@@ -420,7 +420,7 @@ local function buildLobby()
 		COLORS.blood
 	)
 
-	-- shop counter (west wall) + dressing mirror (catalog: later)
+	-- shop counter (west wall) + dressing mirror (character catalog)
 	local east = Vector3.new(1, 0, 0)
 	local counter = piece("ShopCounter", Vector3.new(4, 4, 16), at(-37, 3, -10), SAFEHOUSE.wood)
 	sign(
@@ -449,9 +449,19 @@ local function buildLobby()
 		"MirrorSign",
 		Vector3.new(10, 2, 0.3),
 		facing(at(-W / 2 + 1.2, 13.5, 2), east),
-		"CATALOG - SOON",
+		"CATALOG",
 		Color3.fromRGB(191, 169, 242)
 	)
+	-- the dressing mirror opens the character catalog
+	local catalogPrompt = Instance.new("ProximityPrompt")
+	catalogPrompt.ActionText = "Edit your character"
+	catalogPrompt.ObjectText = "Catalog"
+	catalogPrompt.KeyboardKeyCode = Enum.KeyCode.E
+	catalogPrompt.HoldDuration = 0
+	catalogPrompt.MaxActivationDistance = 10
+	catalogPrompt.RequiresLineOfSight = false
+	CollectionService:AddTag(catalogPrompt, "CatalogPrompt")
+	catalogPrompt.Parent = mirror
 
 	-- the Alpha pedestals (east wall)
 	buildAlphaStation(lobby, at(W / 2 - 8, 1, 0), Vector3.new(-1, 0, 0))

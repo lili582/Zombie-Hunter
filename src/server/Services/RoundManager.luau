@@ -26,6 +26,7 @@ local AbilityService = require(Services.AbilityService)
 local LobbyService = require(Services.LobbyService)
 local DataService = require(Services.DataService)
 local ShopService = require(Services.ShopService)
+local CatalogService = require(Services.CatalogService)
 
 local RoundManager = {}
 
@@ -378,8 +379,17 @@ function RoundManager.start()
 	TimingService.init()
 	DataService.start()
 	ShopService.start(RoundManager)
+	CatalogService.start(ShopService.canShop) -- same rule: in the lobby, not while playing
+	CharacterService.outfitOf = function(player: Player): any
+		local profile = DataService.get(player)
+		return profile and profile.outfit
+	end
 	CharacterService.equippedOf = ShopService.equipped
 	DataService.onLoaded(function(player, profile)
+		-- the save arrived: dress the character in their outfit (unless they're in a round)
+		if ShopService.canShop(player) then
+			CharacterService.applyOutfit(player)
+		end
 		-- the saved Alpha class goes back into the rules (no banner)
 		RoundManager.send({
 			type = "SetAlphaClass",

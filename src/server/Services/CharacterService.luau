@@ -1,6 +1,7 @@
 --!strict
 -- Spawns characters and applies each role's look, health, speed, tools and lights.
--- Keeps the player's own outfit; zombies only get their skin recolored.
+-- Characters are built from the player's in-game outfit (catalog, saved in their profile;
+-- new players get the default character). Zombies only get their skin recoloured on top.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
@@ -9,6 +10,7 @@ local Weapons = require(Shared.Config.Weapons)
 local Classic = require(Shared.Config.Classic)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Items = require(Shared.Config.Items)
+local Outfit = require(Shared.Data.Outfit)
 
 local CharacterService = {}
 
@@ -21,6 +23,11 @@ local ROLE_COLORS = {
 local ZOMBIE_SKIN = Color3.fromRGB(118, 156, 96)
 
 local diedCallback: ((Player, Model) -> ())? = nil
+
+-- Set by RoundManager: the player's saved outfit (nil while their save is loading).
+CharacterService.outfitOf = function(_player: Player): any
+	return nil
+end
 
 -- Set by RoundManager: the gun every Survivor carries this round (Outbreak), or nil.
 CharacterService.humanWeapon = function(): string?
@@ -65,6 +72,35 @@ end
 local function humanoidOf(player: Player): Humanoid?
 	local char = player.Character
 	return if char then char:FindFirstChildOfClass("Humanoid") else nil
+end
+
+-- The HumanoidDescription for a player's in-game character.
+function CharacterService.descriptionFor(player: Player): HumanoidDescription
+	local o = CharacterService.outfitOf(player) or Outfit.default()
+	local desc = Instance.new("HumanoidDescription")
+	for prop, value in Outfit.descriptionProps(o) do
+		if type(value) == "table" then
+			(desc :: any)[prop] = Color3.fromRGB(value[1], value[2], value[3])
+		else
+			(desc :: any)[prop] = value
+		end
+	end
+	return desc
+end
+
+-- Puts the player's current outfit on their character right away (catalog try-on, lobby only).
+function CharacterService.applyOutfit(player: Player): boolean
+	local hum = humanoidOf(player)
+	if not hum then
+		return false
+	end
+	local ok, err = pcall(function()
+		hum:ApplyDescription(CharacterService.descriptionFor(player))
+	end)
+	if not ok then
+		warn(`CharacterService: couldn't apply outfit for {player.Name}: {err}`)
+	end
+	return ok
 end
 
 local function weld(part: BasePart, to: BasePart, offset: CFrame)
@@ -417,7 +453,25 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 	if player.Parent == nil then
 		return
 	end
-	player:LoadCharacter()
+	-- the in-game character (catalog outfit), not the Roblox avatar
+	local ok = pcall(function()
+		player:LoadCharacterWithHumanoidDescription(CharacterService.descriptionFor(player))
+	end)
+	if not ok then
+		warn(`CharacterService: outfit failed to load for {player.Name}, using the default character`)
+		local fallback = pcall(function()
+			local desc = Instance.new("HumanoidDescription")
+			for prop, value in Outfit.descriptionProps(Outfit.default()) do
+				if type(value) == "table" then
+					(desc :: any)[prop] = Color3.fromRGB(value[1], value[2], value[3])
+				end
+			end
+			player:LoadCharacterWithHumanoidDescription(desc)
+		end)
+		if not fallback then
+			player:LoadCharacter()
+		end
+	end
 	local char = player.Character
 	if not char then
 		return

@@ -148,6 +148,8 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] Get infected: you still look like yourself (other players see you that way, with a flashlight), claws in the toolbar. Press **1**: zombie skin + glowing eyes, and they stay while the claws are out. Press **1** again (put them away): you look human again. The Alpha's eyes are red when revealed. During the head start the Alpha's claws won't come out.
 - [ ] Lobby countdown: HUD says **NEXT ROUND STARTING - VOTE FOR A MAP AT THE BOARD**, the sign says **NEXT ROUND STARTING SOON**. The mode only shows on the MODE card.
 
+- [ ] **Character catalog:** a new player spawns as the **default character** (yellow head and arms, blue torso, green legs). Press E at the mirror on the west wall (sign CATALOG) or the CATALOG button top right: the window opens on the left. HATS tab shows real catalog items with pictures; WEAR puts one on your character right away; REMOVE takes it off. BODY tab: pick ARMS, click a colour. WEARING lists what you have on. RESET TO DEFAULT / USE MY ROBLOX AVATAR work. Stop and Play again: you keep your character (needs the place published with API access, see Saving above). During your round the button is hidden and the mirror doesn't open it. Catalog search needs the place to be published.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:

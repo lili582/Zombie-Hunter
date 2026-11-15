@@ -34,6 +34,11 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 - The Alpha is the same height as all other players (no longer 1.3x bigger).
 
 ### Added
+- **Character catalog (VH2-style):** everyone plays as their own in-game character, saved in their profile. **New players get the default character** (classic 2014: yellow head and arms, blue torso, green legs) until they change it. Open the catalog at the **dressing mirror** in the safehouse (E) or the **CATALOG** button in the lobby:
+  - Tabs HATS, HAIR, FACE, EXTRAS (neck/shoulder/front/back/waist), SHIRTS, PANTS, T-SHIRTS, FACES: search the real Roblox catalog, **WEAR** anything for free, **REMOVE** it, or **BUY** it for real (Roblox's own purchase prompt).
+  - **BODY:** 24 colours for all / head / torso / arms / legs. **WEARING:** everything you have on.
+  - **RESET TO DEFAULT** and **USE MY ROBLOX AVATAR** (copies your avatar's classic items and colours).
+  - The server checks every item with Roblox: only classic R6 items (no layered clothing, no body parts), max 8 accessories (3 per slot). Locked while you're playing a round; works in the safehouse between rounds or while sitting out. Infected players keep their outfit with the zombie skin on top. `Shared/Data/Outfit`, `CatalogService`, `CatalogController`, 8 tests.
 - **Z-Shop** (v0.4): press **E** at the shop counter in the safehouse (or the **SHOP** button in the lobby). Tabs **WEAPONS** and **ZOMBIE SKINS**; each card shows the price and **BUY** / **EQUIP** / **EQUIPPED**. Not enough coins shows how many more you need. Shopping works between rounds or while you sit out a round. Items (`Config/Items`), all side-grades or looks:
   - Hunter guns: Revolver (starter), **Lever Rifle** 400 (50 dmg, far, slow, 5 shots), **Rusty SMG** 600 (fast, weak, short range).
   - Hunter melee: Bat (starter), **Shovel** 250 (harder, slower), **Crowbar** 250 (quick, shorter).
