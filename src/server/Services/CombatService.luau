@@ -279,8 +279,7 @@ local function onClaw(player: Player)
 		return
 	end
 	lastSwing[player] = now
-	-- every claw swing shows the zombie's face for a moment (they look human otherwise)
-	CharacterService.revealZombie(player, Weapons.AlphaReveal.seconds)
+	-- (no reveal here: the face already shows while the claws are out)
 	if not target then
 		return
 	end

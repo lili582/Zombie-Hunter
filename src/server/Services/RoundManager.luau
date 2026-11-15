@@ -351,6 +351,9 @@ function RoundManager.start()
 			quiet = true,
 		})
 	end)
+	CharacterService.clawsAllowed = function(_player: Player): boolean
+		return state.phase == "Active" -- the Alpha's claws sleep through the head start
+	end
 	CharacterService.humanWeapon = function(): string?
 		return state.config.humanWeapon
 	end

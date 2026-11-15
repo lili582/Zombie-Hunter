@@ -221,12 +221,26 @@ function CharacterService.giveTools(player: Player, role: string)
 			tool.Parent = backpack
 		end
 	elseif role == "Alpha" or role == "Zombie" then
+		-- Claws start in the backpack: take them out (1 / tap) to attack. While they are out you
+		-- look like a zombie; put them away and you look human again.
 		local claws = makeTool("Claws", nil)
+		claws.Equipped:Connect(function()
+			if not CharacterService.clawsAllowed(player) then
+				-- the Alpha's claws are still asleep (head start): no showing your face yet
+				task.defer(function()
+					local hum = humanoidOf(player)
+					if hum then
+						hum:UnequipTools()
+					end
+				end)
+				return
+			end
+			CharacterService.setClawsOut(player, true)
+		end)
+		claws.Unequipped:Connect(function()
+			CharacterService.setClawsOut(player, false)
+		end)
 		claws.Parent = backpack
-		local hum = humanoidOf(player)
-		if hum then
-			hum:EquipTool(claws) -- tapping/clicking anywhere attacks
-		end
 	end
 end
 
@@ -237,8 +251,8 @@ function CharacterService.applyRole(player: Player, role: string)
 	if not char or not hum then
 		return
 	end
-	-- Every zombie is disguised: own skin and clothes, a flashlight like everyone else. Only a
-	-- claw swing (or an Alpha ability) shows the zombie face, for a moment (revealZombie).
+	-- Every zombie is disguised: own skin and clothes, a flashlight like everyone else. The zombie
+	-- face shows while the claws are out (setClawsOut) or for a moment after an Alpha ability.
 	if role == "Alpha" then
 		local class = AlphaClasses.get(CharacterService.alphaClassOf(player))
 		setStats(hum, class.health, Weapons.speed.human)
@@ -254,96 +268,148 @@ function CharacterService.applyRole(player: Player, role: string)
 	CharacterService.giveTools(player, role)
 end
 
--- A zombie's true face, shown for `seconds` when it claws (or the Alpha uses an ability), then
--- hidden again. Attacking again while revealed keeps the face on longer.
+-- A zombie's true face. Shown while the claws are out (setClawsOut), and for `seconds` after an
+-- Alpha ability (revealZombie); hidden again only when both are over.
 --   Alpha: zombie skin + RED eyes, faster (class speed) while unmasked; `speed` (a dash) overrides.
 --   Basic zombie: zombie skin + its skin's eye colour, same speed.
-local revealToken: { [Model]: number } = {}
 local savedLook: { [Model]: { [Instance]: { [string]: any } } } = {}
+local clawsOut: { [Model]: boolean } = {}
+local timedUntil: { [Model]: number } = {}
 local LIMBS = { "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
 local BODY_COLOR_PROPS =
 	{ "HeadColor3", "TorsoColor3", "LeftArmColor3", "RightArmColor3", "LeftLegColor3", "RightLegColor3" }
 
+-- Set by RoundManager: may this player take their claws out now? (false during the head start)
+CharacterService.clawsAllowed = function(_player: Player): boolean
+	return true
+end
+
+local function isAlpha(player: Player): boolean
+	return CharacterService.alphaClassOf(player) ~= nil
+end
+
+local function unmask(player: Player, char: Model, hum: Humanoid)
+	if savedLook[char] then
+		return -- already showing
+	end
+	local saved = {}
+	local bc = char:FindFirstChildOfClass("BodyColors")
+	if bc then
+		saved[bc] = {}
+		for _, prop in BODY_COLOR_PROPS do
+			saved[bc][prop] = (bc :: any)[prop]
+		end
+	end
+	for _, name in LIMBS do
+		local p = char:FindFirstChild(name)
+		if p and p:IsA("BasePart") then
+			saved[p] = { Color = p.Color }
+		end
+	end
+	savedLook[char] = saved
+	local body, eyeColor = zombieLook(player)
+	skin(char, body)
+	if isAlpha(player) then
+		eyes(char, Color3.fromRGB(255, 40, 60), 0.35) -- the Alpha's eyes are red: that's how you know
+	else
+		eyes(char, eyeColor, 0.25)
+	end
+	local head = char:FindFirstChild("Head")
+	local light = head and head:FindFirstChild("Flashlight") :: SpotLight?
+	if light then
+		light.Enabled = false
+	end
+	if isAlpha(player) and hum.WalkSpeed > 0 then
+		hum.WalkSpeed = AlphaClasses.get(CharacterService.alphaClassOf(player)).speed -- faster unmasked
+	end
+end
+
+local function remask(player: Player, char: Model, hum: Humanoid)
+	local saved = savedLook[char]
+	if not saved then
+		return -- already hidden
+	end
+	savedLook[char] = nil
+	for inst, props in saved do
+		for prop, value in props do
+			(inst :: any)[prop] = value
+		end
+	end
+	for _, d in char:GetChildren() do
+		if d.Name == "Eye" then
+			d:Destroy()
+		end
+	end
+	local head = char:FindFirstChild("Head")
+	if head then
+		local glow = head:FindFirstChild("EyeGlow")
+		if glow then
+			glow:Destroy()
+		end
+		local light = head:FindFirstChild("Flashlight") :: SpotLight?
+		if light then
+			light.Enabled = true
+		end
+	end
+	if hum.Parent and hum.WalkSpeed > 0 then
+		hum.WalkSpeed = if isAlpha(player) then Weapons.speed.human else Weapons.speed.basic
+	end
+end
+
+-- Shows or hides the face to match: claws out, or an ability timer still running.
+local function refresh(player: Player)
+	local char = player.Character
+	local hum = humanoidOf(player)
+	if not char or not hum or not char.Parent then
+		return
+	end
+	local timed = (timedUntil[char] or 0) > os.clock()
+	if clawsOut[char] or timed then
+		unmask(player, char, hum)
+		if not timed and isAlpha(player) and hum.WalkSpeed > 0 then
+			-- an ability (dash) just ended but the claws are still out: back to class speed
+			hum.WalkSpeed = AlphaClasses.get(CharacterService.alphaClassOf(player)).speed
+		end
+	else
+		timedUntil[char] = nil
+		remask(player, char, hum)
+	end
+end
+
+-- Claws taken out / put away.
+function CharacterService.setClawsOut(player: Player, out: boolean)
+	local char = player.Character
+	if not char then
+		return
+	end
+	clawsOut[char] = if out then true else nil
+	refresh(player)
+end
+
+-- Shows the face for `seconds` (Alpha abilities). `speed` (a dash) overrides the speed meanwhile.
 function CharacterService.revealZombie(player: Player, seconds: number, speed: number?)
 	local char = player.Character
 	local hum = humanoidOf(player)
 	if not char or not hum then
 		return
 	end
-	revealToken[char] = (revealToken[char] or 0) + 1
-	local my = revealToken[char]
-	if not savedLook[char] then
-		local saved = {}
-		local bc = char:FindFirstChildOfClass("BodyColors")
-		if bc then
-			saved[bc] = {}
-			for _, prop in BODY_COLOR_PROPS do
-				saved[bc][prop] = (bc :: any)[prop]
-			end
-		end
-		for _, name in LIMBS do
-			local p = char:FindFirstChild(name)
-			if p and p:IsA("BasePart") then
-				saved[p] = { Color = p.Color }
-			end
-		end
-		savedLook[char] = saved
-		local isAlpha = CharacterService.alphaClassOf(player) ~= nil
-		local body, eyeColor = zombieLook(player)
-		skin(char, body)
-		if isAlpha then
-			eyes(char, Color3.fromRGB(255, 40, 60), 0.35) -- the Alpha's eyes are red: that's how you know
-		else
-			eyes(char, eyeColor, 0.25)
-		end
-		local head = char:FindFirstChild("Head")
-		local light = head and head:FindFirstChild("Flashlight") :: SpotLight?
-		if light then
-			light.Enabled = false
-		end
-		if isAlpha then
-			hum.WalkSpeed = AlphaClasses.get(CharacterService.alphaClassOf(player)).speed -- faster unmasked
-		end
-	end
+	timedUntil[char] = math.max(timedUntil[char] or 0, os.clock() + seconds)
+	unmask(player, char, hum)
 	if speed then
 		hum.WalkSpeed = speed
 	end
-	task.delay(seconds, function()
-		if revealToken[char] ~= my or not char.Parent then
-			return
-		end
-		local saved = savedLook[char]
-		savedLook[char] = nil
-		revealToken[char] = nil
-		if saved then
-			for inst, props in saved do
-				for prop, value in props do
-					(inst :: any)[prop] = value
-				end
-			end
-		end
-		for _, d in char:GetChildren() do
-			if d.Name == "Eye" then
-				d:Destroy()
-			end
-		end
-		local head = char:FindFirstChild("Head")
-		if head then
-			local glow = head:FindFirstChild("EyeGlow")
-			if glow then
-				glow:Destroy()
-			end
-			local light = head:FindFirstChild("Flashlight") :: SpotLight?
-			if light then
-				light.Enabled = true
-			end
-		end
-		if hum.Parent and hum.WalkSpeed > 0 then -- the mask is back on
-			hum.WalkSpeed = if CharacterService.alphaClassOf(player) ~= nil
-				then Weapons.speed.human
-				else Weapons.speed.basic
+	task.delay(seconds + 0.05, function()
+		if player.Character == char then
+			refresh(player)
 		end
 	end)
+end
+
+-- Forget a character's reveal state when it goes away.
+local function forget(char: Model)
+	savedLook[char] = nil
+	clawsOut[char] = nil
+	timedUntil[char] = nil
 end
 
 -- Loads a fresh character, applies the role and moves it to `at`. Yields.
@@ -367,6 +433,11 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 		waited += task.wait(0.1)
 	end
 	hideNameTag(hum)
+	char.AncestryChanged:Connect(function()
+		if not char.Parent then
+			forget(char)
+		end
+	end)
 	hum.Died:Connect(function()
 		if diedCallback then
 			diedCallback(player, char)

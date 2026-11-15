@@ -139,7 +139,7 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] During a round the SHOP button is hidden and the counter doesn't open the shop (unless you're sitting out or escaped).
 
 - [ ] Aim: hold the gun, the **+** crosshair follows the mouse (no mouse pointer). Shoot a wall: the yellow tracer ends at the crosshair. Shift-lock / phone: crosshair in the centre.
-- [ ] Get infected: you still look like yourself (and other players see you that way, with a flashlight). Swing your claws: zombie skin + glowing eyes for 3s, then you look human again. The Alpha's eyes are red when revealed.
+- [ ] Get infected: you still look like yourself (other players see you that way, with a flashlight), claws in the toolbar. Press **1**: zombie skin + glowing eyes, and they stay while the claws are out. Press **1** again (put them away): you look human again. The Alpha's eyes are red when revealed. During the head start the Alpha's claws won't come out.
 - [ ] Lobby countdown: HUD says **NEXT ROUND STARTING - VOTE FOR A MAP AT THE BOARD**, the sign says **NEXT ROUND STARTING SOON**. The mode only shows on the MODE card.
 
 ## Your own map
