@@ -21,6 +21,7 @@ All notable changes to Zombie Hunter. Versions follow [SemVer](https://semver.or
 - **The next mode is a surprise:** the lobby no longer says which mode is next (HUD shows NEXT ROUND STARTING, the sign shows NEXT ROUND STARTING SOON / ROUND IN PROGRESS). You find out on the intro's MODE card.
 
 ### Fixed
+- **Everyone still started together with 2-3 players:** the group starts made only one group below 4 players. Now there are always at least 2 starting spots when 2+ players play (2 players start apart, 3 players as 1 + 2).
 - **Empty bar in the waiting room:** the tower repair bar showed whenever you weren't repairing (a `false ~= nil` check). It now only shows while you repair a tower.
 - **Card text pacing:** a card never switches before its text has finished typing plus 1.2s to read it. The role pick's whispers are fewer and slower (two lines, each left up to read), and its last line waits for them. Intro is now 32s (head start 42s).
 - No green bar when you join: the health bar stays hidden until a round, and Roblox's own health bar is turned off.

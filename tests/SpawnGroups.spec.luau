@@ -42,7 +42,12 @@ end)
 
 test("odd counts: groups of 2 and one of 3", function()
 	expect(groupSizes(SpawnGroups.assign(ids(5), SPOTS, Rng.new(2)))).toEqual({ 2, 3 })
-	expect(groupSizes(SpawnGroups.assign(ids(3), SPOTS, Rng.new(2)))).toEqual({ 3 })
+end)
+
+test("never everyone in one place: 2 players start apart, 3 players as 1 + 2", function()
+	expect(groupSizes(SpawnGroups.assign(ids(2), SPOTS, Rng.new(2)))).toEqual({ 1, 1 })
+	expect(groupSizes(SpawnGroups.assign(ids(3), SPOTS, Rng.new(2)))).toEqual({ 1, 2 })
+	expect(groupSizes(SpawnGroups.assign(ids(1), SPOTS, Rng.new(2)))).toEqual({ 1 })
 end)
 
 test("everyone gets a spot; more groups than spots share the spots", function()

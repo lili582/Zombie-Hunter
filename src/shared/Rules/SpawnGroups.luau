@@ -10,12 +10,14 @@ local SpawnGroups = {}
 SpawnGroups.GROUP_SIZE = 2 -- groups of 2, the last one may get 3 (tune)
 SpawnGroups.MIN_DISTANCE = 80 -- studs between the picked spots, relaxed if the map is small (tune)
 
--- How many groups for `n` players (at least 1, never more than there are spots).
+-- How many groups for `n` players: groups of 2-3, but never everyone in one place - 2 or 3
+-- players start alone or in a pair at 2 different spots. Never more than there are spots.
 function SpawnGroups.count(n: number, spotCount: number): number
 	if n <= 0 or spotCount <= 0 then
 		return 0
 	end
-	return math.clamp(math.floor(n / SpawnGroups.GROUP_SIZE), 1, spotCount)
+	local groups = math.max(math.floor(n / SpawnGroups.GROUP_SIZE), math.min(n, 2))
+	return math.clamp(groups, 1, spotCount)
 end
 
 -- playerIds -> spot index (1-based into `spots`).
