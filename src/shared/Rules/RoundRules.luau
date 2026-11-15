@@ -124,6 +124,9 @@ local function enterHeadStart(s: State, fx: { Effect })
 	local map = Maps.get(mapId)
 	if mapId and map then
 		s.mapId = mapId
+		-- each map has its own tower spots and helicopter zones (given by the server as data)
+		local metas = s.baseConfig.mapMetas
+		s.mapMeta = (metas and metas[mapId]) or s.mapMeta
 		table.insert(s.mapHistory, mapId)
 		if #s.mapHistory > 5 then
 			table.remove(s.mapHistory, 1)

@@ -358,7 +358,8 @@ local function watchPlayer(player: Player)
 	end)
 end
 
-local function setupAmmoBoxes(spots: { CFrame })
+-- Ammo boxes for the current map, built inside it (a new map gets new boxes).
+function CombatService.placeAmmo(spots: { CFrame }, parent: Instance)
 	for _, cf in spots do
 		local box = Instance.new("Part")
 		box.Name = "AmmoBox"
@@ -367,7 +368,7 @@ local function setupAmmoBoxes(spots: { CFrame })
 		box.Anchored = true
 		box.Color = Color3.fromRGB(255, 224, 138) -- butter
 		box.Material = Enum.Material.Neon
-		box.Parent = workspace
+		box.Parent = parent
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Pick up ammo"
 		prompt.ObjectText = "Ammo"
@@ -396,7 +397,7 @@ local function setupAmmoBoxes(spots: { CFrame })
 	end
 end
 
-function CombatService.start(r: Round, ammoSpots: { CFrame })
+function CombatService.start(r: Round)
 	round = r
 	Remotes.get("FireWeapon").OnServerEvent:Connect(onFire)
 	Remotes.get("Reload").OnServerEvent:Connect(function(player)
@@ -414,7 +415,6 @@ function CombatService.start(r: Round, ammoSpots: { CFrame })
 		lastHunterHit[p] = nil
 		immuneUntil[p] = nil
 	end)
-	setupAmmoBoxes(ammoSpots)
 end
 
 -- Returns (and forgets) the Hunter who last damaged this zombie.

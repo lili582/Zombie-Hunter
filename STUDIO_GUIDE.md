@@ -153,6 +153,15 @@ Then: select **Players** in the Explorer → Properties → untick **CharacterAu
 - [ ] **Rooms:** the mirror / CATALOG opens a full-screen DRESSING ROOM, the counter / SHOP a full-screen Z-SHOP: your character turns on the right (drag it). Shop: click a card to preview the weapon in your hand or the zombie skin. Stay in a room when the countdown ends: you are NOT pulled into the round (no intro cards), you join the next one after DONE. With 5 needed and one player in a room, the lobby shows WAITING FOR PLAYERS 4/5.
 - [ ] **Character catalog:** Press E at the mirror on the west wall (sign CATALOG) or the CATALOG button top right: the window opens on the left. HATS tab shows real catalog items with pictures; WEAR puts one on your character right away; REMOVE takes it off. BODY tab: pick ARMS, click a colour. WEARING lists what you have on. RESET TO DEFAULT / USE MY ROBLOX AVATAR work. Stop and Play again: you keep your character (needs the place published with API access, see Saving above). During your round the button is hidden and the mirror doesn't open it. Catalog search needs the place to be published.
 
+## v1.0 maps checklist
+
+- [ ] **See Forest Camp right away:** select Workspace, add a String attribute **StartMap = ForestCamp**, press Play (or Run). The map builds in a second or two.
+- [ ] Night with thick cold mist, real shadows from lanterns and the campfire. Dirt paths lit by lanterns lead from the campfire to the lodge (north), the cabins (west), the dock (east) and the ranger tower (south).
+- [ ] Cabins: you can walk in one door and out the other; roofs closed (no gaps), lit windows in some. The ranger tower ladder can be climbed.
+- [ ] The lake is water; the dock stands over it; one canoe drifts half sunk.
+- [ ] No tree blocks a path, a cabin door, a hiding shed or a spawn; nobody spawns inside anything.
+- [ ] **Map vote swaps the map:** remove StartMap, vote FOREST CAMP on the board: the round starts in the forest, towers and helicopter work there, lockers (sheds) work, ammo boxes appear. Next round vote ABANDONED TOWN: the forest is gone, the town is back.
+
 ## Your own map
 
 Build anything under a Model named **`Map`** in Workspace and add these **tags** (Home → Tag Editor) to small invisible parts:

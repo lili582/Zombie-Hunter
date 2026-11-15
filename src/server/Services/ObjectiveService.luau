@@ -423,9 +423,6 @@ local function setupLockers()
 			round.send({ type = "LockerSearch", attackerId = player.UserId, lockerId = id })
 		end)
 	end
-	Remotes.get("LockerLeave").OnServerEvent:Connect(function(player)
-		round.send({ type = "LockerExit", playerId = player.UserId })
-	end)
 end
 
 ----------------------------------------------------------------------------- round life
@@ -589,10 +586,18 @@ function ObjectiveService.tick()
 	end
 end
 
-function ObjectiveService.start(r: Round, m: MapInfo)
-	round = r
+-- A new map was loaded: use its spots and set up its lockers.
+function ObjectiveService.setMap(m: MapInfo)
 	map = m
 	setupLockers()
+end
+
+function ObjectiveService.start(r: Round, m: MapInfo)
+	round = r
+	ObjectiveService.setMap(m)
+	Remotes.get("LockerLeave").OnServerEvent:Connect(function(player)
+		round.send({ type = "LockerExit", playerId = player.UserId })
+	end)
 	Players.PlayerRemoving:Connect(function(player)
 		nextSkillCheck[player] = nil
 		hiddenLooks[player] = nil

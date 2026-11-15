@@ -9,6 +9,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local RoundRules = require(Shared.Rules.RoundRules)
 local Classic = require(Shared.Config.Classic)
 local Modes = require(Shared.Config.Modes)
+local Maps = require(Shared.Config.Maps)
 local Rng = require(Shared.Rng)
 local Remotes = require(Shared.Net.Remotes)
 local Rewards = require(Shared.Rules.Rewards)
@@ -309,9 +310,11 @@ runEffect = function(f: any)
 			CombatService.resetGun(player, ShopService.equipped(player, "hunterGun"))
 		end
 	elseif f.type == "MapChosen" then
-		-- Only the Town greybox (or your hand-built workspace.Map) exists so far, so there is
-		-- nothing to swap yet. When more maps are added, load f.mapId here.
-		print(`RoundManager: map {f.mapId}`)
+		-- the voted map: build it now (everyone is still in the safehouse), then point the
+		-- lockers, towers, helicopter and ammo boxes at it
+		map = MapService.loadMap(f.mapId)
+		ObjectiveService.setMap(map)
+		CombatService.placeAmmo(map.ammoSpawns, workspace:FindFirstChild("Map") :: Instance)
 	elseif f.type == "AlphaClassSet" then
 		local player = playerById(f.playerId)
 		if player then
@@ -382,7 +385,13 @@ function RoundManager.start()
 	Players.CharacterAutoLoads = false
 	map = MapService.load()
 	MapService.startFlicker()
-	-- the rules get the map's tower spots and helicopter zones (positions only, no Roblox objects)
+	-- every map's tower spots and helicopter zones (plain data): the round uses the voted map's
+	if MapService.isCustom() then
+		config.mapPool = { Maps.order[1] } -- your own hand-built map: nothing to vote between
+	else
+		config.mapMetas = MapService.metas()
+	end
+	-- the first map's spots, from its tags (used until a map is voted, and for a hand-built map)
 	local towerSpots = {}
 	for _, cf in map.towerSpots do
 		table.insert(towerSpots, { x = cf.Position.X, z = cf.Position.Z })
@@ -437,7 +446,8 @@ function RoundManager.start()
 	LobbyService.start(RoundManager)
 	ObjectiveService.start(RoundManager, map)
 	CharacterService.onDied(onDied)
-	CombatService.start(RoundManager, map.ammoSpawns)
+	CombatService.start(RoundManager)
+	CombatService.placeAmmo(map.ammoSpawns, workspace:FindFirstChild("Map") :: Instance)
 
 	local function onJoin(player: Player)
 		task.spawn(CharacterService.spawn, player, nil, map.lobbySpawn)

@@ -98,3 +98,23 @@ test("a player who leaves takes their vote with them", function()
 	s = H.run(s, { vote(6, "Town"), H.left(6) })
 	expect(s.votes[6]).toBeNil()
 end)
+
+test("each map brings its own tower spots: the round uses the voted map's spots", function()
+	local forest =
+		{ towerSpots = { { x = 1000, z = 0 }, { x = 1200, z = 0 }, { x = 1400, z = 0 } }, heliZoneCount = 2 }
+	local base = table.clone(Classic)
+	base.mapPool = { "Town" }
+	base.mapMetas = { Town = forest }
+	local s = H.run(RoundRules.new(base, Rng.new(1), H.mapMeta), H.join(5))
+	s = H.run(s, { H.tick(Classic.intermission) })
+	expect(s.mapMeta).toBe(forest)
+	for id in s.towers do
+		expect(forest.towerSpots[id] ~= nil).toBeTruthy()
+	end
+end)
+
+test("without per-map data the round keeps the map data it was given", function()
+	local s = H.run(RoundRules.new(Classic, Rng.new(1), H.mapMeta), H.join(5))
+	s = H.run(s, { H.tick(Classic.intermission) })
+	expect(s.mapMeta).toBe(H.mapMeta)
+end)
