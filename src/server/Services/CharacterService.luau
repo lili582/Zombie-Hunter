@@ -8,6 +8,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Weapons = require(Shared.Config.Weapons)
 local Classic = require(Shared.Config.Classic)
 local AlphaClasses = require(Shared.Config.AlphaClasses)
+local Items = require(Shared.Config.Items)
 
 local CharacterService = {}
 
@@ -18,7 +19,6 @@ local ROLE_COLORS = {
 	Survivor = Color3.fromRGB(156, 200, 255), -- baby blue
 }
 local ZOMBIE_SKIN = Color3.fromRGB(118, 156, 96)
-local ALPHA_SKIN = Color3.fromRGB(96, 112, 86)
 
 local diedCallback: ((Player, Model) -> ())? = nil
 
@@ -26,6 +26,32 @@ local diedCallback: ((Player, Model) -> ())? = nil
 CharacterService.humanWeapon = function(): string?
 	return nil
 end
+
+-- Set by RoundManager: the shop item a player has equipped in a slot
+-- ("hunterGun" | "hunterMelee" | "zombieSkin").
+CharacterService.equippedOf = function(_player: Player, slot: string): string
+	return if slot == "hunterGun" then "Revolver" elseif slot == "hunterMelee" then "Bat" else "Rotten"
+end
+
+local function rgb(c: { number }?, fallback: Color3): Color3
+	return if c then Color3.fromRGB(c[1], c[2], c[3]) else fallback
+end
+
+-- The zombie skin a player has equipped: (body color, eye color).
+local function zombieLook(player: Player): (Color3, Color3)
+	local item = Items.get(CharacterService.equippedOf(player, "zombieSkin"))
+	return rgb(item and item.skin, ZOMBIE_SKIN), rgb(item and item.eyes, ROLE_COLORS.Zombie)
+end
+
+-- Tool looks per shop item: handle size and color.
+local TOOL_LOOK: { [string]: { Vector3 | Color3 } } = {
+	Revolver = { Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44) },
+	LeverRifle = { Vector3.new(0.4, 0.8, 3.2), Color3.fromRGB(110, 75, 48) },
+	RustySMG = { Vector3.new(0.5, 1.1, 1.6), Color3.fromRGB(120, 70, 50) },
+	Bat = { Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50) },
+	Shovel = { Vector3.new(0.5, 4.6, 0.5), Color3.fromRGB(110, 110, 115) },
+	Crowbar = { Vector3.new(0.3, 3, 0.3), Color3.fromRGB(150, 40, 50) },
+}
 
 -- Set by RoundManager: which Alpha class a player has this round (nil = not an Alpha).
 CharacterService.alphaClassOf = function(_player: Player): string?
@@ -181,11 +207,19 @@ function CharacterService.giveTools(player: Player, role: string)
 		end
 		kit.Parent = backpack
 		if CharacterService.humanWeapon() == "Pistol" then
-			makeTool("Pistol", Vector3.new(0.35, 0.8, 1.4), Color3.fromRGB(60, 60, 70)).Parent = backpack
+			local pistol = makeTool("Pistol", Vector3.new(0.35, 0.8, 1.4), Color3.fromRGB(60, 60, 70))
+			pistol:SetAttribute("Gun", true)
+			pistol.Parent = backpack
 		end
 	elseif role == "Hunter" then
-		makeTool("Revolver", Vector3.new(0.4, 0.9, 1.8), Color3.fromRGB(40, 40, 44)).Parent = backpack
-		makeTool("Bat", Vector3.new(0.4, 4, 0.4), Color3.fromRGB(120, 85, 50)).Parent = backpack
+		-- the gun and melee the player equipped in the shop (tool name = item id)
+		for _, slot in { "hunterGun", "hunterMelee" } do
+			local id = CharacterService.equippedOf(player, slot)
+			local look = TOOL_LOOK[id] or TOOL_LOOK[if slot == "hunterGun" then "Revolver" else "Bat"]
+			local tool = makeTool(id, look[1] :: Vector3, look[2] :: Color3)
+			tool:SetAttribute(if slot == "hunterGun" then "Gun" else "Melee", true)
+			tool.Parent = backpack
+		end
 	elseif role == "Alpha" or role == "Zombie" then
 		local claws = makeTool("Claws", nil)
 		claws.Parent = backpack
@@ -210,8 +244,9 @@ function CharacterService.applyRole(player: Player, role: string)
 		setStats(hum, class.health, Weapons.speed.human)
 		flashlight(char)
 	elseif role == "Zombie" then
-		skin(char, ZOMBIE_SKIN)
-		eyes(char, ROLE_COLORS.Zombie, 0.25)
+		local body, eyeColor = zombieLook(player)
+		skin(char, body)
+		eyes(char, eyeColor, 0.25)
 		setStats(hum, Weapons.health.basic, Weapons.speed.basic)
 	else
 		setStats(hum, Weapons.health.human, Weapons.speed.human)
@@ -254,7 +289,7 @@ function CharacterService.revealAlpha(player: Player, seconds: number, speed: nu
 			end
 		end
 		savedLook[char] = saved
-		skin(char, ALPHA_SKIN)
+		skin(char, (zombieLook(player))) -- the Alpha's eyes stay red: that's how you know
 		eyes(char, Color3.fromRGB(255, 40, 60), 0.35)
 		local head = char:FindFirstChild("Head")
 		local light = head and head:FindFirstChild("Flashlight") :: SpotLight?

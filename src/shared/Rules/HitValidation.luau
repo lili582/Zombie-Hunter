@@ -31,14 +31,15 @@ function HitValidation.shot(input: ShotInput, weapon: typeof(Weapons.Revolver)?)
 	return true, nil
 end
 
-function HitValidation.melee(input: SwingInput): (boolean, string?)
+function HitValidation.melee(input: SwingInput, weapon: typeof(Weapons.Melee)?): (boolean, string?)
+	local w = weapon or Weapons.Melee
 	if input.role ~= "Hunter" then
 		return false, "not_hunter" -- survivors carry no weapons
 	end
-	if input.sinceLast < Weapons.Melee.interval - 1e-6 then
+	if input.sinceLast < w.interval - 1e-6 then
 		return false, "too_fast"
 	end
-	if input.distance > Weapons.Melee.range then
+	if input.distance > w.range then
 		return false, "out_of_range"
 	end
 	return true, nil

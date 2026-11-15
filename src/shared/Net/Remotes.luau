@@ -13,6 +13,8 @@ Remotes.names = {
 	"LockerLeave", -- leave the locker you are hiding in
 	"UseAbility", -- Alpha only: use your class ability
 	"RequestProfile", -- send me my saved profile (coins, items, stats)
+	"ShopBuy", -- (itemId) buy with Z-Coins (and equip it)
+	"ShopEquip", -- (itemId) equip an owned item
 	-- (melee and claws use Tool.Activated, which already reaches the server)
 	-- server -> client
 	"RoundStateChanged", -- filtered round snapshot
@@ -23,6 +25,7 @@ Remotes.names = {
 	"TimingChallenge", -- (id, kind "dodge"|"skill", window, zoneStart, zoneSize): click in time!
 	"TimingResult", -- (id, ok: boolean)
 	"NoiseAlert", -- (position) zombies only: a skill check failed at this tower
+	"ShopResult", -- (ok, reason?, itemId)
 	"ProfileChanged", -- (snapshot) your saved profile: coins, owned, equipped, stats
 	"RevealHumans", -- (characters, seconds) zombies only: a Screamer's scream shows these humans
 }

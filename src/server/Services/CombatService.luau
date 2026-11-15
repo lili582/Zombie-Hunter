@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Weapons = require(Shared.Config.Weapons)
+local Items = require(Shared.Config.Items)
 local HitValidation = require(Shared.Rules.HitValidation)
 local Remotes = require(Shared.Net.Remotes)
 local CharacterService = require(script.Parent.CharacterService)
@@ -61,14 +62,25 @@ local function sendAmmo(player: Player)
 	end
 end
 
--- Gun stats by name ("Revolver" = Hunter, "Pistol" = Outbreak survivors).
-local function statsOf(g: Gun): typeof(Weapons.Revolver)
-	return if g.weapon == "Pistol" then Weapons.Pistol else Weapons.Revolver
+-- Gun stats by name: "Pistol" (Outbreak survivors) or a shop gun id (Hunter).
+local function gunStats(name: string): typeof(Weapons.Revolver)
+	if name == "Pistol" then
+		return Weapons.Pistol
+	end
+	local item = Items.get(name)
+	return if item and item.slot == "hunterGun" then item.stats else Weapons.Revolver
 end
 
+local function statsOf(g: Gun): typeof(Weapons.Revolver)
+	return gunStats(g.weapon)
+end
+
+-- `weapon`: the tool name the player carries ("Pistol", or the Hunter's equipped gun id).
 function CombatService.resetGun(player: Player, weapon: string?)
-	local name = if weapon == "Pistol" then "Pistol" else "Revolver"
-	local w = (Weapons :: any)[name]
+	local item = Items.get(weapon)
+	local isGun = weapon == "Pistol" or (item ~= nil and item.slot == "hunterGun")
+	local name = if isGun then weapon :: string else "Revolver"
+	local w = gunStats(name)
 	guns[player] = { weapon = name, mag = w.mag, reserve = w.reserve, lastShot = 0, reloading = false }
 	sendAmmo(player)
 end
@@ -173,12 +185,14 @@ local function onFire(player: Player, direction: any)
 	end
 end
 
-local function onBat(player: Player)
+local function onMelee(player: Player, itemId: string)
 	if not isActive() or lifeOf(player) ~= "Alive" then
 		return
 	end
+	local item = Items.get(itemId)
+	local w = if item and item.slot == "hunterMelee" then item.stats else Weapons.Melee
 	local now = os.clock()
-	local target, dist = nearestInFront(player, Weapons.Melee.range, function(other)
+	local target, dist = nearestInFront(player, w.range, function(other)
 		local r = roleOf(other)
 		return r == "Alpha" or r == "Zombie"
 	end)
@@ -186,13 +200,13 @@ local function onBat(player: Player)
 		role = roleOf(player) or "",
 		distance = if target then dist else 0,
 		sinceLast = now - (lastSwing[player] or 0),
-	})
+	}, w)
 	if not ok then
 		return
 	end
 	lastSwing[player] = now
 	if target then
-		damageZombie(target, Weapons.Melee.damage, player)
+		damageZombie(target, w.damage, player)
 		-- short push back (stun-lite)
 		local r, me = rootOf(target), rootOf(player)
 		if r and me then
@@ -301,9 +315,9 @@ local function hookTool(player: Player, tool: Instance)
 		return
 	end
 	tool:SetAttribute("Hooked", true)
-	if tool.Name == "Bat" then
+	if tool:GetAttribute("Melee") then
 		tool.Activated:Connect(function()
-			onBat(player)
+			onMelee(player, tool.Name)
 		end)
 	elseif tool.Name == "Claws" then
 		tool.Activated:Connect(function()
