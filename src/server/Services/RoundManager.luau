@@ -203,9 +203,22 @@ local function spawnRoundCharacters()
 		-- the Alpha starts in a group like everyone else, disguised (claws wake up at release)
 		local at = startFor(id)
 		task.spawn(function()
-			CharacterService.spawn(player, p.role, at)
-			giveGun(player, p.role)
+			-- empty hands during the intro: the toolbar would show your role before the reveal
+			CharacterService.spawn(player, p.role, at, true)
+			local char = player.Character
 			CharacterService.freeze(player, introEnds - os.clock())
+			task.wait(math.max(0, introEnds - os.clock()))
+			-- the intro is over: hand out the tools (and the Hunter's ammo) for the role you have now
+			local now = state.players[player.UserId]
+			if
+				now
+				and player.Character == char
+				and inRound()
+				and (now.life == "Alive" or now.life == "Downed")
+			then
+				CharacterService.giveTools(player, now.role)
+				giveGun(player, now.role)
+			end
 		end)
 	end
 end

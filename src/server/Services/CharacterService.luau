@@ -281,7 +281,8 @@ function CharacterService.giveTools(player: Player, role: string)
 end
 
 -- Look + stats for a role on the current character (no respawn).
-function CharacterService.applyRole(player: Player, role: string)
+-- `noTools`: the look and stats only, empty hands (the intro: tools would show your role).
+function CharacterService.applyRole(player: Player, role: string, noTools: boolean?)
 	local char = player.Character
 	local hum = humanoidOf(player)
 	if not char or not hum then
@@ -301,7 +302,7 @@ function CharacterService.applyRole(player: Player, role: string)
 		flashlight(char)
 		-- secret roles: the Hunter looks like everyone else (no hat, no name tag)
 	end
-	CharacterService.giveTools(player, role)
+	CharacterService.giveTools(player, if noTools then "None" else role)
 end
 
 -- A zombie's true face. Shown while the claws are out (setClawsOut), and for `seconds` after an
@@ -449,7 +450,8 @@ local function forget(char: Model)
 end
 
 -- Loads a fresh character, applies the role and moves it to `at`. Yields.
-function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
+-- `noTools`: spawn empty-handed (round intro); call giveTools later.
+function CharacterService.spawn(player: Player, role: string?, at: CFrame?, noTools: boolean?)
 	if player.Parent == nil then
 		return
 	end
@@ -501,7 +503,7 @@ function CharacterService.spawn(player: Player, role: string?, at: CFrame?)
 		char:PivotTo(at + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
 	end
 	if role then
-		CharacterService.applyRole(player, role)
+		CharacterService.applyRole(player, role, noTools)
 	else
 		CharacterService.giveTools(player, "None")
 	end
