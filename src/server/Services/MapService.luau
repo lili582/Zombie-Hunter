@@ -26,6 +26,7 @@ export type MapInfo = {
 
 local COLORS = {
 	lamp = Color3.fromRGB(255, 224, 138), -- butter
+	blood = Color3.fromRGB(255, 143, 184), -- candy pink (the mode sign)
 }
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3): Part
