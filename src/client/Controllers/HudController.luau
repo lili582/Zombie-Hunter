@@ -225,6 +225,17 @@ local function build()
 	end)
 	ui.ability = ability
 
+	-- your saved Z-Coins (top left)
+	ui.coins = Theme.label(gui, {
+		Position = UDim2.fromOffset(16, 44),
+		Size = UDim2.fromOffset(200, 26),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextScaled = false,
+		TextSize = 20,
+		Text = "",
+		TextColor3 = C.butter,
+	})
+
 	-- lobby: which Alpha class you will play if you are picked
 	ui.alphaPref = Theme.label(gui, {
 		AnchorPoint = Vector2.new(0.5, 1),
@@ -668,6 +679,10 @@ function HudController.start()
 	Remotes.get("ShotFired").OnClientEvent:Connect(tracer)
 	Remotes.get("NoiseAlert").OnClientEvent:Connect(noisePing)
 	Remotes.get("RevealHumans").OnClientEvent:Connect(revealHumans)
+	Remotes.get("ProfileChanged").OnClientEvent:Connect(function(profile)
+		ui.coins.Text = `Z-COINS  {profile.coins}`
+	end)
+	Remotes.get("RequestProfile"):FireServer()
 	for _, tag in
 		{
 			"RevivePrompt",

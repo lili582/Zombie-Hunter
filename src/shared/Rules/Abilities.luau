@@ -24,10 +24,13 @@ end
 function Abilities.step(s: State, event: Types.Event, fx: { Effect })
 	if event.type == "SetAlphaClass" then
 		-- Any time, but it only applies the next time you become the Alpha (no mid-round swaps).
-		local p = s.players[event.playerId]
-		if p and AlphaClasses.isValid(event.class) then
+		-- The player may not have joined the round state yet (their save loaded first): fine.
+		if AlphaClasses.isValid(event.class) then
 			s.alphaPrefs[event.playerId] = event.class
 			table.insert(fx, { type = "AlphaClassSet", playerId = event.playerId, class = event.class })
+			if event.quiet then
+				return -- loaded from the player's save: no banner
+			end
 			table.insert(fx, {
 				type = "Announce",
 				card = "AlphaPicked",
