@@ -1,6 +1,9 @@
 --!strict
 -- THE SAFEHOUSE: the basement of Relay Station 9, the old radio station that ran the towers
--- (design-safehouse.md). "The last lit room in a town that went dark." 64 x 48 studs, a low
+-- (design-safehouse.md). "The last lit room in a town that went dark." Survivors have made it
+-- home: a couch by the fire, fairy lights, a reading nook, warm lamps in every corner. And the
+-- outbreak is on every wall: the infection map, the survival rules, the days scratched in tally
+-- marks, a zombie shooting target, rations, a hazard-striped door that says DO NOT OPEN. 64 x 48 studs, a low
 -- 16-stud ceiling. The center is warm (an oil-drum fire, cots and sandbags under the one hanging
 -- bulb); the edges are cold (boarded windows letting in lavender moonbeams, the stairwell climbing
 -- into black, the deploy door with its red bulb).
@@ -36,9 +39,9 @@ local BASE = Vector3.new(0, 300, 0) -- the floor's top is BASE.Y + 1
 local W, D, H = 64, 48, 16 -- inside faces of the walls: x +-31, z +-23; ceiling at y 17
 
 local C = {
-	concrete = Color3.fromRGB(56, 54, 58),
+	concrete = Color3.fromRGB(70, 64, 60),
 	waterLine = Color3.fromRGB(34, 32, 36),
-	floor = Color3.fromRGB(46, 44, 48),
+	floor = Color3.fromRGB(58, 52, 48),
 	ceiling = Color3.fromRGB(40, 38, 42),
 	rust = Color3.fromRGB(104, 62, 42),
 	metal = Color3.fromRGB(74, 76, 80),
@@ -645,6 +648,14 @@ local function cot(room: Model, cf: CFrame)
 		Color3.fromRGB(86, 64, 52),
 		Enum.Material.Fabric
 	)
+	Kit.part(
+		room,
+		"Pillow",
+		Vector3.new(2.2, 0.6, 1.3),
+		cf * CFrame.new(0, 1.9, -2.5),
+		Color3.fromRGB(196, 186, 160),
+		Enum.Material.Fabric
+	)
 end
 
 -- The warm center: an oil drum fire, cots, crates to sit on, a half-ring of sandbags, candles,
@@ -668,7 +679,7 @@ local function hearth(room: Model, rng: Random)
 	flames.Color = Color3.fromRGB(255, 150, 60)
 	flames.SecondaryColor = Color3.fromRGB(255, 70, 20)
 	flames.Parent = fire
-	Kit.light(fire, 16, 1.1, Color3.fromRGB(255, 150, 80)).Name = "FireLight"
+	Kit.light(fire, 26, 1.5, Color3.fromRGB(255, 150, 80)).Name = "FireLight"
 	local embers = Instance.new("ParticleEmitter")
 	embers.Rate = 6
 	embers.Lifetime = NumberRange.new(2, 3)
@@ -679,8 +690,8 @@ local function hearth(room: Model, rng: Random)
 	embers.LightEmission = 1
 	embers.Parent = fire
 	-- cots around the fire, crates as seats
-	cot(room, CFrame.new(at(-8, 1, -1)) * CFrame.Angles(0, 0.35, 0))
-	cot(room, CFrame.new(at(8, 1, -1)) * CFrame.Angles(0, -0.35, 0))
+	cot(room, CFrame.new(at(-10, 1, 0)) * CFrame.Angles(0, 0.35, 0))
+	cot(room, CFrame.new(at(10, 1, 0)) * CFrame.Angles(0, -0.35, 0))
 	cot(room, CFrame.new(at(-7.5, 1, 8)) * CFrame.Angles(0, -0.4, 0))
 	cot(room, CFrame.new(at(7.5, 1, 8)) * CFrame.Angles(0, 0.4, 0))
 	Kit.crate(room, at(-3.5, 1, -4.5), 2.2, 0.3)
@@ -724,7 +735,7 @@ local function hearth(room: Model, rng: Random)
 		piece(room, "HearthBulb", Vector3.new(0.8, 0.8, 0.8), at(0, 13.1, 2), C.butter, Enum.Material.Neon)
 	)
 	bulb.Shape = Enum.PartType.Ball
-	Kit.light(bulb, 22, 1.6, Color3.fromRGB(255, 214, 150)).Name = "BulbLight"
+	Kit.light(bulb, 34, 2.1, Color3.fromRGB(255, 214, 150)).Name = "BulbLight"
 	local moths = Instance.new("ParticleEmitter")
 	moths.Name = "Moths"
 	moths.Rate = 1.5
@@ -1155,6 +1166,712 @@ local function missingPosters(room: Model): { Poster }
 	return posters
 end
 
+--------------------------------------------------------------------------- warmth: light and comfort
+
+local WARM_FILL = Color3.fromRGB(255, 200, 140)
+
+-- A warm wall lamp facing into the room: fill light for the corners (no shadows).
+local function sconce(room: Model, pos: Vector3, facing: Vector3, range: number?)
+	local cf = CFrame.lookAt(pos, pos + facing)
+	deco(
+		Kit.part(
+			room,
+			"SconcePlate",
+			Vector3.new(0.8, 1.2, 0.2),
+			cf * CFrame.new(0, 0, 0.1),
+			C.rust,
+			Enum.Material.Metal
+		)
+	)
+	local shade = deco(
+		Kit.part(
+			room,
+			"Sconce",
+			Vector3.new(0.9, 0.7, 0.6),
+			cf * CFrame.new(0, 0.2, -0.4),
+			C.butter,
+			Enum.Material.Neon
+		)
+	)
+	shade.Transparency = 0.15
+	softLight(shade, range or 22, 1, WARM_FILL).Name = "FillLight"
+end
+
+-- A garland of warm fairy lights sagging between two points under the ceiling.
+local function stringLights(room: Model, a: Vector3, b: Vector3, sag: number)
+	local n = math.floor((b - a).Magnitude / 2.2)
+	local prev: Vector3? = nil
+	for i = 0, n do
+		local t = i / n
+		local p = a:Lerp(b, t) - Vector3.new(0, sag * 4 * t * (1 - t), 0)
+		if prev then
+			local length = (p - prev).Magnitude
+			deco(
+				Kit.part(
+					room,
+					"Wire",
+					Vector3.new(0.06, 0.06, length),
+					CFrame.lookAt(prev, p) * CFrame.new(0, 0, -length / 2),
+					Color3.fromRGB(24, 22, 20)
+				)
+			)
+		end
+		local bulb = deco(
+			piece(
+				room,
+				"FairyLight",
+				Vector3.new(0.35, 0.35, 0.35),
+				p - Vector3.new(0, 0.2, 0),
+				if i % 2 == 0 then C.butter else C.ember,
+				Enum.Material.Neon
+			)
+		)
+		bulb.Shape = Enum.PartType.Ball
+		if i % 8 == 4 then
+			softLight(bulb, 18, 0.7, WARM_FILL).Name = "FairyGlow"
+		end
+		prev = p
+	end
+end
+
+local function lights(room: Model)
+	sconce(room, at(-30.7, 10, -16), EAST) -- the foot of the stairs
+	sconce(room, at(-30.7, 12, 2), EAST) -- over the lockers
+	sconce(room, at(-30.7, 10.5, 15), EAST) -- over the jars
+	sconce(room, at(29, 10, -22.7), SOUTH) -- the corner by the door
+	sconce(room, at(30.7, 12, 4), WEST) -- between the shop and the mirror
+	sconce(room, at(-16.5, 13.6, -22.7), SOUTH, 16) -- over the outbreak map
+	sconce(room, at(-22, 13, 22.7), NORTH) -- over the radio desk
+	sconce(room, at(17, 12, 22.7), NORTH, 16) -- over the MISSING posters
+	stringLights(room, at(-28, 16.4, -4), at(28, 16.4, -4), 1.2)
+	stringLights(room, at(-28, 16.4, 14), at(28, 16.4, 14), 1.4)
+	-- a desk lamp on the radio desk
+	local deskTop = at(-14.5, 4.4, 21)
+	upright(
+		"DeskLampBase",
+		room,
+		0.2,
+		1,
+		deskTop + Vector3.new(0, 0.1, 0),
+		Color3.fromRGB(40, 60, 46),
+		Enum.Material.Metal
+	)
+	deco(
+		piece(
+			room,
+			"DeskLampNeck",
+			Vector3.new(0.15, 1.6, 0.15),
+			deskTop + Vector3.new(0, 0.9, 0),
+			Color3.fromRGB(40, 60, 46),
+			Enum.Material.Metal
+		)
+	)
+	local deskShade = deco(
+		piece(
+			room,
+			"DeskLamp",
+			Vector3.new(1.2, 0.5, 0.8),
+			deskTop + Vector3.new(0, 1.8, -0.3),
+			Color3.fromRGB(40, 70, 52),
+			Enum.Material.Metal
+		)
+	)
+	softLight(deskShade, 14, 1, WARM_FILL).Name = "FillLight"
+	-- vanity bulbs around the mirror
+	for i = 0, 4 do
+		local bulb = deco(
+			piece(
+				room,
+				"VanityBulb",
+				Vector3.new(0.4, 0.4, 0.4),
+				at(W / 2 - 1.4, 11.9, 10 + i),
+				C.butter,
+				Enum.Material.Neon
+			)
+		)
+		bulb.Shape = Enum.PartType.Ball
+		if i == 2 then
+			softLight(bulb, 12, 0.9, WARM_FILL).Name = "FillLight"
+		end
+	end
+	-- a warm bulb hanging in the shop cage
+	deco(piece(room, "CageCord", Vector3.new(0.06, 3, 0.06), at(28, 15.5, -9), Color3.fromRGB(20, 20, 20)))
+	local cageBulb = deco(
+		piece(room, "CageBulb", Vector3.new(0.6, 0.6, 0.6), at(28, 13.8, -9), C.butter, Enum.Material.Neon)
+	)
+	cageBulb.Shape = Enum.PartType.Ball
+	softLight(cageBulb, 14, 0.9, WARM_FILL).Name = "FillLight"
+end
+
+-- The old leather couch facing the fire, a throw blanket over its back.
+local function couch(room: Model, cf: CFrame)
+	local leather = Color3.fromRGB(96, 56, 42)
+	Kit.part(
+		room,
+		"CouchSeat",
+		Vector3.new(12, 1.8, 3.6),
+		cf * CFrame.new(0, 1.4, 0),
+		leather,
+		Enum.Material.Leather
+	)
+	Kit.part(
+		room,
+		"CouchBack",
+		Vector3.new(12, 3.4, 1.1),
+		cf * CFrame.new(0, 3, 1.9),
+		leather,
+		Enum.Material.Leather
+	)
+	for _, x in { -6.3, 6.3 } do
+		Kit.part(
+			room,
+			"CouchArm",
+			Vector3.new(1, 2.8, 4.6),
+			cf * CFrame.new(x, 1.9, 0.2),
+			leather,
+			Enum.Material.Leather
+		)
+	end
+	for _, x in { -3.9, 0, 3.9 } do
+		Kit.part(
+			room,
+			"Cushion",
+			Vector3.new(3.8, 0.6, 3.2),
+			cf * CFrame.new(x, 2.6, -0.1),
+			Color3.fromRGB(110, 64, 48),
+			Enum.Material.Leather
+		)
+	end
+	for _, p in { { -4.6, 0.3 }, { 4.4, -0.25 } } do
+		Kit.part(
+			room,
+			"Pillow",
+			Vector3.new(1.8, 1.6, 0.6),
+			cf * CFrame.new(p[1], 3.5, 1.1) * CFrame.Angles(-0.2, p[2], 0),
+			Color3.fromRGB(176, 150, 112),
+			Enum.Material.Fabric
+		)
+	end
+	deco(
+		Kit.part(
+			room,
+			"Throw",
+			Vector3.new(4.6, 0.25, 2.8),
+			cf * CFrame.new(2.6, 4.4, 1.6) * CFrame.Angles(-0.9, 0, 0.05),
+			Color3.fromRGB(150, 84, 64),
+			Enum.Material.Fabric
+		)
+	)
+end
+
+local function armchair(room: Model, cf: CFrame)
+	local leather = Color3.fromRGB(86, 60, 46)
+	Kit.part(
+		room,
+		"ArmchairSeat",
+		Vector3.new(4.4, 1.8, 4),
+		cf * CFrame.new(0, 1.4, 0),
+		leather,
+		Enum.Material.Leather
+	)
+	Kit.part(
+		room,
+		"ArmchairBack",
+		Vector3.new(4.4, 3.6, 1),
+		cf * CFrame.new(0, 3.2, 1.6),
+		leather,
+		Enum.Material.Leather
+	)
+	for _, x in { -2.3, 2.3 } do
+		Kit.part(
+			room,
+			"ArmchairArm",
+			Vector3.new(0.8, 2.6, 4),
+			cf * CFrame.new(x, 1.9, 0),
+			leather,
+			Enum.Material.Leather
+		)
+	end
+	deco(
+		Kit.part(
+			room,
+			"Blanket",
+			Vector3.new(3.6, 0.25, 3),
+			cf * CFrame.new(0.3, 2.45, -0.2) * CFrame.Angles(0, 0.2, 0),
+			Color3.fromRGB(120, 130, 96),
+			Enum.Material.Fabric
+		)
+	)
+end
+
+local function comfort(room: Model)
+	-- rugs in front of the fire
+	deco(
+		piece(
+			room,
+			"RugBorder",
+			Vector3.new(17, 0.06, 12),
+			at(0, 1.23, -2),
+			Color3.fromRGB(70, 36, 30),
+			Enum.Material.Carpet
+		)
+	)
+	deco(
+		piece(
+			room,
+			"Rug",
+			Vector3.new(15.6, 0.07, 10.6),
+			at(0, 1.25, -2),
+			Color3.fromRGB(128, 64, 48),
+			Enum.Material.Carpet
+		)
+	)
+	couch(room, CFrame.lookAt(at(0, 1, -8.4), at(0, 1, 2)))
+	-- a pot of something warm on a grill over the drum, steaming
+	for _, dz in { -0.5, 0.5 } do
+		deco(
+			piece(
+				room,
+				"Grill",
+				Vector3.new(3.4, 0.15, 0.15),
+				at(0, 5.6, 2 + dz),
+				C.metal,
+				Enum.Material.Metal
+			)
+		)
+	end
+	local pot =
+		upright("Pot", room, 1.3, 1.7, at(0.5, 6.35, 2), Color3.fromRGB(46, 46, 50), Enum.Material.Metal)
+	pot.CanCollide = false
+	local steam = Instance.new("ParticleEmitter")
+	steam.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	steam.Rate = 3
+	steam.Lifetime = NumberRange.new(2, 3)
+	steam.Speed = NumberRange.new(1, 2)
+	steam.SpreadAngle = Vector2.new(15, 15)
+	steam.Size =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 2.4) })
+	steam.Transparency =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.75), NumberSequenceKeypoint.new(1, 1) })
+	steam.Color = ColorSequence.new(Color3.fromRGB(230, 226, 220))
+	steam.Parent = pot
+	-- mugs on the crates in front of the couch
+	for _, p in { at(-3.1, 3.55, -4.9), at(3.6, 3.55, -5.4) } do
+		upright("Mug", room, 0.6, 0.5, p, Color3.fromRGB(176, 170, 156), Enum.Material.SmoothPlastic)
+	end
+	-- a guitar leaning on a cot
+	local g = CFrame.new(at(-11.6, 1, 4)) * CFrame.Angles(0, math.rad(70), math.rad(-14))
+	for _, b in { { 0.9, 2.2 }, { 2.4, 1.7 } } do
+		Kit.cylinder(
+			room,
+			"GuitarBody",
+			0.5,
+			b[2],
+			g * CFrame.new(0, b[1], 0) * CFrame.Angles(0, math.rad(90), 0),
+			Color3.fromRGB(150, 92, 50),
+			Enum.Material.Wood
+		)
+	end
+	Kit.part(
+		room,
+		"GuitarNeck",
+		Vector3.new(0.35, 3.4, 0.25),
+		g * CFrame.new(0, 4.6, 0),
+		Color3.fromRGB(60, 40, 28),
+		Enum.Material.Wood
+	)
+	-- the reading nook in the south-east corner: an armchair, a side table, a floor lamp
+	armchair(room, CFrame.lookAt(at(25.5, 1, 20.5), at(10, 1, 6)))
+	piece(room, "SideTable", Vector3.new(2, 2.8, 2), at(29.5, 2.4, 18.5), C.rotten, Enum.Material.Wood)
+	for i = 0, 2 do
+		piece(
+			room,
+			"Book",
+			Vector3.new(1.4, 0.3, 1),
+			at(29.5, 3.95 + i * 0.3, 18.5),
+			Color3.fromHSV(0.05 + i * 0.25, 0.4, 0.4),
+			Enum.Material.SmoothPlastic
+		)
+	end
+	upright(
+		"Mug",
+		room,
+		0.6,
+		0.5,
+		at(30, 4.1, 17.9),
+		Color3.fromRGB(150, 60, 50),
+		Enum.Material.SmoothPlastic
+	)
+	upright("FloorLampPole", room, 6.4, 0.25, at(29.6, 4.2, 21.6), C.metal, Enum.Material.Metal)
+	local shade = deco(
+		upright(
+			"FloorLampShade",
+			room,
+			1.4,
+			2.2,
+			at(29.6, 7.6, 21.6),
+			Color3.fromRGB(220, 190, 140),
+			Enum.Material.Fabric
+		)
+	)
+	shade.Transparency = 0.2
+	softLight(shade, 18, 1.1, WARM_FILL).Name = "FillLight"
+	-- wooden posts holding up the low ceiling
+	for _, p in { at(-18, 1, -10), at(18, 1, -10), at(-18, 1, 14), at(18, 1, 14) } do
+		piece(
+			room,
+			"Post",
+			Vector3.new(1.2, H, 1.2),
+			p + Vector3.new(0, H / 2, 0),
+			C.rotten,
+			Enum.Material.Wood
+		)
+		piece(
+			room,
+			"PostCap",
+			Vector3.new(2.6, 0.6, 2.6),
+			p + Vector3.new(0, H - 0.3, 0),
+			C.rotten,
+			Enum.Material.Wood
+		)
+	end
+end
+
+--------------------------------------------------------------------------- the zombie apocalypse on the walls
+
+-- A paper board with things drawn on it (made of UI frames, no image assets).
+local function paperBoard(
+	room: Model,
+	name: string,
+	size: Vector2,
+	pos: Vector3,
+	dir: Vector3,
+	color: Color3
+): SurfaceGui
+	local board = deco(
+		Kit.part(
+			room,
+			name,
+			Vector3.new(size.X, size.Y, 0.1),
+			CFrame.lookAt(pos, pos + dir),
+			color,
+			Enum.Material.SmoothPlastic
+		)
+	)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0.8
+	gui.Parent = board
+	return gui
+end
+
+local function frame(
+	parent: Instance,
+	pos: UDim2,
+	size: UDim2,
+	color: Color3,
+	round: boolean?,
+	transparency: number?
+): Frame
+	local f = Instance.new("Frame")
+	f.Position = pos
+	f.Size = size
+	f.BackgroundColor3 = color
+	f.BackgroundTransparency = transparency or 0
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	if round then
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = f
+	end
+	return f
+end
+
+local function text(
+	parent: Instance,
+	pos: UDim2,
+	size: UDim2,
+	value: string,
+	color: Color3,
+	font: Enum.Font
+): TextLabel
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Position = pos
+	t.Size = size
+	t.Text = value
+	t.TextColor3 = color
+	t.Font = font
+	t.TextScaled = true
+	t.Parent = parent
+	return t
+end
+
+-- The outbreak map of the town, hand-marked: streets, infected zones, crossed-out places, "HERE".
+local function outbreakMap(room: Model)
+	local gui = paperBoard(room, "OutbreakMap", Vector2.new(9, 6), at(-16.5, 9, -22.75), SOUTH, C.paper)
+	local ink, red = C.ink, Color3.fromRGB(170, 24, 30)
+	text(
+		gui,
+		UDim2.fromScale(0.04, 0.02),
+		UDim2.fromScale(0.92, 0.13),
+		"OUTBREAK - RAVEN HOLLOW",
+		ink,
+		Enum.Font.SpecialElite
+	)
+	-- streets
+	for _, s in
+		{
+			{ 0.05, 0.42, 0.9, 0.035 },
+			{ 0.05, 0.72, 0.9, 0.035 },
+			{ 0.3, 0.16, 0.025, 0.8 },
+			{ 0.66, 0.16, 0.025, 0.8 },
+		}
+	do
+		frame(gui, UDim2.fromScale(s[1], s[2]), UDim2.fromScale(s[3], s[4]), Color3.fromRGB(120, 112, 100))
+	end
+	-- blocks
+	for _, b in
+		{
+			{ 0.08, 0.2 },
+			{ 0.38, 0.2 },
+			{ 0.72, 0.2 },
+			{ 0.08, 0.5 },
+			{ 0.38, 0.5 },
+			{ 0.72, 0.5 },
+			{ 0.08, 0.79 },
+			{ 0.38, 0.79 },
+			{ 0.72, 0.79 },
+		}
+	do
+		frame(gui, UDim2.fromScale(b[1], b[2]), UDim2.fromScale(0.18, 0.17), Color3.fromRGB(176, 166, 146))
+	end
+	-- infected zones and crossed-out places
+	frame(gui, UDim2.fromScale(0.62, 0.12), UDim2.fromScale(0.36, 0.45), red, true, 0.75)
+	frame(gui, UDim2.fromScale(0.02, 0.62), UDim2.fromScale(0.3, 0.36), red, true, 0.75)
+	text(
+		gui,
+		UDim2.fromScale(0.68, 0.24),
+		UDim2.fromScale(0.24, 0.12),
+		"INFECTED",
+		red,
+		Enum.Font.PermanentMarker
+	)
+	for _, x in { { 0.42, 0.22 }, { 0.12, 0.52 }, { 0.78, 0.8 }, { 0.12, 0.82 } } do
+		text(
+			gui,
+			UDim2.fromScale(x[1], x[2]),
+			UDim2.fromScale(0.1, 0.13),
+			"X",
+			red,
+			Enum.Font.PermanentMarker
+		)
+	end
+	text(
+		gui,
+		UDim2.fromScale(0.36, 0.55),
+		UDim2.fromScale(0.22, 0.12),
+		"WE ARE HERE",
+		Color3.fromRGB(30, 90, 50),
+		Enum.Font.PermanentMarker
+	)
+	-- pins
+	for _, p in { { -19.6, 10.4 }, { -13.6, 10.6 }, { -18.9, 7.2 }, { -14.4, 7.6 }, { -16.4, 8.6 } } do
+		local pin = deco(
+			piece(
+				room,
+				"MapPin",
+				Vector3.new(0.3, 0.3, 0.3),
+				at(p[1], p[2], -22.6),
+				if p[1] == -16.4 then Color3.fromRGB(40, 140, 60) else Color3.fromRGB(190, 30, 30)
+			)
+		)
+		pin.Shape = Enum.PartType.Ball
+	end
+end
+
+-- Spray paint and chalk on the walls.
+local function graffiti(room: Model)
+	local spray = Enum.Font.PermanentMarker
+	sign(room, "Graffiti", Vector2.new(8, 3.2), at(-30.85, 14.2, -8), EAST, "DAY 47\n||||/ ||||/ ||||/ ||", {
+		text = Color3.fromRGB(214, 208, 196),
+		font = spray,
+	})
+	sign(room, "Graffiti", Vector2.new(7, 2.4), at(-30.85, 12.8, -20), EAST, "SAFE ZONE", {
+		text = Color3.fromRGB(110, 200, 120),
+		font = spray,
+	})
+	sign(room, "Graffiti", Vector2.new(7, 2.2), at(30.85, 14.8, 4), WEST, "DON'T GET BIT", {
+		text = Color3.fromRGB(196, 44, 52),
+		font = spray,
+	})
+	sign(room, "Graffiti", Vector2.new(5.6, 2), at(0, 12, D / 2 - 1.15), NORTH, "SHHH...\nTHEY HEAR YOU", {
+		text = Color3.fromRGB(196, 44, 52),
+		font = spray,
+	})
+end
+
+-- Yellow-black hazard stripes around the deploy door and a stencilled warning on it.
+local function hazardDoor(room: Model)
+	local z = -D / 2 + 1.75
+	local yellow, black = Color3.fromRGB(226, 186, 40), Color3.fromRGB(22, 20, 18)
+	for _, x in { 17.6, 26.4 } do
+		for i = 0, 8 do
+			deco(
+				piece(
+					room,
+					"HazardStripe",
+					Vector3.new(0.82, 1.4, 0.06),
+					at(x, 1.7 + i * 1.4, z),
+					if i % 2 == 0 then yellow else black,
+					Enum.Material.Metal
+				)
+			)
+		end
+	end
+	for i = 0, 5 do
+		deco(
+			piece(
+				room,
+				"HazardStripe",
+				Vector3.new(1.6, 0.82, 0.06),
+				at(18 + i * 1.6, 13.2, z),
+				if i % 2 == 0 then black else yellow,
+				Enum.Material.Metal
+			)
+		)
+	end
+	local door = room:FindFirstChild("DeployDoor")
+	if door then
+		sign(
+			door,
+			"DoorWarning",
+			Vector2.new(5.4, 1.4),
+			at(22, 9.6, -D / 2 + 1.45),
+			SOUTH,
+			"INFECTED ZONE - DO NOT OPEN",
+			{
+				text = yellow,
+				board = black,
+				font = Enum.Font.GothamBlack,
+			}
+		)
+	end
+end
+
+-- The survival rules, pinned up by someone who learned them the hard way.
+local function rulesPoster(room: Model)
+	sign(
+		room,
+		"SurvivalRules",
+		Vector2.new(4.8, 6.2),
+		at(12.8, 8, -22.75),
+		SOUTH,
+		"SURVIVAL RULES\n\n1. STAY QUIET\n2. NEVER GO ALONE\n3. CHECK FOR BITES\n4. AIM FOR THE HEAD\n5. NEVER OPEN THE DOOR AT NIGHT",
+		{
+			text = C.ink,
+			board = C.paper,
+		}
+	)
+end
+
+-- A shooting target on the east wall: a zombie silhouette, holes everywhere, an X on the head.
+local function zombieTarget(room: Model)
+	piece(
+		room,
+		"TargetBoard",
+		Vector3.new(0.3, 6, 4.4),
+		at(W / 2 - 1.15, 6.5, 4),
+		Color3.fromRGB(150, 120, 84),
+		Enum.Material.WoodPlanks
+	)
+	local gui = paperBoard(
+		room,
+		"Target",
+		Vector2.new(3.8, 5.4),
+		at(W / 2 - 1.35, 6.5, 4),
+		WEST,
+		Color3.fromRGB(226, 220, 204)
+	)
+	local shape = Color3.fromRGB(46, 58, 44)
+	frame(gui, UDim2.fromScale(0.36, 0.06), UDim2.fromScale(0.28, 0.2), shape, true) -- head
+	frame(gui, UDim2.fromScale(0.3, 0.27), UDim2.fromScale(0.4, 0.4), shape) -- body
+	frame(gui, UDim2.fromScale(0.02, 0.3), UDim2.fromScale(0.3, 0.08), shape) -- arms reaching
+	frame(gui, UDim2.fromScale(0.68, 0.33), UDim2.fromScale(0.3, 0.08), shape)
+	frame(gui, UDim2.fromScale(0.32, 0.67), UDim2.fromScale(0.13, 0.3), shape) -- legs
+	frame(gui, UDim2.fromScale(0.55, 0.67), UDim2.fromScale(0.13, 0.3), shape)
+	text(
+		gui,
+		UDim2.fromScale(0.38, 0.05),
+		UDim2.fromScale(0.24, 0.2),
+		"X",
+		Color3.fromRGB(200, 30, 36),
+		Enum.Font.PermanentMarker
+	)
+	for _, h in
+		{
+			{ 0.45, 0.4 },
+			{ 0.52, 0.48 },
+			{ 0.4, 0.55 },
+			{ 0.6, 0.33 },
+			{ 0.2, 0.8 },
+			{ 0.82, 0.15 },
+			{ 0.48, 0.13 },
+		}
+	do
+		frame(gui, UDim2.fromScale(h[1], h[2]), UDim2.fromScale(0.04, 0.03), Color3.fromRGB(10, 10, 10), true)
+	end
+end
+
+-- The stockpile in the north-east corner: canned food, water jugs, a gas can, a rations crate.
+local function supplies(room: Model)
+	piece(room, "Pallet", Vector3.new(4, 0.5, 4), at(28.5, 1.25, -16.5), C.rotten, Enum.Material.WoodPlanks)
+	local level = 0
+	for _, side in { 3, 2, 1 } do
+		for i = 0, side - 1 do
+			for j = 0, side - 1 do
+				local off = (3 - side) * 0.35
+				upright(
+					"Can",
+					room,
+					0.8,
+					0.6,
+					at(27.3 + off + i * 0.7, 1.9 + level * 0.8, -17.7 + off + j * 0.7),
+					Color3.fromRGB(150, 140, 120),
+					Enum.Material.Metal
+				)
+			end
+		end
+		level += 1
+	end
+	for _, p in { at(29.6, 2.2, -21.4), at(30.3, 2.2, -19.9), at(28.6, 2.2, -20.4) } do
+		local jug = upright("WaterJug", room, 2.4, 1.3, p, Color3.fromRGB(110, 160, 200), Enum.Material.Glass)
+		jug.Transparency = 0.35
+	end
+	piece(
+		room,
+		"GasCan",
+		Vector3.new(0.8, 1.6, 1.3),
+		at(30.2, 1.8, -13.8),
+		Color3.fromRGB(170, 40, 34),
+		Enum.Material.Metal
+	)
+	Kit.crate(room, at(26, 1, -14.2), 2.6, 0)
+	sign(room, "RationsStencil", Vector2.new(2.2, 0.8), at(26, 2.6, -12.88), SOUTH, "RATIONS", {
+		text = Color3.fromRGB(30, 26, 22),
+		font = Enum.Font.GothamBlack,
+	})
+end
+
+-- A barricade under the first window: crates and sandbags piled up.
+local function windowBarricade(room: Model, rng: Random)
+	Kit.crate(room, at(-7.6, 1, 21.4), 2.8, 0.08)
+	Kit.crate(room, at(-4.5, 1, 21.6), 2.8, -0.1)
+	Clutter.sandbags(room, CFrame.new(at(-6, 3.8, 21.5)), 6, rng)
+end
+
 -- Builds the safehouse as workspace.Lobby (`parent`) and returns what LobbyService updates.
 function Safehouse.build(parent: Instance): Refs
 	local room = Instance.new("Model")
@@ -1173,6 +1890,15 @@ function Safehouse.build(parent: Instance): Refs
 	archive(room)
 	windows(room, rng)
 	local posters = missingPosters(room)
+	lights(room)
+	comfort(room)
+	outbreakMap(room)
+	graffiti(room)
+	hazardDoor(room)
+	rulesPoster(room)
+	zombieTarget(room)
+	supplies(room)
+	windowBarricade(room, rng)
 	return { mapSlots = slots, modeLabel = modeLabel, posters = posters }
 end
 
