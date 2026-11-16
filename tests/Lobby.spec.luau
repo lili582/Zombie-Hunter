@@ -28,3 +28,21 @@ test("sitting out: Out, Escaped and Dead are not in the round any more; Alive an
 	expect(Lobby.isSittingOut("Alive")).toBe(false)
 	expect(Lobby.isSittingOut("Downed")).toBe(false)
 end)
+
+test("missing posters show the players infected this round, not the Alpha or survivors", function()
+	local players = {
+		[30] = { wasInfected = true },
+		[10] = { wasInfected = true },
+		[20] = { wasInfected = false },
+		[40] = {},
+	}
+	expect(Lobby.missingIds(players, 4)).toEqual({ 10, 30 })
+end)
+
+test("at most as many missing posters as fit on the board", function()
+	local players = {}
+	for id = 1, 6 do
+		players[id] = { wasInfected = true }
+	end
+	expect(#Lobby.missingIds(players, 4)).toBe(4)
+end)

@@ -17,4 +17,20 @@ function Lobby.isFree(phase: string, life: string?): boolean
 	return not roundRunning or life == nil or Lobby.isSittingOut(life)
 end
 
+-- The safehouse's MISSING posters after a round: the players who were infected during it (not
+-- the Alpha, who was never one of us), newest first, at most `max`, in a stable order.
+function Lobby.missingIds(players: { [number]: { wasInfected: boolean? } }, max: number): { number }
+	local ids = {}
+	for id, p in players do
+		if p.wasInfected then
+			table.insert(ids, id)
+		end
+	end
+	table.sort(ids)
+	while #ids > max do
+		table.remove(ids)
+	end
+	return ids
+end
+
 return Lobby

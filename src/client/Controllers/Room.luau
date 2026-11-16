@@ -160,6 +160,11 @@ function Room.new(name: string, title: string, accent: Color3, displayOrder: num
 	return self
 end
 
+-- True while any full-screen room (shop, dressing room) is open: nothing should scare you then.
+function Room.anyOpen(): boolean
+	return openRooms > 0
+end
+
 function Room.isOpen(self: any): boolean
 	return self.root.Visible
 end

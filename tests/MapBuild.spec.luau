@@ -25,7 +25,7 @@ test("server start builds the safehouse lobby and the first map", function()
 end)
 
 test("the safehouse has every station players use", function()
-	local _, MapService = mapService()
+	local game, MapService = mapService()
 	MapService.load()
 	expect(World.tagged("LobbySpawn")).toBe(1)
 	expect(World.tagged("MapVotePrompt")).toBe(3)
@@ -34,6 +34,26 @@ test("the safehouse has every station players use", function()
 	expect(World.tagged("CatalogPrompt")).toBe(1)
 	expect(#MapService.lobby.mapSlots).toBe(3)
 	expect(MapService.lobby.modeLabel.Text).toBe("WAITING FOR PLAYERS")
+	expect(#MapService.lobby.posters).toBe(4)
+	-- what the client's scares and countdown animate is there, by name
+	local lobby = game:GetService("Workspace"):FindFirstChild("Lobby")
+	for _, name in
+		{
+			"HearthBulb",
+			"DeployDoor",
+			"DoorWheel",
+			"DoorBulb",
+			"DoorFog",
+			"DoorVapor",
+			"Window1",
+			"Window2",
+			"TallOne",
+			"ShopTube",
+			"CRTScreen",
+		}
+	do
+		expect(lobby:FindFirstChild(name, true) ~= nil).toBe(true)
+	end
 end)
 
 for _, mapId in Maps.order do

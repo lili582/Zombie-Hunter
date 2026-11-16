@@ -140,6 +140,8 @@ function World.new()
 			Color3 = roblox.Color3,
 			ColorSequence = roblox.ColorSequence,
 			NumberSequence = roblox.NumberSequence,
+			NumberSequenceKeypoint = roblox.NumberSequenceKeypoint,
+			ColorSequenceKeypoint = roblox.ColorSequenceKeypoint,
 			NumberRange = roblox.NumberRange,
 			UDim = roblox.UDim,
 			UDim2 = roblox.UDim2,

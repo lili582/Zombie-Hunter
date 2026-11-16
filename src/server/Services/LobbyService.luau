@@ -3,10 +3,13 @@
 --   * Alpha class pedestals -> SetAlphaClass
 --   * Map vote pads (3)     -> VoteMap (only during the countdown)
 --   * Sign                  -> waiting / starting soon / round in progress (never the mode)
+--   * MISSING posters       -> the players infected last round, with their faces
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Maps = require(Shared.Config.Maps)
+local Lobby = require(Shared.Rules.Lobby)
 local MapService = require(script.Parent.MapService)
 
 local LobbyService = {}
@@ -48,6 +51,48 @@ local function hookAll(tag: string, hook: (Instance) -> ())
 end
 
 -- Updates the vote board and the mode sign. Called with every state broadcast.
+-- Chalk tally marks: "||||/" for every 5, then single strokes.
+local function tally(n: number): string
+	if n == 0 then
+		return "-"
+	end
+	local groups = {}
+	for _ = 1, n // 5 do
+		table.insert(groups, "||||/")
+	end
+	if n % 5 > 0 then
+		table.insert(groups, string.rep("|", n % 5))
+	end
+	return table.concat(groups, " ")
+end
+
+-- The missing, newest first. They stay up until someone newer takes their place.
+local missing: { { id: number, name: string } } = {}
+local lastPhase: string? = nil
+
+local function postMissing(state: any, refs: any)
+	local fresh = {}
+	for _, id in Lobby.missingIds(state.players, #refs.posters) do
+		local player = Players:GetPlayerByUserId(id)
+		table.insert(fresh, { id = id, name = if player then player.DisplayName else "UNKNOWN" })
+	end
+	for _, old in missing do
+		local already = false
+		for _, f in fresh do
+			already = already or f.id == old.id
+		end
+		if not already and #fresh < #refs.posters then
+			table.insert(fresh, old)
+		end
+	end
+	missing = fresh
+	for i, poster in refs.posters do
+		local m = missing[i]
+		poster.face.Image = if m then `rbxthumb://type=AvatarHeadShot&id={m.id}&w=150&h=150` else ""
+		poster.name.Text = if m then string.upper(m.name) else "HAVE YOU SEEN ME?"
+	end
+end
+
 function LobbyService.refresh(state: any)
 	local refs = MapService.lobby
 	if not refs then
@@ -63,7 +108,7 @@ function LobbyService.refresh(state: any)
 		local map = Maps.get(mapId)
 		if map then
 			local n = counts[mapId] or 0
-			slot.label.Text = `{map.name}\n{n} {if n == 1 then "VOTE" else "VOTES"}`
+			slot.label.Text = `{map.name}\n{tally(n)}`
 			slot.prompt.ObjectText = map.name
 		else
 			slot.label.Text = "MORE MAPS\nCOMING SOON"
@@ -78,6 +123,11 @@ function LobbyService.refresh(state: any)
 	else
 		refs.modeLabel.Text = "ROUND IN PROGRESS"
 	end
+	-- a round just ended: whoever was infected in it goes up on the wall
+	if state.phase == "Results" and lastPhase ~= "Results" and refs.posters then
+		postMissing(state, refs)
+	end
+	lastPhase = state.phase
 end
 
 function LobbyService.start(r: Round)
