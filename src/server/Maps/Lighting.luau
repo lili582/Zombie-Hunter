@@ -1,5 +1,5 @@
 --!strict
--- Night lighting per map: the sky, the fog (an Atmosphere, so it looks like real mist and hides
+-- Night lighting and weather per map: the sky, the fog (an Atmosphere, so it looks like real mist and hides
 -- the distance), colour grading, a soft bloom on lights and a touch of depth of field. Uses the
 -- Future lighting technology (set in default.project.json) for real shadows from every light.
 local Lighting = game:GetService("Lighting")
@@ -15,6 +15,10 @@ export type Preset = {
 	fog: { density: number, offset: number, color: Color3, decay: Color3, haze: number, glare: number },
 	grade: { brightness: number, contrast: number, saturation: number, tint: Color3 },
 	bloom: { intensity: number, size: number, threshold: number },
+	-- the weather the clients draw around each player (AtmosphereController)
+	weather: "None" | "Drizzle" | "Rain",
+	groundFog: number, -- 0..1: the low mist hugging the ground
+	thunder: boolean, -- lightning, then every light on the map dies for a moment
 }
 
 MapLighting.PRESETS = {
@@ -26,15 +30,23 @@ MapLighting.PRESETS = {
 		outdoor = Color3.fromRGB(40, 40, 58),
 		exposure = -0.2,
 		fog = {
-			density = 0.42,
+			density = 0.5,
 			offset = 0.1,
-			color = Color3.fromRGB(70, 66, 82),
-			decay = Color3.fromRGB(40, 32, 48),
-			haze = 2.2,
+			color = Color3.fromRGB(62, 62, 76),
+			decay = Color3.fromRGB(25, 25, 60),
+			haze = 2.4,
 			glare = 0,
 		},
-		grade = { brightness = 0, contrast = 0.12, saturation = -0.25, tint = Color3.fromRGB(235, 228, 255) },
-		bloom = { intensity = 0.7, size = 30, threshold = 1.6 },
+		grade = {
+			brightness = -0.02,
+			contrast = 0.16,
+			saturation = -0.38,
+			tint = Color3.fromRGB(228, 228, 250),
+		},
+		bloom = { intensity = 0.75, size = 30, threshold = 1.5 },
+		weather = "Drizzle",
+		groundFog = 0.6,
+		thunder = true,
 	} :: Preset,
 	-- cold moonlight through the pines, thick low mist over the lake
 	ForestCamp = {
@@ -44,15 +56,23 @@ MapLighting.PRESETS = {
 		outdoor = Color3.fromRGB(34, 46, 54),
 		exposure = -0.1,
 		fog = {
-			density = 0.47,
+			density = 0.52,
 			offset = 0.05,
-			color = Color3.fromRGB(64, 78, 84),
-			decay = Color3.fromRGB(28, 40, 42),
-			haze = 2.6,
+			color = Color3.fromRGB(58, 70, 76),
+			decay = Color3.fromRGB(24, 34, 40),
+			haze = 2.8,
 			glare = 0,
 		},
-		grade = { brightness = 0, contrast = 0.15, saturation = -0.3, tint = Color3.fromRGB(222, 240, 245) },
+		grade = {
+			brightness = -0.02,
+			contrast = 0.17,
+			saturation = -0.4,
+			tint = Color3.fromRGB(220, 236, 242),
+		},
 		bloom = { intensity = 0.8, size = 34, threshold = 1.5 },
+		weather = "Drizzle",
+		groundFog = 1,
+		thunder = false,
 	} :: Preset,
 	-- buzzing fluorescent green inside, wet sodium haze outside
 	School = {
@@ -62,15 +82,23 @@ MapLighting.PRESETS = {
 		outdoor = Color3.fromRGB(36, 42, 50),
 		exposure = -0.15,
 		fog = {
-			density = 0.38,
+			density = 0.44,
 			offset = 0.08,
-			color = Color3.fromRGB(62, 70, 66),
-			decay = Color3.fromRGB(34, 40, 36),
-			haze = 2,
+			color = Color3.fromRGB(58, 64, 62),
+			decay = Color3.fromRGB(30, 36, 34),
+			haze = 2.2,
 			glare = 0,
 		},
-		grade = { brightness = 0, contrast = 0.14, saturation = -0.32, tint = Color3.fromRGB(226, 245, 232) },
+		grade = {
+			brightness = -0.02,
+			contrast = 0.16,
+			saturation = -0.4,
+			tint = Color3.fromRGB(224, 242, 230),
+		},
 		bloom = { intensity = 0.75, size = 30, threshold = 1.5 },
+		weather = "Rain",
+		groundFog = 0.4,
+		thunder = true,
 	} :: Preset,
 	-- pale, dead mall light with a pink neon tint
 	Mall = {
@@ -80,15 +108,23 @@ MapLighting.PRESETS = {
 		outdoor = Color3.fromRGB(42, 38, 52),
 		exposure = -0.1,
 		fog = {
-			density = 0.36,
+			density = 0.42,
 			offset = 0.1,
-			color = Color3.fromRGB(74, 66, 80),
-			decay = Color3.fromRGB(42, 32, 46),
-			haze = 1.8,
+			color = Color3.fromRGB(66, 60, 74),
+			decay = Color3.fromRGB(36, 28, 44),
+			haze = 2,
 			glare = 0,
 		},
-		grade = { brightness = 0, contrast = 0.12, saturation = -0.2, tint = Color3.fromRGB(245, 232, 245) },
+		grade = {
+			brightness = -0.02,
+			contrast = 0.15,
+			saturation = -0.3,
+			tint = Color3.fromRGB(242, 230, 242),
+		},
 		bloom = { intensity = 0.9, size = 32, threshold = 1.4 },
+		weather = "Drizzle",
+		groundFog = 0.3,
+		thunder = true,
 	} :: Preset,
 }
 
@@ -143,6 +179,11 @@ function MapLighting.apply(mapId: string)
 	depth.FocusDistance = 40
 	depth.InFocusRadius = 40
 	depth.NearIntensity = 0
+
+	-- the clients read these to draw the weather; the server's thunder reads `Thunder`
+	workspace:SetAttribute("Weather", p.weather)
+	workspace:SetAttribute("GroundFog", p.groundFog)
+	workspace:SetAttribute("Thunder", p.thunder)
 end
 
 return MapLighting

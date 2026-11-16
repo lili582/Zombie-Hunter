@@ -5,6 +5,7 @@
 -- lake of water), lantern-lit paths, ~150 pines and dead trees, and thick cold mist.
 -- All spots are data at the top, so the round rules and the builder use the same numbers.
 local Kit = require(script.Parent.Kit)
+local Clutter = require(script.Parent.Clutter)
 
 local ForestCamp = {}
 
@@ -319,7 +320,24 @@ local function camp(map: Model)
 	end
 end
 
+-- where a shadow figure may stand for a moment (AtmosphereController): the tree line, the far shore
+local SCARES = {
+	Vector3.new(-150, 0, -150),
+	Vector3.new(150, 0, -155),
+	Vector3.new(-172, 0, 40),
+	Vector3.new(174, 0, 30), -- across the lake
+	Vector3.new(-10, 0, -168),
+	Vector3.new(-110, 0, 172),
+	Vector3.new(110, 0, 172),
+	Vector3.new(-125, 0, -90),
+	Vector3.new(60, 0, -160),
+	Vector3.new(-60, 0, 100),
+}
+
 local function spots(map: Model)
+	for _, p in SCARES do
+		Kit.marker(map, "ScareSpot", p)
+	end
 	for _, p in HUMAN_STARTS do
 		Kit.marker(map, "HumanStart", p)
 	end
@@ -337,12 +355,36 @@ local function spots(map: Model)
 	end
 end
 
+-- Wet and wrong: puddles along the mud paths, a dropped flashlight still shining toward the
+-- clearing, papers scattered between the cabins, and a ritual circle in the clearing.
+local function weathering(map: Model, rng: Random)
+	for _, path in PATHS do
+		for i = 1, #path - 1 do
+			local a, b = path[i], path[i + 1]
+			local steps = math.floor((b - a).Magnitude / 16)
+			for step = 1, steps do
+				if rng:NextNumber() < 0.6 then
+					local p = a:Lerp(b, (step - rng:NextNumber()) / steps)
+					local jitter = Vector3.new(rng:NextNumber(-2, 2), 0, rng:NextNumber(-2, 2))
+					Clutter.puddle(map, p + jitter, rng:NextNumber(2.5, 5), rng)
+				end
+			end
+		end
+	end
+	Clutter.ritualCircle(map, Vector3.new(-35, 0, -135), 7, rng)
+	Clutter.flashlight(map, Vector3.new(-18, 0, -88), math.rad(-150))
+	Clutter.papers(map, Vector3.new(-75, 0, -22), 8, 9, rng)
+	Clutter.papers(map, Vector3.new(-108, 0, 30), 6, 6, rng)
+	Clutter.papers(map, Vector3.new(0, 0, -20), 6, 5, rng)
+end
+
 -- Builds the map into `map` (an empty Model already in the workspace).
 function ForestCamp.build(map: Model)
 	terrain()
 	camp(map)
 	trees(map)
 	lanterns(map)
+	weathering(map, Random.new(31))
 	spots(map)
 	Kit.boundary(map, ForestCamp.SIZE)
 end

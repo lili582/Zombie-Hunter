@@ -153,6 +153,9 @@ function MapService.startFlicker()
 	task.spawn(function()
 		while true do
 			task.wait(math.random(6, 20) / 10)
+			if workspace:GetAttribute("Blackout") then
+				continue -- the thunder has every light off; don't switch one back on
+			end
 			local lights = CollectionService:GetTagged("FlickerLight")
 			if #lights == 0 then
 				continue

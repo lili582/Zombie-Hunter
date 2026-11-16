@@ -10,6 +10,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Kit = require(script.Parent.Kit)
 local BuildingKit = require(script.Parent.BuildingKit)
+local Clutter = require(script.Parent.Clutter)
 
 local Mall = {}
 
@@ -531,7 +532,24 @@ local function details(map: Model, rng: Random)
 	end
 end
 
+-- where a shadow figure may stand for a moment (AtmosphereController): at the gallery railing
+-- looking down into the atrium, in the garage, at the edge of the car park
+local SCARES = {
+	Vector3.new(-40, 18, -40), -- the gallery, upstairs
+	Vector3.new(40, 18, 40),
+	Vector3.new(-40, 18, 40),
+	Vector3.new(40, 18, -40),
+	Vector3.new(-140, 0.3, 160), -- deep in the parking garage
+	Vector3.new(120, 0, 168), -- the far end of the car park
+	Vector3.new(-40, 0, 170),
+	Vector3.new(130, 0, -160), -- the loading dock
+	Vector3.new(-55, 0, -160),
+}
+
 local function spots(map: Model)
+	for _, p in SCARES do
+		Kit.marker(map, "ScareSpot", p)
+	end
 	for _, p in HUMAN_STARTS do
 		Kit.marker(map, "HumanStart", p)
 	end
@@ -549,6 +567,32 @@ local function spots(map: Model)
 	end
 end
 
+-- Rain getting in: leaks dripping from the atrium roof into the food court, broken glass in front
+-- of the shops, clothes dumped on the upstairs floor, receipts everywhere, puddles outside.
+local function weathering(map: Model, rng: Random)
+	Clutter.leak(map, Vector3.new(14, TOP - 0.2, 10), 0.3, rng)
+	Clutter.leak(map, Vector3.new(-18, TOP - 0.2, -14), 0.3, rng)
+	Clutter.puddles(map, rng, { -30, -30, 30, 30 }, 0.3, 5)
+	for _, c in
+		{
+			Vector3.new(-50, 0.3, -40),
+			Vector3.new(50, 0.3, -40),
+			Vector3.new(-50, 0.3, 40),
+			Vector3.new(50, 0.3, 40),
+		}
+	do
+		Clutter.shards(map, c, 5, 14, rng)
+	end
+	Clutter.clothes(map, Vector3.new(-80, UP, -60), 10, 14, rng)
+	Clutter.clothes(map, Vector3.new(-90, UP, 30), 10, 10, rng)
+	Clutter.papers(map, Vector3.new(0, 0.3, -24), 14, 12, rng)
+	Clutter.papers(map, Vector3.new(0, UP, 44), 10, 8, rng)
+	Clutter.puddles(map, rng, { -30, 70, 155, 172 }, 0, 18) -- the car park
+	Clutter.puddles(map, rng, { -55, -165, 135, -98 }, 0, 10) -- the loading dock
+	Clutter.trashCan(map, Vector3.new(60, 0, 68), true, rng)
+	Clutter.flashlight(map, Vector3.new(-100, 0.3, 140), math.rad(40))
+end
+
 -- Builds the map into `map` (an empty Model already in the workspace).
 function Mall.build(map: Model)
 	local rng = Random.new(2014)
@@ -559,6 +603,7 @@ function Mall.build(map: Model)
 	booths(map)
 	lights(map, rng)
 	details(map, rng)
+	weathering(map, rng)
 	spots(map)
 	Kit.boundary(map, Mall.SIZE)
 end

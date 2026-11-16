@@ -11,6 +11,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Kit = require(script.Parent.Kit)
 local BuildingKit = require(script.Parent.BuildingKit)
+local Clutter = require(script.Parent.Clutter)
 
 local Town = {}
 
@@ -1502,7 +1503,26 @@ local function trees(map: Model, rng: Random)
 	Kit.crate(map, Vector3.new(-155, 0, -32), 3, 0.5)
 end
 
+-- where a shadow figure may stand for a moment (AtmosphereController): roof edges, far corners
+local SCARES = {
+	Vector3.new(-28, 29, -22), -- the hospital roof
+	Vector3.new(28, 29, -22),
+	Vector3.new(30, 29, 26),
+	Vector3.new(-71, 15, -80), -- Main Street rooftops
+	Vector3.new(25, 15, -80),
+	Vector3.new(-130, 14, 104), -- the police station roof
+	Vector3.new(-112, 15.6, -98), -- on the gas station canopy
+	Vector3.new(165, 0, -148), -- the back of the used-car lot
+	Vector3.new(172, 0, 160), -- under the dead field light
+	Vector3.new(-172, 0, 10), -- the edge of the west lot
+	Vector3.new(130, 0, 62), -- the backyards
+	Vector3.new(-40, 0, 172), -- the far end of the parking lot
+}
+
 local function spots(map: Model)
+	for _, p in SCARES do
+		Kit.marker(map, "ScareSpot", p)
+	end
 	for _, p in HUMAN_STARTS do
 		Kit.marker(map, "HumanStart", p)
 	end
@@ -1518,6 +1538,46 @@ local function spots(map: Model)
 	for _, p in Town.HELI do
 		Kit.marker(map, "HeliZone", p)
 	end
+end
+
+-- Rain-soaked and abandoned: puddles on every street, paper blowing down Main Street, glass
+-- from the shop windows, tipped bins, and the quarantine line in front of the hospital.
+local function weathering(map: Model, rng: Random)
+	Clutter.puddles(map, rng, { -175, -70, 175, -50 }, 0, 26) -- Main Street
+	Clutter.puddles(map, rng, { 50, -175, 70, 175 }, 0, 18) -- the avenue
+	Clutter.puddles(map, rng, { -175, 67, 175, 83 }, 0, 14) -- South Street
+	Clutter.puddles(map, rng, { -68, -45, -52, 175 }, 0, 10) -- West Street
+	Clutter.puddles(map, rng, { -48, 92, 38, 168 }, 0, 12) -- the parking lot
+	Clutter.puddles(map, rng, { -165, -145, -95, -85 }, 0, 6) -- the gas station
+	for _, c in
+		{
+			Vector3.new(-120, 0, -62),
+			Vector3.new(-40, 0, -56),
+			Vector3.new(30, 0, -64),
+			Vector3.new(110, 0, -58),
+			Vector3.new(-5, 0, 130),
+			Vector3.new(0, 0, -42),
+		}
+	do
+		Clutter.papers(map, c, 10, 8, rng)
+	end
+	for _, x in { -71, -39, 25 } do
+		Clutter.shards(map, Vector3.new(x, 0, -72), 4, 14, rng)
+	end
+	Clutter.shards(map, Vector3.new(18, 0, -56), 6, 16, rng)
+	Clutter.trashCan(map, Vector3.new(-55, 0, -82), true, rng)
+	Clutter.trashCan(map, Vector3.new(9, 0, -86), false, rng)
+	Clutter.trashCan(map, Vector3.new(-23, 0, -80), true, rng)
+	Clutter.trashCan(map, Vector3.new(84, 0, -45), true, rng)
+	Clutter.trashCan(map, Vector3.new(-90, 0, 70), false, rng)
+	-- the quarantine line
+	Clutter.sawhorse(map, CFrame.new(-28, 0, -47))
+	Clutter.sawhorse(map, CFrame.new(28, 0, -47))
+	Clutter.sawhorse(map, CFrame.new(40, 0, -36) * CFrame.Angles(0, math.pi / 2, 0))
+	Clutter.sandbags(map, CFrame.new(14, 0, -29), 8, rng)
+	Clutter.sandbags(map, CFrame.new(-24, 0, -29), 8, rng)
+	Kit.sign(map, CFrame.new(0, 0, -47), "QUARANTINE")
+	Clutter.flashlight(map, Vector3.new(-60, 0, 30), 1.2)
 end
 
 -- Builds the map into `map` (an empty Model already in the workspace).
@@ -1537,6 +1597,7 @@ function Town.build(map: Model)
 	trafficLight(map)
 	burntCar(map, rng)
 	trees(map, rng)
+	weathering(map, rng)
 	spots(map)
 	Kit.boundary(map, Town.SIZE)
 end

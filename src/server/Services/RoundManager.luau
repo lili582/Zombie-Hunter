@@ -30,6 +30,7 @@ local LobbyService = require(Services.LobbyService)
 local DataService = require(Services.DataService)
 local ShopService = require(Services.ShopService)
 local CatalogService = require(Services.CatalogService)
+local AtmosphereService = require(Services.AtmosphereService)
 
 local RoundManager = {}
 
@@ -385,6 +386,7 @@ function RoundManager.start()
 	Players.CharacterAutoLoads = false
 	map = MapService.load()
 	MapService.startFlicker()
+	AtmosphereService.start()
 	-- every map's tower spots and helicopter zones (plain data): the round uses the voted map's
 	if MapService.isCustom() then
 		config.mapPool = { Maps.order[1] } -- your own hand-built map: nothing to vote between

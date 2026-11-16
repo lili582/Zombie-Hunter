@@ -6,6 +6,7 @@
 -- All spots are data at the top, so the round rules and the builder use the same numbers.
 local Kit = require(script.Parent.Kit)
 local BuildingKit = require(script.Parent.BuildingKit)
+local Clutter = require(script.Parent.Clutter)
 
 local School = {}
 
@@ -487,7 +488,24 @@ local function rooms(map: Model, rng: Random)
 	Kit.barrel(map, Vector3.new(118, 0, -112))
 end
 
+-- where a shadow figure may stand for a moment (AtmosphereController): the far ends of the
+-- hallway, the roof edges, the dark corners of the grounds
+local SCARES = {
+	Vector3.new(-117, 0.3, -24), -- the end of the hallway
+	Vector3.new(117, 0.3, -24),
+	Vector3.new(-100, 17, 8), -- the roof
+	Vector3.new(100, 17, 8),
+	Vector3.new(0, 25, -96), -- the gym roof
+	Vector3.new(-140, 0, 165), -- the far corner of the sports field
+	Vector3.new(160, 0, 170), -- behind the buses
+	Vector3.new(-110, 0, -172), -- the end of the car park
+	Vector3.new(110, 0, -172),
+}
+
 local function spots(map: Model)
+	for _, p in SCARES do
+		Kit.marker(map, "ScareSpot", p)
+	end
 	for _, p in HUMAN_STARTS do
 		Kit.marker(map, "HumanStart", p)
 	end
@@ -505,6 +523,24 @@ local function spots(map: Model)
 	end
 end
 
+-- Rain and neglect: puddles in the car parks and on the front walk, homework blown down the
+-- hallway, fallen ceiling tiles, a leak dripping in the corridor, a flashlight left on the floor.
+local function weathering(map: Model, rng: Random)
+	Clutter.puddles(map, rng, { -120, -170, 120, -105 }, 0, 14) -- staff parking
+	Clutter.puddles(map, rng, { 65, 25, 165, 165 }, 0, 12) -- bus lot
+	Clutter.puddles(map, rng, { -130, 15, 130, 28 }, 0, 8) -- front walk
+	for x = -100, 100, 25 do
+		Clutter.papers(map, Vector3.new(x, 0.3, -24), 4, 6, rng)
+	end
+	for _, p in { Vector3.new(-80, 0.3, -22), Vector3.new(10, 0.3, -26), Vector3.new(70, 0.3, -23) } do
+		Clutter.fallenTile(map, p, rng)
+	end
+	Clutter.leak(map, Vector3.new(40, H - 0.2, -24), 0.3, rng)
+	Clutter.flashlight(map, Vector3.new(-50, 0.3, -24), math.rad(90))
+	Clutter.trashCan(map, Vector3.new(128, 0, 20), true, rng)
+	Clutter.trashCan(map, Vector3.new(-128, 0, 22), false, rng)
+end
+
 -- Builds the map into `map` (an empty Model already in the workspace).
 function School.build(map: Model)
 	local rng = Random.new(404)
@@ -513,6 +549,7 @@ function School.build(map: Model)
 	walls(map)
 	rooms(map, rng)
 	lights(map, rng)
+	weathering(map, rng)
 	spots(map)
 	Kit.boundary(map, School.SIZE)
 end

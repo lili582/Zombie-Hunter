@@ -19,6 +19,9 @@ test("server start builds the safehouse lobby and the first map", function()
 	expect(workspace:FindFirstChild("Map") ~= nil).toBe(true)
 	expect(#info.humanStarts >= 1).toBe(true)
 	expect(#info.zombieSpawns >= 3).toBe(true)
+	-- the map's weather is published for the clients and the thunder
+	expect(workspace:GetAttribute("Weather")).toBe("Drizzle")
+	expect(workspace:GetAttribute("Thunder")).toBe(true)
 end)
 
 test("the safehouse has every station players use", function()
@@ -45,5 +48,6 @@ for _, mapId in Maps.order do
 		expect(#info.zombieSpawns >= 3).toBe(true)
 		expect(#info.ammoSpawns >= 1).toBe(true)
 		expect(#info.lockers >= 1).toBe(true)
+		expect(World.tagged("ScareSpot") >= 6).toBe(true)
 	end)
 end
