@@ -8,7 +8,7 @@
 --     the door wheel turning by itself, eyes in the boards, the Tall One in the moonbeam), each with
 --     a caption. Never while a panel is open, never in your first 20s, never in the final countdown.
 --   * The countdown: at 10s the door bulb pulses; at 5s the bulb settles dim, candles gutter and
---     breath fogs at the door; at 3s the wheel spins; at the end the door swings open into fog.
+--     breath fogs at the door; at 3s the door handle rattles; at the end the door swings open into fog.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -490,7 +490,8 @@ local function startBreathing()
 			lastStage = stage
 		end
 		if stage == "three" and doorOpen == 0 then
-			wheelTurn += 6
+			-- the handle rattles: something on the other side wants in
+			wheelTurn = -25 * math.abs(math.sin(t * 9))
 			placeDoor()
 		end
 		if view.phase == "Intermission" and timeLeft() <= LobbyScares.DOOR_OPENS_AT and doorOpen == 0 then

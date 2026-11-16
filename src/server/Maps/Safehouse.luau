@@ -1,29 +1,25 @@
 --!strict
--- THE SAFEHOUSE: the basement of Relay Station 9, the old radio station that ran the towers
--- (design-safehouse.md). "The last lit room in a town that went dark." Survivors have made it
--- home: a couch by the fire, fairy lights, a reading nook, warm lamps in every corner. And the
--- outbreak is on every wall: the infection map, the survival rules, the days scratched in tally
--- marks, a zombie shooting target, rations, a hazard-striped door that says DO NOT OPEN. 64 x 48 studs, a low
--- 16-stud ceiling. The center is warm (an oil-drum fire, cots and sandbags under the one hanging
--- bulb); the edges are cold (boarded windows letting in lavender moonbeams, the stairwell climbing
--- into black, the deploy door with its red bulb).
+-- THE SAFEHOUSE: a high-rise apartment, high above the dead city. It was somebody's beautiful
+-- home: a concrete-and-hardwood living room, a dropped ceiling with a warm LED cove and recessed
+-- downlights, a big TV over a linear fireplace on a dark wood-slat wall, floating shelves with
+-- cube lamps, an L-shaped sectional on a shag rug, geometric pendant lights, floor-to-ceiling
+-- glass. Now the survivors hide in it: the TV only shows the emergency broadcast, the windows are
+-- boarded and taped with handprints on the glass, the plants are dying, the city below burns in
+-- the fog, and something stands on the balcony some nights.
 --
---   N:  [stairs + spawn]  [map vote chalkboard + 3 pads]  [deploy door]
---   W:  [loadout pegboard + lockers]  [specimen jars: private Alpha pick]
---   C:  [the hearth]
---   E:  [shop cage + bell]  [mirror alcove: catalog]
---   S:  [radio desk, CRT, CCTV]  [boarded windows]  [MISSING posters]
+--   N:  [MISSING posters]  [front door = the deploy door, EXIT]  [TV: the map vote + 3 pads]
+--   W:  [shelves + lamps]  [the painting]  [specimen jars: private Alpha pick]  [wardrobe mirror]
+--   C:  [sectional, ottoman, pendants]          NE: [kitchen: the Z-Shop bell on the island]
+--   S + SE:  [floor-to-ceiling windows, the balcony, the skyline]
 --
--- Every station is a physical object with a prompt. The room is built here once; the client's
--- SafehouseController plays the scares and the countdown on its own copy (never replicated), and
--- finds what it animates by name (HearthBulb, DeployDoor, Window1/2, TallOne, ...).
+-- Every station is an object with a prompt. The client's SafehouseController animates parts by
+-- name (HearthBulb, DrumFire, DeployDoor/DoorPanel/DoorWheel, DoorBulb, DoorFog, DoorVapor,
+-- Window1/2 with Board/ScareHand/ScareEye, TallOne, ShopTube, CRTScreen, CandleLight, JarLight).
 local CollectionService = game:GetService("CollectionService")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local AlphaClasses = require(Shared.Config.AlphaClasses)
 local Kit = require(script.Parent.Kit)
-local BuildingKit = require(script.Parent.BuildingKit)
-local Clutter = require(script.Parent.Clutter)
 
 local Safehouse = {}
 
@@ -36,29 +32,32 @@ export type Refs = {
 }
 
 local BASE = Vector3.new(0, 300, 0) -- the floor's top is BASE.Y + 1
-local W, D, H = 64, 48, 16 -- inside faces of the walls: x +-31, z +-23; ceiling at y 17
+local W, D, H = 64, 48, 16 -- inside: x -31..31, z -23..23, floor y 1, ceiling y 17
 
 local C = {
-	concrete = Color3.fromRGB(70, 64, 60),
-	waterLine = Color3.fromRGB(34, 32, 36),
-	floor = Color3.fromRGB(58, 52, 48),
-	ceiling = Color3.fromRGB(40, 38, 42),
-	rust = Color3.fromRGB(104, 62, 42),
-	metal = Color3.fromRGB(74, 76, 80),
-	rotten = Color3.fromRGB(84, 82, 66), -- grey-green planks
-	olive = Color3.fromRGB(70, 74, 50),
-	dustyPurple = Color3.fromRGB(78, 60, 90),
+	concrete = Color3.fromRGB(104, 96, 88),
+	ceiling = Color3.fromRGB(92, 86, 80),
+	wood = Color3.fromRGB(96, 46, 30), -- the hardwood floor
+	slats = Color3.fromRGB(46, 34, 28),
+	shelf = Color3.fromRGB(70, 42, 30),
+	fabric = Color3.fromRGB(176, 158, 118),
+	fabricDark = Color3.fromRGB(128, 112, 84),
+	leather = Color3.fromRGB(58, 50, 46),
+	rug = Color3.fromRGB(196, 174, 128),
+	frame = Color3.fromRGB(34, 34, 38),
+	glass = Color3.fromRGB(40, 46, 64),
 	paper = Color3.fromRGB(206, 196, 172),
 	ink = Color3.fromRGB(36, 26, 26),
-	chalk = Color3.fromRGB(226, 226, 214),
-	-- light colours: the only colour in the room
-	butter = Color3.fromRGB(255, 224, 138),
-	ember = Color3.fromRGB(255, 184, 107),
+	blood = Color3.fromRGB(110, 14, 18),
+	-- light
+	led = Color3.fromRGB(255, 168, 86),
+	warm = Color3.fromRGB(255, 206, 150),
+	ember = Color3.fromRGB(255, 150, 70),
 	lavender = Color3.fromRGB(191, 169, 242),
-	danger = Color3.fromRGB(255, 74, 92),
-	mint = Color3.fromRGB(205, 239, 217),
+	danger = Color3.fromRGB(255, 50, 60),
 	signal = Color3.fromRGB(191, 216, 255),
 	jar = Color3.fromRGB(163, 234, 200),
+	sick = Color3.fromRGB(214, 236, 200),
 	black = Color3.fromRGB(4, 3, 7),
 }
 
@@ -66,6 +65,7 @@ local NORTH = Vector3.new(0, 0, -1)
 local SOUTH = Vector3.new(0, 0, 1)
 local EAST = Vector3.new(1, 0, 0)
 local WEST = Vector3.new(-1, 0, 0)
+local UP = Vector3.new(0, 1, 0)
 
 local function at(x: number, y: number, z: number): Vector3
 	return BASE + Vector3.new(x, y, z)
@@ -90,7 +90,7 @@ local function deco<T>(p: T): T
 	return p
 end
 
--- A light that doesn't cast shadows (the design allows only 4 shadow casters).
+-- A light that doesn't cast shadows (only a few lights may: the pendant, the fire, the moon).
 local function softLight(on: BasePart, range: number, brightness: number, color: Color3): PointLight
 	local l = Kit.light(on, range, brightness, color)
 	l.Shadows = false
@@ -117,6 +117,29 @@ local function upright(
 	)
 end
 
+-- A rod from a to b (pendant cages, wires, mullions).
+local function rod(
+	parent: Instance,
+	name: string,
+	a: Vector3,
+	b: Vector3,
+	thickness: number,
+	color: Color3,
+	material: Enum.Material?
+): Part
+	local length = (b - a).Magnitude
+	return deco(
+		Kit.part(
+			parent,
+			name,
+			Vector3.new(thickness, thickness, length),
+			CFrame.lookAt(a, b) * CFrame.new(0, 0, -length / 2),
+			color,
+			material or Enum.Material.Metal
+		)
+	)
+end
+
 -- Text on the face of a board that looks along `dir`. No board colour = only the text shows.
 local function sign(
 	parent: Instance,
@@ -131,7 +154,7 @@ local function sign(
 		Kit.part(
 			parent,
 			name,
-			Vector3.new(size.X, size.Y, 0.2),
+			Vector3.new(size.X, size.Y, 0.15),
 			CFrame.lookAt(pos, pos + dir),
 			style.board or C.black,
 			Enum.Material.SmoothPlastic
@@ -150,7 +173,7 @@ local function sign(
 	label.BackgroundTransparency = 1
 	label.Size = UDim2.fromScale(0.92, 0.86)
 	label.Position = UDim2.fromScale(0.04, 0.07)
-	label.Font = style.font or Enum.Font.SpecialElite
+	label.Font = style.font or Enum.Font.GothamBold
 	label.TextScaled = true
 	label.TextColor3 = style.text
 	label.Text = text
@@ -177,1395 +200,6 @@ local function prompt(
 	return p
 end
 
---------------------------------------------------------------------------- the room
-
--- Concrete box with the stairwell hole and the deploy door in the north wall and two basement
--- windows high in the south wall. Damp: a dark water line along the bottom of every wall.
-local function shell(room: Model)
-	piece(room, "Floor", Vector3.new(W, 2, D), BASE, C.floor, Enum.Material.Slate)
-	piece(room, "Ceiling", Vector3.new(W, 1, D), at(0, H + 1.5, 0), C.ceiling, Enum.Material.Concrete)
-	local function wall(size: Vector3, pos: Vector3)
-		piece(room, "Wall", size, pos, C.concrete, Enum.Material.Concrete)
-	end
-	local top = H + 1
-	-- north (z -24): stair hole x -30..-24 above y 8, door x 18..26 up to y 13
-	local nz = -D / 2
-	wall(Vector3.new(2, H, 2), at(-31, 1 + H / 2, nz))
-	wall(Vector3.new(6, 7, 2), at(-27, 4.5, nz))
-	wall(Vector3.new(42, H, 2), at(-3, 1 + H / 2, nz))
-	wall(Vector3.new(8, top - 13, 2), at(22, 13 + (top - 13) / 2, nz))
-	wall(Vector3.new(6, H, 2), at(29, 1 + H / 2, nz))
-	-- south (z 24): windows x -9..-3 and 3..9, y 10..14
-	local sz = D / 2
-	wall(Vector3.new(23, H, 2), at(-20.5, 1 + H / 2, sz))
-	wall(Vector3.new(6, H, 2), at(0, 1 + H / 2, sz))
-	wall(Vector3.new(23, H, 2), at(20.5, 1 + H / 2, sz))
-	for _, x in { -6, 6 } do
-		wall(Vector3.new(6, 9, 2), at(x, 5.5, sz))
-		wall(Vector3.new(6, top - 14, 2), at(x, 14 + (top - 14) / 2, sz))
-	end
-	wall(Vector3.new(2, H, D), at(W / 2, 1 + H / 2, 0))
-	wall(Vector3.new(2, H, D), at(-W / 2, 1 + H / 2, 0))
-	-- the water line
-	for _, band in
-		{
-			{ Vector3.new(W - 2, 2.5, 0.2), at(0, 2.25, -D / 2 + 1.1) },
-			{ Vector3.new(W - 2, 2.5, 0.2), at(0, 2.25, D / 2 - 1.1) },
-			{ Vector3.new(0.2, 2.5, D - 2), at(W / 2 - 1.1, 2.25, 0) },
-			{ Vector3.new(0.2, 2.5, D - 2), at(-W / 2 + 1.1, 2.25, 0) },
-		}
-	do
-		deco(piece(room, "WaterLine", band[1], band[2], C.waterLine, Enum.Material.Concrete))
-	end
-	-- pipes and a cable tray under the ceiling
-	for i, z in { -19, -17.6 } do
-		Kit.cylinder(
-			room,
-			"Pipe",
-			W - 2,
-			0.8 - i * 0.15,
-			CFrame.new(at(0, 15.6, z)),
-			C.rust,
-			Enum.Material.CorrodedMetal
-		)
-	end
-	Kit.cylinder(
-		room,
-		"Pipe",
-		D - 2,
-		0.7,
-		CFrame.new(at(-14, 15.9, 0)) * CFrame.Angles(0, math.rad(90), 0),
-		C.metal,
-		Enum.Material.Metal
-	)
-	deco(
-		piece(
-			room,
-			"CableTray",
-			Vector3.new(W - 4, 0.3, 1.4),
-			at(0, 16.2, 9),
-			C.metal,
-			Enum.Material.DiamondPlate
-		)
-	)
-	-- the old studded tiles around the hearth (the one nostalgic floor)
-	local studs = piece(
-		room,
-		"HearthTiles",
-		Vector3.new(20, 0.2, 16),
-		at(0, 1.1, 2),
-		Color3.fromRGB(64, 58, 54),
-		Enum.Material.Plastic
-	)
-	studs.TopSurface = Enum.SurfaceType.Studs
-	-- a slow leak from a pipe joint into a puddle
-	Clutter.leak(room, at(-14, 15.4, -6), BASE.Y + 1, Random.new(5))
-end
-
--- The stairwell in the north-west corner: steps climbing into pure black. You spawn at the bottom.
-local function stairwell(room: Model)
-	BuildingKit.stairs(room, at(-27, 1, -13), NORTH, 7, 5.6)
-	piece(room, "StairVoid", Vector3.new(6, 10, 1), at(-27, 12.5, -25.5), C.black)
-	deco(piece(room, "StairDark", Vector3.new(6, 9, 6), at(-27, 12.5, -21), C.black)).Transparency = 0.15
-	Kit.part(
-		room,
-		"Handrail",
-		Vector3.new(0.25, 0.25, 11),
-		CFrame.new(at(-24.1, 7, -18)) * CFrame.Angles(math.atan(7 / 10.5), 0, 0),
-		C.rust,
-		Enum.Material.CorrodedMetal
-	)
-	-- scratched into the wall by the stairs: an old visitor counter
-	sign(room, "VisitorCounter", Vector2.new(4, 1.4), at(-30.8, 5, -9), EAST, "VISITORS 000013", {
-		text = Color3.fromRGB(150, 146, 140),
-		font = Enum.Font.Arcade,
-	})
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "LobbySpawn"
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = 0 -- no forcefield
-	spawn.Size = Vector3.new(6, 1, 6)
-	spawn.CFrame = CFrame.lookAt(at(-25, 1.5, -8), at(0, 1.5, 2)) -- facing the hearth
-	spawn.Transparency = 1
-	spawn.CanCollide = false
-	spawn.CanQuery = false
-	spawn.Parent = room
-	CollectionService:AddTag(spawn, "LobbySpawn")
-end
-
---------------------------------------------------------------------------- north: vote + door
-
--- The map vote: a chalkboard with three map slots, a lantern over it, three chalk-outlined pads.
-local function chalkboard(room: Model): { { label: TextLabel, prompt: ProximityPrompt } }
-	local board = Instance.new("Model")
-	board.Name = "VoteBoard"
-	board.Parent = room
-	local z = -D / 2 + 1
-	piece(
-		board,
-		"Chalkboard",
-		Vector3.new(18, 7, 0.3),
-		at(0, 8.5, z + 0.2),
-		Color3.fromRGB(30, 40, 34),
-		Enum.Material.Slate
-	)
-	for _, f in
-		{
-			{ Vector3.new(18.8, 0.5, 0.5), at(0, 12.2, z + 0.4) },
-			{ Vector3.new(18.8, 0.5, 0.5), at(0, 4.8, z + 0.4) },
-			{ Vector3.new(0.5, 7.8, 0.5), at(-9.2, 8.5, z + 0.4) },
-			{ Vector3.new(0.5, 7.8, 0.5), at(9.2, 8.5, z + 0.4) },
-		}
-	do
-		piece(board, "BoardFrame", f[1], f[2], C.rotten, Enum.Material.Wood)
-	end
-	sign(board, "VoteHeader", Vector2.new(14, 1.4), at(0, 11.1, z + 0.45), SOUTH, "WHERE TONIGHT?", {
-		text = C.chalk,
-		font = Enum.Font.PermanentMarker,
-	})
-	local lantern = deco(
-		piece(
-			board,
-			"BoardLantern",
-			Vector3.new(0.9, 1.2, 0.9),
-			at(0, 13.6, z + 1.4),
-			C.butter,
-			Enum.Material.Neon
-		)
-	)
-	softLight(lantern, 12, 0.9, Color3.fromRGB(255, 199, 154))
-	local slots = {}
-	for i, x in { -6, 0, 6 } do
-		local label = sign(board, `MapSlot{i}`, Vector2.new(5.4, 4.6), at(x, 7.6, z + 0.45), SOUTH, "", {
-			text = C.chalk,
-			font = Enum.Font.PermanentMarker,
-		})
-		-- the pad: a chalk square on the floor, faintly glowing
-		local pz = -16
-		for _, l in
-			{
-				{ at(x - 2.5, 1, pz - 2.5), at(x + 2.5, 1, pz - 2.5) },
-				{ at(x - 2.5, 1, pz + 2.5), at(x + 2.5, 1, pz + 2.5) },
-				{ at(x - 2.5, 1, pz - 2.5), at(x - 2.5, 1, pz + 2.5) },
-				{ at(x + 2.5, 1, pz - 2.5), at(x + 2.5, 1, pz + 2.5) },
-			}
-		do
-			BuildingKit.line(board, l[1], l[2], 0.25, C.chalk)
-		end
-		local pad = deco(
-			piece(board, "VotePad", Vector3.new(5, 0.06, 5), at(x, 1.04, pz), C.butter, Enum.Material.Neon)
-		)
-		pad.Transparency = 0.85
-		local vote = prompt(pad, "Vote", "Map", "MapVotePrompt", 7)
-		vote.Enabled = false
-		vote:SetAttribute("Slot", i)
-		table.insert(slots, { label = label, prompt = vote })
-	end
-	return slots
-end
-
--- The steel blast door in the north-east corner: wheel lock, red caged bulb, lavender fog behind.
--- Returns the countdown sign beside it.
-local function deployDoor(room: Model): TextLabel
-	local z = -D / 2
-	local door = Instance.new("Model")
-	door.Name = "DeployDoor"
-	door.Parent = room
-	for _, f in
-		{
-			{ Vector3.new(0.8, 12.6, 1.4), at(17.6, 7.3, z + 1) },
-			{ Vector3.new(0.8, 12.6, 1.4), at(26.4, 7.3, z + 1) },
-			{ Vector3.new(9.6, 0.8, 1.4), at(22, 13.2, z + 1) },
-		}
-	do
-		piece(room, "DoorFrame", f[1], f[2], C.rust, Enum.Material.CorrodedMetal)
-	end
-	piece(
-		door,
-		"DoorPanel",
-		Vector3.new(8, 12, 0.8),
-		at(22, 7, z + 0.9),
-		Color3.fromRGB(82, 74, 70),
-		Enum.Material.DiamondPlate
-	)
-	for _, y in { 3, 11 } do
-		piece(
-			door,
-			"DoorBand",
-			Vector3.new(8, 0.6, 0.3),
-			at(22, y, z + 1.4),
-			C.rust,
-			Enum.Material.CorrodedMetal
-		)
-	end
-	-- the wheel lock (its own model so the client can turn it)
-	local wheel = Instance.new("Model")
-	wheel.Name = "DoorWheel"
-	wheel.Parent = door
-	local hub = at(22, 7, z + 1.6)
-	local hubPart = Kit.cylinder(
-		wheel,
-		"WheelHub",
-		0.6,
-		0.8,
-		CFrame.new(hub) * CFrame.Angles(0, math.rad(90), 0),
-		C.metal,
-		Enum.Material.Metal
-	)
-	for i = 0, 7 do
-		local a = i / 8 * math.pi * 2
-		Kit.part(
-			wheel,
-			"WheelRim",
-			Vector3.new(1.2, 0.3, 0.3),
-			CFrame.new(hub) * CFrame.Angles(0, 0, a) * CFrame.new(0, 1.45, 0),
-			C.rust,
-			Enum.Material.CorrodedMetal
-		)
-	end
-	for _, a in { 0, math.pi / 2 } do
-		Kit.part(
-			wheel,
-			"WheelSpoke",
-			Vector3.new(2.9, 0.25, 0.25),
-			CFrame.new(hub) * CFrame.Angles(0, 0, a),
-			C.metal,
-			Enum.Material.Metal
-		)
-	end
-	wheel.PrimaryPart = hubPart
-	-- behind the door: the night, lavender fog (seen only when it opens)
-	piece(room, "DoorOutside", Vector3.new(8, 12, 1), at(22, 7, z - 3), C.black)
-	local fog = deco(
-		piece(
-			room,
-			"DoorFog",
-			Vector3.new(7.6, 11.6, 2.2),
-			at(22, 7, z - 1.4),
-			C.lavender,
-			Enum.Material.Neon
-		)
-	)
-	fog.Transparency = 0.55
-	fog.CastShadow = false
-	local fogLight = softLight(fog, 26, 2.2, C.lavender)
-	fogLight.Name = "FogLight"
-	fogLight.Enabled = false
-	-- cold breath at the door in the final seconds (the client turns it on)
-	local vaporAt = deco(piece(room, "DoorVapor", Vector3.new(6, 1, 1), at(22, 5, z + 2.5), C.black))
-	vaporAt.Transparency = 1
-	local vapor = Instance.new("ParticleEmitter")
-	vapor.Name = "Vapor"
-	vapor.Enabled = false
-	vapor.Rate = 10
-	vapor.Lifetime = NumberRange.new(2, 3)
-	vapor.Speed = NumberRange.new(1, 2.5)
-	vapor.EmissionDirection = Enum.NormalId.Back
-	vapor.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 4) })
-	vapor.Transparency =
-		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 1) })
-	vapor.Color = ColorSequence.new(Color3.fromRGB(210, 205, 230))
-	vapor.Texture = "rbxasset://textures/particles/smoke_main.dds"
-	vapor.Parent = vaporAt
-	-- the red caged bulb: the room's beacon, like the towers' in a round
-	local bulb = deco(
-		piece(
-			room,
-			"DoorBulb",
-			Vector3.new(0.9, 0.9, 0.9),
-			at(22, 14.6, z + 1.6),
-			C.danger,
-			Enum.Material.Neon
-		)
-	)
-	bulb.Shape = Enum.PartType.Ball
-	softLight(bulb, 14, 1.4, C.danger)
-	for i = 0, 3 do
-		local a = i / 4 * math.pi * 2
-		deco(
-			piece(
-				room,
-				"BulbCage",
-				Vector3.new(0.1, 1.3, 0.1),
-				at(22 + math.cos(a) * 0.6, 14.6, z + 1.6 + math.sin(a) * 0.6),
-				C.metal,
-				Enum.Material.Metal
-			)
-		)
-	end
-	-- the countdown board beside it (a flip-clock look)
-	return sign(room, "ModeSign", Vector2.new(9, 2), at(11, 13.6, z + 1.15), SOUTH, "WAITING FOR PLAYERS", {
-		text = C.butter,
-		board = Color3.fromRGB(16, 14, 18),
-		font = Enum.Font.Code,
-		glow = true,
-	})
-end
-
---------------------------------------------------------------------------- west: rack + jars
-
--- The loadout wall: a pegboard with outlines (revolver, bat, medkit) and four dented lockers.
-local function loadoutRack(room: Model)
-	local x = -W / 2 + 1
-	piece(
-		room,
-		"Pegboard",
-		Vector3.new(0.3, 7, 9),
-		at(x + 0.2, 7, -8),
-		Color3.fromRGB(116, 92, 66),
-		Enum.Material.Cardboard
-	)
-	for _, o in
-		{
-			{ Vector3.new(0.1, 0.9, 3.2), at(x + 0.4, 9, -10) }, -- revolver outline
-			{ Vector3.new(0.1, 1.6, 0.8), at(x + 0.4, 8.3, -11) },
-			{ Vector3.new(0.1, 0.9, 1.5), at(x + 0.4, 5.6, -5) }, -- medkit tin outline
-		}
-	do
-		deco(piece(room, "ToolOutline", o[1], o[2], Color3.fromRGB(30, 26, 22)))
-	end
-	Kit.cylinder(
-		room,
-		"Bat",
-		4.2,
-		0.45,
-		CFrame.new(at(x + 0.7, 8, -6.5)) * CFrame.Angles(0, 0, math.rad(80)),
-		Color3.fromRGB(120, 86, 56),
-		Enum.Material.Wood
-	)
-	piece(
-		room,
-		"MedkitTin",
-		Vector3.new(0.8, 0.9, 1.5),
-		at(x + 0.75, 5.6, -5),
-		Color3.fromRGB(196, 190, 180),
-		Enum.Material.Metal
-	)
-	deco(
-		piece(
-			room,
-			"MedkitCross",
-			Vector3.new(0.82, 0.25, 0.6),
-			at(x + 0.76, 5.6, -5),
-			Color3.fromRGB(180, 30, 30)
-		)
-	)
-	BuildingKit.lockerRow(room, at(-29.9, 1, -2.8), SOUTH, 4, EAST, 0, Color3.fromRGB(70, 78, 70))
-end
-
--- The specimen jars: three murky jars, each with a faint silhouette of an Alpha class inside.
--- Picking one changes nothing in the world: the choice stays private.
-local JAR_LOOK = {
-	Runner = Vector3.new(0.35, 1.5, 0.3),
-	Tank = Vector3.new(0.8, 1.2, 0.5),
-	Screamer = Vector3.new(0.5, 1.35, 0.35),
-}
-
-local function specimenJars(room: Model)
-	local x = -W / 2 + 2
-	piece(room, "JarShelf", Vector3.new(2.2, 0.3, 15), at(x, 4.4, 15), C.rotten, Enum.Material.WoodPlanks)
-	for _, z in { 8.5, 21.5 } do
-		piece(
-			room,
-			"ShelfBracket",
-			Vector3.new(2, 3.4, 0.3),
-			at(x, 2.7, z),
-			C.rotten,
-			Enum.Material.WoodPlanks
-		)
-	end
-	for i, className in AlphaClasses.order do
-		local class = (AlphaClasses :: any)[className]
-		local z = 9 + (i - 1) * 6
-		local base = at(x, 4.55, z)
-		local jar = upright(
-			"Jar",
-			room,
-			2.8,
-			1.8,
-			base + Vector3.new(0, 1.4, 0),
-			Color3.fromRGB(90, 120, 104),
-			Enum.Material.Glass
-		)
-		jar.Transparency = 0.35
-		local liquid = deco(
-			upright("JarLiquid", room, 2.2, 1.6, base + Vector3.new(0, 1.15, 0), Color3.fromRGB(52, 78, 60))
-		)
-		liquid.Transparency = 0.25
-		upright("JarLid", room, 0.3, 1.9, base + Vector3.new(0, 2.95, 0), C.metal, Enum.Material.Metal)
-		local shape = JAR_LOOK[className] or JAR_LOOK.Screamer
-		deco(piece(room, "JarShape", shape, base + Vector3.new(0, 1.2, 0), Color3.fromRGB(14, 18, 14)))
-		local glow = deco(
-			piece(
-				room,
-				"JarGlow",
-				Vector3.new(0.3, 0.3, 0.3),
-				base + Vector3.new(0, 0.4, 0),
-				C.jar,
-				Enum.Material.Neon
-			)
-		)
-		glow.Transparency = 0.6
-		softLight(glow, 5, 0.25, C.jar).Name = "JarLight"
-		sign(room, "JarLabel", Vector2.new(1.9, 0.6), at(x + 1.15, 4.1, z), EAST, string.upper(class.name), {
-			text = C.ink,
-			board = C.paper,
-		})
-		local pick = prompt(jar, "Choose your nightmare", class.name, "AlphaPickPrompt", 6)
-		pick:SetAttribute("Class", className)
-	end
-end
-
---------------------------------------------------------------------------- the hearth
-
-local function cot(room: Model, cf: CFrame)
-	for _, x in { -1.3, 1.3 } do
-		for _, z in { -3, 3 } do
-			Kit.onGround(
-				room,
-				"CotLeg",
-				Vector3.new(0.2, 1.4, 0.2),
-				cf * CFrame.new(x, 0, z),
-				C.metal,
-				Enum.Material.Metal
-			)
-		end
-	end
-	Kit.part(
-		room,
-		"Cot",
-		Vector3.new(2.8, 0.25, 6.6),
-		cf * CFrame.new(0, 1.5, 0),
-		C.olive,
-		Enum.Material.Fabric
-	)
-	Kit.part(
-		room,
-		"Blanket",
-		Vector3.new(2.6, 0.3, 3.2),
-		cf * CFrame.new(0, 1.7, 1.4) * CFrame.Angles(0, 0.08, 0),
-		Color3.fromRGB(86, 64, 52),
-		Enum.Material.Fabric
-	)
-	Kit.part(
-		room,
-		"Pillow",
-		Vector3.new(2.2, 0.6, 1.3),
-		cf * CFrame.new(0, 1.9, -2.5),
-		Color3.fromRGB(196, 186, 160),
-		Enum.Material.Fabric
-	)
-end
-
--- The warm center: an oil drum fire, cots, crates to sit on, a half-ring of sandbags, candles,
--- and the one hanging bulb (moths circling it).
-local function hearth(room: Model, rng: Random)
-	local c = at(0, 1, 2)
-	upright("OilDrum", room, 4, 3.2, c + Vector3.new(0, 2, 0), C.rust, Enum.Material.CorrodedMetal)
-	local fire = deco(
-		piece(
-			room,
-			"DrumFire",
-			Vector3.new(2.4, 0.4, 2.4),
-			c + Vector3.new(0, 4.1, 0),
-			Color3.fromRGB(255, 110, 40),
-			Enum.Material.Neon
-		)
-	)
-	local flames = Instance.new("Fire")
-	flames.Size = 4
-	flames.Heat = 7
-	flames.Color = Color3.fromRGB(255, 150, 60)
-	flames.SecondaryColor = Color3.fromRGB(255, 70, 20)
-	flames.Parent = fire
-	Kit.light(fire, 26, 1.5, Color3.fromRGB(255, 150, 80)).Name = "FireLight"
-	local embers = Instance.new("ParticleEmitter")
-	embers.Rate = 6
-	embers.Lifetime = NumberRange.new(2, 3)
-	embers.Speed = NumberRange.new(3, 5)
-	embers.SpreadAngle = Vector2.new(20, 20)
-	embers.Size = NumberSequence.new(0.12)
-	embers.Color = ColorSequence.new(C.ember)
-	embers.LightEmission = 1
-	embers.Parent = fire
-	-- cots around the fire, crates as seats
-	cot(room, CFrame.new(at(-10, 1, 0)) * CFrame.Angles(0, 0.35, 0))
-	cot(room, CFrame.new(at(10, 1, 0)) * CFrame.Angles(0, -0.35, 0))
-	cot(room, CFrame.new(at(-7.5, 1, 8)) * CFrame.Angles(0, -0.4, 0))
-	cot(room, CFrame.new(at(7.5, 1, 8)) * CFrame.Angles(0, 0.4, 0))
-	Kit.crate(room, at(-3.5, 1, -4.5), 2.2, 0.3)
-	Kit.crate(room, at(4, 1, -5), 2.2, -0.2)
-	Kit.crate(room, at(0, 1, 9.5), 2.4, 0.6)
-	-- the sandbag half-ring on the window side
-	for i = 0, 4 do
-		local a = math.rad(30 + i * 30)
-		local pos = c + Vector3.new(math.cos(a) * 12, 0, math.sin(a) * 12)
-		Clutter.sandbags(room, CFrame.lookAt(pos, c) * CFrame.Angles(0, math.pi / 2, 0), 5, rng)
-	end
-	-- candles on the crates (three of them light the faces around the fire)
-	for i, p in
-		{
-			at(-3.5, 3.2, -4.5),
-			at(4, 3.2, -5),
-			at(0, 3.4, 9.5),
-			at(-3, 3.2, -4),
-			at(4.5, 3.2, -4.6),
-			at(0.6, 3.4, 9.2),
-		}
-	do
-		upright("Candle", room, 0.6, 0.3, p + Vector3.new(0, 0.3, 0), Color3.fromRGB(214, 204, 180))
-		local flame = deco(
-			piece(
-				room,
-				"CandleFlame",
-				Vector3.new(0.16, 0.3, 0.16),
-				p + Vector3.new(0, 0.75, 0),
-				C.ember,
-				Enum.Material.Neon
-			)
-		)
-		if i <= 3 then
-			softLight(flame, 7, 0.5, C.ember).Name = "CandleLight"
-		end
-	end
-	-- the one hanging bulb
-	deco(piece(room, "BulbCord", Vector3.new(0.08, 3.6, 0.08), at(0, 15.2, 2), Color3.fromRGB(20, 20, 20)))
-	local bulb = deco(
-		piece(room, "HearthBulb", Vector3.new(0.8, 0.8, 0.8), at(0, 13.1, 2), C.butter, Enum.Material.Neon)
-	)
-	bulb.Shape = Enum.PartType.Ball
-	Kit.light(bulb, 34, 2.1, Color3.fromRGB(255, 214, 150)).Name = "BulbLight"
-	local moths = Instance.new("ParticleEmitter")
-	moths.Name = "Moths"
-	moths.Rate = 1.5
-	moths.Lifetime = NumberRange.new(5, 7)
-	moths.Speed = NumberRange.new(0.8, 1.6)
-	moths.SpreadAngle = Vector2.new(180, 180)
-	moths.RotSpeed = NumberRange.new(-200, 200)
-	moths.Size = NumberSequence.new(0.18)
-	moths.Color = ColorSequence.new(Color3.fromRGB(60, 54, 48))
-	moths.LightInfluence = 1
-	moths.Parent = bulb
-end
-
---------------------------------------------------------------------------- east: shop + mirror
-
--- The shop: a chain-link cage with a counter in its front, a brass bell to ring, crates of stock
--- and a sick green tube light.
-local function shopCage(room: Model, rng: Random)
-	local fx = 25 -- the cage front
-	local x1 = W / 2 - 1
-	BuildingKit.chainFence(room, at(fx, 1, -12), at(fx, 1, -8), 9)
-	BuildingKit.chainFence(room, at(fx, 1, -4), at(fx, 1, 0), 9)
-	BuildingKit.chainFence(room, at(fx, 1, -12), at(x1, 1, -12), 9)
-	BuildingKit.chainFence(room, at(fx, 1, 0), at(x1, 1, 0), 9)
-	piece(
-		room,
-		"ShopCounter",
-		Vector3.new(1.8, 3.6, 4.2),
-		at(fx, 2.8, -6),
-		C.rotten,
-		Enum.Material.WoodPlanks
-	)
-	piece(
-		room,
-		"CounterTop",
-		Vector3.new(2.2, 0.25, 4.6),
-		at(fx, 4.7, -6),
-		Color3.fromRGB(60, 50, 40),
-		Enum.Material.Wood
-	)
-	local bell = upright(
-		"ShopBell",
-		room,
-		0.5,
-		1,
-		at(fx, 5.1, -6.8),
-		Color3.fromRGB(196, 150, 60),
-		Enum.Material.Metal
-	)
-	prompt(bell, "Ring the bell", "Z-Shop", "ShopPrompt", 8)
-	BuildingKit.shelf(room, CFrame.lookAt(at(x1 - 0.8, 1, -6), at(x1 - 0.8, 1, -6) + WEST), 9, rng)
-	Kit.crate(room, at(27.5, 1, -10.2), 2.4, 0.2)
-	Kit.crate(room, at(27.5, 3.4, -10.2), 1.8, 0.7)
-	Kit.crate(room, at(28, 1, -1.8), 2.2, -0.3)
-	local tube =
-		deco(piece(room, "ShopTube", Vector3.new(0.3, 0.3, 5), at(28, 11.5, -6), C.mint, Enum.Material.Neon))
-	softLight(tube, 12, 1, C.mint)
-	sign(room, "ShopSign", Vector2.new(6, 1.6), at(fx - 0.3, 10.8, -6), WEST, "Z-SHOP", {
-		text = C.butter,
-		board = Color3.fromRGB(22, 18, 16),
-		glow = true,
-	})
-end
-
--- The mirror alcove: a tall cracked mirror behind a moth-eaten curtain. Dressing happens "in" it.
-local function mirrorAlcove(room: Model)
-	local x1 = W / 2 - 1
-	for _, z in { 7.5, 16.5 } do
-		piece(
-			room,
-			"AlcoveWall",
-			Vector3.new(6, 12, 0.8),
-			at(x1 - 3, 7, z),
-			C.concrete,
-			Enum.Material.Concrete
-		)
-	end
-	piece(
-		room,
-		"MirrorFrame",
-		Vector3.new(0.4, 10, 5),
-		at(x1 - 0.1, 6.6, 12),
-		Color3.fromRGB(46, 34, 28),
-		Enum.Material.Wood
-	)
-	local mirror = piece(
-		room,
-		"Mirror",
-		Vector3.new(0.2, 9.2, 4.2),
-		at(x1 - 0.35, 6.6, 12),
-		Color3.fromRGB(176, 182, 190),
-		Enum.Material.Glass
-	)
-	mirror.Reflectance = 0.4
-	prompt(mirror, "Look in the mirror", "Catalog", "CatalogPrompt", 9)
-	-- cracks across the glass
-	for _, crack in { { 0.6, 0.5 }, { -0.9, -0.3 }, { 0.1, 1.2 } } do
-		deco(
-			Kit.part(
-				room,
-				"Crack",
-				Vector3.new(0.05, 3, 0.08),
-				CFrame.new(at(x1 - 0.47, 7 + crack[1], 12 + crack[2] * 0.8)) * CFrame.Angles(crack[2], 0, 0),
-				Color3.fromRGB(30, 30, 34)
-			)
-		)
-	end
-	-- the curtain, half drawn, on a sagging rod
-	deco(
-		piece(
-			room,
-			"CurtainRod",
-			Vector3.new(0.2, 0.2, 9),
-			at(x1 - 5.6, 12.4, 12),
-			C.rust,
-			Enum.Material.CorrodedMetal
-		)
-	)
-	local curtain = deco(
-		piece(
-			room,
-			"Curtain",
-			Vector3.new(0.25, 11, 3.2),
-			at(x1 - 5.6, 6.9, 9.4),
-			C.dustyPurple,
-			Enum.Material.Fabric
-		)
-	)
-	curtain.Transparency = 0.1
-	sign(room, "MirrorSign", Vector2.new(3.6, 0.9), at(x1 - 5.8, 13.4, 12), WEST, "LOOK", {
-		text = C.chalk,
-		font = Enum.Font.PermanentMarker,
-	})
-end
-
---------------------------------------------------------------------------- south: archive, windows, posters
-
--- The radio desk: a reel-to-reel deck, a CRT playing static, a bank of four CCTV monitors, the
--- tape archive shelf and a clipboard nailed by the desk.
-local function archive(room: Model)
-	local z = D / 2 - 2.6
-	piece(room, "RadioDesk", Vector3.new(14, 3.4, 3), at(-19.5, 2.7, z), C.rotten, Enum.Material.WoodPlanks)
-	piece(
-		room,
-		"TapeDeck",
-		Vector3.new(3.4, 2.4, 1.6),
-		at(-24, 5.6, z + 0.3),
-		Color3.fromRGB(58, 56, 52),
-		Enum.Material.Metal
-	)
-	for _, x in { -24.8, -23.2 } do
-		Kit.cylinder(
-			room,
-			"Reel",
-			0.2,
-			1.3,
-			CFrame.new(at(x, 6, z - 0.55)) * CFrame.Angles(0, math.rad(90), 0),
-			Color3.fromRGB(150, 146, 140),
-			Enum.Material.Metal
-		)
-	end
-	-- the CRT, nothing but static
-	local tvCf = CFrame.lookAt(at(-17, 6.3, z), at(-17, 6.3, z) + NORTH)
-	Kit.part(
-		room,
-		"CRT",
-		Vector3.new(3.6, 3, 3),
-		tvCf,
-		Color3.fromRGB(40, 38, 36),
-		Enum.Material.SmoothPlastic
-	)
-	local screen = deco(
-		Kit.part(
-			room,
-			"CRTScreen",
-			Vector3.new(2.8, 2.2, 0.1),
-			tvCf * CFrame.new(0, 0, -1.52),
-			Color3.fromRGB(150, 160, 176),
-			Enum.Material.Neon
-		)
-	)
-	screen.Transparency = 0.35
-	softLight(screen, 9, 0.9, C.signal)
-	-- CCTV bank on the wall above
-	local zWall = D / 2 - 1.2
-	local bank = Instance.new("Model")
-	bank.Name = "CCTV"
-	bank.Parent = room
-	for i = 0, 3 do
-		local col, row = i % 2, math.floor(i / 2)
-		local pos = at(-13.4 + col * 2.5, 8.6 + row * 2, zWall)
-		piece(
-			bank,
-			"Monitor",
-			Vector3.new(2.3, 1.8, 1.2),
-			pos,
-			Color3.fromRGB(34, 34, 34),
-			Enum.Material.SmoothPlastic
-		)
-		sign(
-			bank,
-			"MonitorScreen",
-			Vector2.new(1.9, 1.4),
-			pos + Vector3.new(0, 0, -0.65),
-			NORTH,
-			`CAM {i + 1}\nNO SIGNAL`,
-			{
-				text = C.signal,
-				board = Color3.fromRGB(26, 34, 46),
-				font = Enum.Font.Code,
-				glow = true,
-			}
-		)
-	end
-	-- the tape shelf: room for twelve tapes, only four found so far
-	piece(room, "TapeShelf", Vector3.new(7, 0.3, 1), at(-24, 10, zWall), C.rotten, Enum.Material.Wood)
-	for i = 0, 3 do
-		piece(
-			room,
-			"Tape",
-			Vector3.new(0.4, 1.2, 0.8),
-			at(-27 + i * 0.5, 10.75, zWall),
-			Color3.fromRGB(30, 28, 30)
-		)
-	end
-	-- the clipboard nailed by the desk, and a candle
-	sign(
-		room,
-		"Clipboard",
-		Vector2.new(1.4, 2),
-		at(-11.6, 6.5, zWall),
-		NORTH,
-		"NIGHT LOG\n...",
-		{ text = C.ink, board = C.paper }
-	)
-	upright("Candle", room, 0.6, 0.3, at(-21, 4.7, z - 0.8), Color3.fromRGB(214, 204, 180))
-	deco(
-		piece(
-			room,
-			"CandleFlame",
-			Vector3.new(0.16, 0.3, 0.16),
-			at(-21, 5.15, z - 0.8),
-			C.ember,
-			Enum.Material.Neon
-		)
-	)
-end
-
--- The two basement windows at ground level: boards with gaps, lavender moonbeams cutting through,
--- dust in the light. Hidden things the client's scares use: a hand, eyes, the Tall One.
-local function windows(room: Model, rng: Random)
-	local z = D / 2
-	for i, x in { -6, 6 } do
-		local win = Instance.new("Model")
-		win.Name = `Window{i}`
-		win.Parent = room
-		local glass = piece(
-			win,
-			"Glass",
-			Vector3.new(6, 4, 0.2),
-			at(x, 12, z + 0.4),
-			Color3.fromRGB(26, 24, 40),
-			Enum.Material.Glass
-		)
-		glass.Transparency = 0.5
-		glass.CastShadow = false -- the moonbeams shine through it
-		for b, y in { 10.4, 11.5, 12.7, 13.7 } do
-			Kit.part(
-				win,
-				"Board",
-				Vector3.new(7, 0.7, 0.3),
-				CFrame.new(at(x + rng:NextNumber(-0.3, 0.3), y, z - 1.2))
-					* CFrame.Angles(0, 0, rng:NextNumber(-0.06, 0.06) * b),
-				C.rotten:Lerp(Color3.fromRGB(60, 58, 48), rng:NextNumber(0, 0.6)),
-				Enum.Material.WoodPlanks
-			)
-		end
-		-- moonlight shining in through the gaps (the boards cut it into stripes)
-		local from = at(x * 1.4, 18, z + 7)
-		local moon = deco(
-			Kit.part(
-				win,
-				"Moonbeam",
-				Vector3.new(1, 1, 1),
-				CFrame.lookAt(from, at(x * 0.6, 1, z - 12)),
-				C.black
-			)
-		)
-		moon.Transparency = 1
-		local beam = Instance.new("SpotLight")
-		beam.Name = "MoonLight"
-		beam.Face = Enum.NormalId.Front
-		beam.Angle = 30
-		beam.Range = 40
-		beam.Brightness = 2.2
-		beam.Color = C.lavender
-		beam.Shadows = true
-		beam.Parent = moon
-		-- dust motes in the beam
-		local motes = deco(piece(win, "Motes", Vector3.new(4, 6, 8), at(x * 0.8, 7, z - 7), C.black))
-		motes.Transparency = 1
-		local dust = Instance.new("ParticleEmitter")
-		dust.Shape = Enum.ParticleEmitterShape.Box
-		dust.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-		dust.Rate = 4
-		dust.Lifetime = NumberRange.new(6, 9)
-		dust.Speed = NumberRange.new(0.1, 0.3)
-		dust.SpreadAngle = Vector2.new(180, 180)
-		dust.Size = NumberSequence.new(0.06)
-		dust.Transparency = NumberSequence.new(0.4)
-		dust.LightInfluence = 1
-		dust.Parent = motes
-		-- a puff of dust the client throws when something bangs on the boards
-		local puff = Instance.new("ParticleEmitter")
-		puff.Name = "BangDust"
-		puff.Enabled = false
-		puff.Lifetime = NumberRange.new(1, 2)
-		puff.Speed = NumberRange.new(1, 3)
-		puff.SpreadAngle = Vector2.new(60, 60)
-		puff.Acceleration = Vector3.new(0, -4, 0)
-		puff.EmissionDirection = Enum.NormalId.Back
-		puff.Size = NumberSequence.new(0.25)
-		puff.Color = ColorSequence.new(Color3.fromRGB(120, 112, 100))
-		puff.Parent = win:FindFirstChild("Board")
-		-- the hand that slides in between the planks (hidden until a scare)
-		local hand = deco(
-			piece(
-				win,
-				"ScareHand",
-				Vector3.new(1.1, 0.5, 1.6),
-				at(x + 1, 12.1, z - 0.6),
-				Color3.fromRGB(70, 78, 66)
-			)
-		)
-		hand.Transparency = 1
-		-- eyes in the gap (hidden until a scare)
-		for _, dx in { -0.4, 0.4 } do
-			local eye = deco(
-				piece(
-					win,
-					"ScareEye",
-					Vector3.new(0.25, 0.14, 0.05),
-					at(x - 1.5 + dx, 12.1, z + 0.2),
-					Color3.fromRGB(226, 232, 206),
-					Enum.Material.Neon
-				)
-			)
-			eye.Transparency = 1
-		end
-	end
-	-- outside: the black street
-	piece(room, "Outside", Vector3.new(W, 12, 1), at(0, 12, z + 10), C.black)
-	-- the Tall One: very tall, very thin, standing in the first moonbeam (hidden until it isn't)
-	local tall = Instance.new("Model")
-	tall.Name = "TallOne"
-	tall.Parent = room
-	for _, part in
-		{
-			{ Vector3.new(0.9, 9, 0.7), at(-8.6, 4.5, z + 4) },
-			{ Vector3.new(0.9, 9, 0.7), at(-7.4, 4.5, z + 4) },
-			{ Vector3.new(2.2, 7, 1), at(-8, 12.5, z + 4) },
-			{ Vector3.new(1.2, 1.6, 1.2), at(-8, 17, z + 4) },
-		}
-	do
-		local p = deco(piece(tall, "TallPart", part[1], part[2], C.black))
-		p.Transparency = 1
-	end
-end
-
--- The MISSING posters: a corkboard of the players infected last round, with their faces.
-local function missingPosters(room: Model): { Poster }
-	local zWall = D / 2 - 1.2
-	piece(
-		room,
-		"Corkboard",
-		Vector3.new(9, 7, 0.3),
-		at(17, 7.5, zWall + 0.1),
-		Color3.fromRGB(116, 88, 60),
-		Enum.Material.Cardboard
-	)
-	local posters = {}
-	for i = 0, 3 do
-		local col, row = i % 2, math.floor(i / 2)
-		local pos = at(14.9 + col * 4.2, 9.3 - row * 3.6, zWall - 0.15)
-		local paper = deco(
-			Kit.part(
-				room,
-				"Poster",
-				Vector3.new(3.4, 3.2, 0.1),
-				CFrame.lookAt(pos, pos + NORTH) * CFrame.Angles(0, 0, (col - 0.5) * 0.06),
-				C.paper,
-				Enum.Material.SmoothPlastic
-			)
-		)
-		local gui = Instance.new("SurfaceGui")
-		gui.Face = Enum.NormalId.Front
-		gui.PixelsPerStud = 50
-		gui.LightInfluence = 0.8
-		gui.Parent = paper
-		local header = Instance.new("TextLabel")
-		header.BackgroundTransparency = 1
-		header.Size = UDim2.fromScale(1, 0.2)
-		header.Font = Enum.Font.SpecialElite
-		header.TextScaled = true
-		header.TextColor3 = Color3.fromRGB(150, 20, 24)
-		header.Text = "MISSING"
-		header.Parent = gui
-		local face = Instance.new("ImageLabel")
-		face.Name = "Face"
-		face.BackgroundColor3 = Color3.fromRGB(150, 144, 130)
-		face.BorderSizePixel = 0
-		face.Position = UDim2.fromScale(0.2, 0.22)
-		face.Size = UDim2.fromScale(0.6, 0.56)
-		face.ImageColor3 = Color3.fromRGB(200, 196, 186) -- faded, like a photocopy
-		face.Parent = gui
-		local name = Instance.new("TextLabel")
-		name.Name = "Name"
-		name.BackgroundTransparency = 1
-		name.Position = UDim2.fromScale(0.05, 0.8)
-		name.Size = UDim2.fromScale(0.9, 0.18)
-		name.Font = Enum.Font.SpecialElite
-		name.TextScaled = true
-		name.TextColor3 = C.ink
-		name.Text = "HAVE YOU SEEN ME?"
-		name.Parent = gui
-		table.insert(posters, { face = face, name = name })
-	end
-	return posters
-end
-
---------------------------------------------------------------------------- warmth: light and comfort
-
-local WARM_FILL = Color3.fromRGB(255, 200, 140)
-
--- A warm wall lamp facing into the room: fill light for the corners (no shadows).
-local function sconce(room: Model, pos: Vector3, facing: Vector3, range: number?)
-	local cf = CFrame.lookAt(pos, pos + facing)
-	deco(
-		Kit.part(
-			room,
-			"SconcePlate",
-			Vector3.new(0.8, 1.2, 0.2),
-			cf * CFrame.new(0, 0, 0.1),
-			C.rust,
-			Enum.Material.Metal
-		)
-	)
-	local shade = deco(
-		Kit.part(
-			room,
-			"Sconce",
-			Vector3.new(0.9, 0.7, 0.6),
-			cf * CFrame.new(0, 0.2, -0.4),
-			C.butter,
-			Enum.Material.Neon
-		)
-	)
-	shade.Transparency = 0.15
-	softLight(shade, range or 22, 1, WARM_FILL).Name = "FillLight"
-end
-
--- A garland of warm fairy lights sagging between two points under the ceiling.
-local function stringLights(room: Model, a: Vector3, b: Vector3, sag: number)
-	local n = math.floor((b - a).Magnitude / 2.2)
-	local prev: Vector3? = nil
-	for i = 0, n do
-		local t = i / n
-		local p = a:Lerp(b, t) - Vector3.new(0, sag * 4 * t * (1 - t), 0)
-		if prev then
-			local length = (p - prev).Magnitude
-			deco(
-				Kit.part(
-					room,
-					"Wire",
-					Vector3.new(0.06, 0.06, length),
-					CFrame.lookAt(prev, p) * CFrame.new(0, 0, -length / 2),
-					Color3.fromRGB(24, 22, 20)
-				)
-			)
-		end
-		local bulb = deco(
-			piece(
-				room,
-				"FairyLight",
-				Vector3.new(0.35, 0.35, 0.35),
-				p - Vector3.new(0, 0.2, 0),
-				if i % 2 == 0 then C.butter else C.ember,
-				Enum.Material.Neon
-			)
-		)
-		bulb.Shape = Enum.PartType.Ball
-		if i % 8 == 4 then
-			softLight(bulb, 18, 0.7, WARM_FILL).Name = "FairyGlow"
-		end
-		prev = p
-	end
-end
-
-local function lights(room: Model)
-	sconce(room, at(-30.7, 10, -16), EAST) -- the foot of the stairs
-	sconce(room, at(-30.7, 12, 2), EAST) -- over the lockers
-	sconce(room, at(-30.7, 10.5, 15), EAST) -- over the jars
-	sconce(room, at(29, 10, -22.7), SOUTH) -- the corner by the door
-	sconce(room, at(30.7, 12, 4), WEST) -- between the shop and the mirror
-	sconce(room, at(-16.5, 13.6, -22.7), SOUTH, 16) -- over the outbreak map
-	sconce(room, at(-22, 13, 22.7), NORTH) -- over the radio desk
-	sconce(room, at(17, 12, 22.7), NORTH, 16) -- over the MISSING posters
-	stringLights(room, at(-28, 16.4, -4), at(28, 16.4, -4), 1.2)
-	stringLights(room, at(-28, 16.4, 14), at(28, 16.4, 14), 1.4)
-	-- a desk lamp on the radio desk
-	local deskTop = at(-14.5, 4.4, 21)
-	upright(
-		"DeskLampBase",
-		room,
-		0.2,
-		1,
-		deskTop + Vector3.new(0, 0.1, 0),
-		Color3.fromRGB(40, 60, 46),
-		Enum.Material.Metal
-	)
-	deco(
-		piece(
-			room,
-			"DeskLampNeck",
-			Vector3.new(0.15, 1.6, 0.15),
-			deskTop + Vector3.new(0, 0.9, 0),
-			Color3.fromRGB(40, 60, 46),
-			Enum.Material.Metal
-		)
-	)
-	local deskShade = deco(
-		piece(
-			room,
-			"DeskLamp",
-			Vector3.new(1.2, 0.5, 0.8),
-			deskTop + Vector3.new(0, 1.8, -0.3),
-			Color3.fromRGB(40, 70, 52),
-			Enum.Material.Metal
-		)
-	)
-	softLight(deskShade, 14, 1, WARM_FILL).Name = "FillLight"
-	-- vanity bulbs around the mirror
-	for i = 0, 4 do
-		local bulb = deco(
-			piece(
-				room,
-				"VanityBulb",
-				Vector3.new(0.4, 0.4, 0.4),
-				at(W / 2 - 1.4, 11.9, 10 + i),
-				C.butter,
-				Enum.Material.Neon
-			)
-		)
-		bulb.Shape = Enum.PartType.Ball
-		if i == 2 then
-			softLight(bulb, 12, 0.9, WARM_FILL).Name = "FillLight"
-		end
-	end
-	-- a warm bulb hanging in the shop cage
-	deco(piece(room, "CageCord", Vector3.new(0.06, 3, 0.06), at(28, 15.5, -9), Color3.fromRGB(20, 20, 20)))
-	local cageBulb = deco(
-		piece(room, "CageBulb", Vector3.new(0.6, 0.6, 0.6), at(28, 13.8, -9), C.butter, Enum.Material.Neon)
-	)
-	cageBulb.Shape = Enum.PartType.Ball
-	softLight(cageBulb, 14, 0.9, WARM_FILL).Name = "FillLight"
-end
-
--- The old leather couch facing the fire, a throw blanket over its back.
-local function couch(room: Model, cf: CFrame)
-	local leather = Color3.fromRGB(96, 56, 42)
-	Kit.part(
-		room,
-		"CouchSeat",
-		Vector3.new(12, 1.8, 3.6),
-		cf * CFrame.new(0, 1.4, 0),
-		leather,
-		Enum.Material.Leather
-	)
-	Kit.part(
-		room,
-		"CouchBack",
-		Vector3.new(12, 3.4, 1.1),
-		cf * CFrame.new(0, 3, 1.9),
-		leather,
-		Enum.Material.Leather
-	)
-	for _, x in { -6.3, 6.3 } do
-		Kit.part(
-			room,
-			"CouchArm",
-			Vector3.new(1, 2.8, 4.6),
-			cf * CFrame.new(x, 1.9, 0.2),
-			leather,
-			Enum.Material.Leather
-		)
-	end
-	for _, x in { -3.9, 0, 3.9 } do
-		Kit.part(
-			room,
-			"Cushion",
-			Vector3.new(3.8, 0.6, 3.2),
-			cf * CFrame.new(x, 2.6, -0.1),
-			Color3.fromRGB(110, 64, 48),
-			Enum.Material.Leather
-		)
-	end
-	for _, p in { { -4.6, 0.3 }, { 4.4, -0.25 } } do
-		Kit.part(
-			room,
-			"Pillow",
-			Vector3.new(1.8, 1.6, 0.6),
-			cf * CFrame.new(p[1], 3.5, 1.1) * CFrame.Angles(-0.2, p[2], 0),
-			Color3.fromRGB(176, 150, 112),
-			Enum.Material.Fabric
-		)
-	end
-	deco(
-		Kit.part(
-			room,
-			"Throw",
-			Vector3.new(4.6, 0.25, 2.8),
-			cf * CFrame.new(2.6, 4.4, 1.6) * CFrame.Angles(-0.9, 0, 0.05),
-			Color3.fromRGB(150, 84, 64),
-			Enum.Material.Fabric
-		)
-	)
-end
-
-local function armchair(room: Model, cf: CFrame)
-	local leather = Color3.fromRGB(86, 60, 46)
-	Kit.part(
-		room,
-		"ArmchairSeat",
-		Vector3.new(4.4, 1.8, 4),
-		cf * CFrame.new(0, 1.4, 0),
-		leather,
-		Enum.Material.Leather
-	)
-	Kit.part(
-		room,
-		"ArmchairBack",
-		Vector3.new(4.4, 3.6, 1),
-		cf * CFrame.new(0, 3.2, 1.6),
-		leather,
-		Enum.Material.Leather
-	)
-	for _, x in { -2.3, 2.3 } do
-		Kit.part(
-			room,
-			"ArmchairArm",
-			Vector3.new(0.8, 2.6, 4),
-			cf * CFrame.new(x, 1.9, 0),
-			leather,
-			Enum.Material.Leather
-		)
-	end
-	deco(
-		Kit.part(
-			room,
-			"Blanket",
-			Vector3.new(3.6, 0.25, 3),
-			cf * CFrame.new(0.3, 2.45, -0.2) * CFrame.Angles(0, 0.2, 0),
-			Color3.fromRGB(120, 130, 96),
-			Enum.Material.Fabric
-		)
-	)
-end
-
-local function comfort(room: Model)
-	-- rugs in front of the fire
-	deco(
-		piece(
-			room,
-			"RugBorder",
-			Vector3.new(17, 0.06, 12),
-			at(0, 1.23, -2),
-			Color3.fromRGB(70, 36, 30),
-			Enum.Material.Carpet
-		)
-	)
-	deco(
-		piece(
-			room,
-			"Rug",
-			Vector3.new(15.6, 0.07, 10.6),
-			at(0, 1.25, -2),
-			Color3.fromRGB(128, 64, 48),
-			Enum.Material.Carpet
-		)
-	)
-	couch(room, CFrame.lookAt(at(0, 1, -8.4), at(0, 1, 2)))
-	-- a pot of something warm on a grill over the drum, steaming
-	for _, dz in { -0.5, 0.5 } do
-		deco(
-			piece(
-				room,
-				"Grill",
-				Vector3.new(3.4, 0.15, 0.15),
-				at(0, 5.6, 2 + dz),
-				C.metal,
-				Enum.Material.Metal
-			)
-		)
-	end
-	local pot =
-		upright("Pot", room, 1.3, 1.7, at(0.5, 6.35, 2), Color3.fromRGB(46, 46, 50), Enum.Material.Metal)
-	pot.CanCollide = false
-	local steam = Instance.new("ParticleEmitter")
-	steam.Texture = "rbxasset://textures/particles/smoke_main.dds"
-	steam.Rate = 3
-	steam.Lifetime = NumberRange.new(2, 3)
-	steam.Speed = NumberRange.new(1, 2)
-	steam.SpreadAngle = Vector2.new(15, 15)
-	steam.Size =
-		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 2.4) })
-	steam.Transparency =
-		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.75), NumberSequenceKeypoint.new(1, 1) })
-	steam.Color = ColorSequence.new(Color3.fromRGB(230, 226, 220))
-	steam.Parent = pot
-	-- mugs on the crates in front of the couch
-	for _, p in { at(-3.1, 3.55, -4.9), at(3.6, 3.55, -5.4) } do
-		upright("Mug", room, 0.6, 0.5, p, Color3.fromRGB(176, 170, 156), Enum.Material.SmoothPlastic)
-	end
-	-- a guitar leaning on a cot
-	local g = CFrame.new(at(-11.6, 1, 4)) * CFrame.Angles(0, math.rad(70), math.rad(-14))
-	for _, b in { { 0.9, 2.2 }, { 2.4, 1.7 } } do
-		Kit.cylinder(
-			room,
-			"GuitarBody",
-			0.5,
-			b[2],
-			g * CFrame.new(0, b[1], 0) * CFrame.Angles(0, math.rad(90), 0),
-			Color3.fromRGB(150, 92, 50),
-			Enum.Material.Wood
-		)
-	end
-	Kit.part(
-		room,
-		"GuitarNeck",
-		Vector3.new(0.35, 3.4, 0.25),
-		g * CFrame.new(0, 4.6, 0),
-		Color3.fromRGB(60, 40, 28),
-		Enum.Material.Wood
-	)
-	-- the reading nook in the south-east corner: an armchair, a side table, a floor lamp
-	armchair(room, CFrame.lookAt(at(25.5, 1, 20.5), at(10, 1, 6)))
-	piece(room, "SideTable", Vector3.new(2, 2.8, 2), at(29.5, 2.4, 18.5), C.rotten, Enum.Material.Wood)
-	for i = 0, 2 do
-		piece(
-			room,
-			"Book",
-			Vector3.new(1.4, 0.3, 1),
-			at(29.5, 3.95 + i * 0.3, 18.5),
-			Color3.fromHSV(0.05 + i * 0.25, 0.4, 0.4),
-			Enum.Material.SmoothPlastic
-		)
-	end
-	upright(
-		"Mug",
-		room,
-		0.6,
-		0.5,
-		at(30, 4.1, 17.9),
-		Color3.fromRGB(150, 60, 50),
-		Enum.Material.SmoothPlastic
-	)
-	upright("FloorLampPole", room, 6.4, 0.25, at(29.6, 4.2, 21.6), C.metal, Enum.Material.Metal)
-	local shade = deco(
-		upright(
-			"FloorLampShade",
-			room,
-			1.4,
-			2.2,
-			at(29.6, 7.6, 21.6),
-			Color3.fromRGB(220, 190, 140),
-			Enum.Material.Fabric
-		)
-	)
-	shade.Transparency = 0.2
-	softLight(shade, 18, 1.1, WARM_FILL).Name = "FillLight"
-	-- wooden posts holding up the low ceiling
-	for _, p in { at(-18, 1, -10), at(18, 1, -10), at(-18, 1, 14), at(18, 1, 14) } do
-		piece(
-			room,
-			"Post",
-			Vector3.new(1.2, H, 1.2),
-			p + Vector3.new(0, H / 2, 0),
-			C.rotten,
-			Enum.Material.Wood
-		)
-		piece(
-			room,
-			"PostCap",
-			Vector3.new(2.6, 0.6, 2.6),
-			p + Vector3.new(0, H - 0.3, 0),
-			C.rotten,
-			Enum.Material.Wood
-		)
-	end
-end
-
---------------------------------------------------------------------------- the zombie apocalypse on the walls
-
--- A paper board with things drawn on it (made of UI frames, no image assets).
-local function paperBoard(
-	room: Model,
-	name: string,
-	size: Vector2,
-	pos: Vector3,
-	dir: Vector3,
-	color: Color3
-): SurfaceGui
-	local board = deco(
-		Kit.part(
-			room,
-			name,
-			Vector3.new(size.X, size.Y, 0.1),
-			CFrame.lookAt(pos, pos + dir),
-			color,
-			Enum.Material.SmoothPlastic
-		)
-	)
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Front
-	gui.PixelsPerStud = 40
-	gui.LightInfluence = 0.8
-	gui.Parent = board
-	return gui
-end
-
 local function frame(
 	parent: Instance,
 	pos: UDim2,
@@ -1589,287 +223,1329 @@ local function frame(
 	return f
 end
 
-local function text(
-	parent: Instance,
-	pos: UDim2,
-	size: UDim2,
-	value: string,
-	color: Color3,
-	font: Enum.Font
-): TextLabel
-	local t = Instance.new("TextLabel")
-	t.BackgroundTransparency = 1
-	t.Position = pos
-	t.Size = size
-	t.Text = value
-	t.TextColor3 = color
-	t.Font = font
-	t.TextScaled = true
-	t.Parent = parent
-	return t
+local function surface(part: BasePart, pixels: number, lightInfluence: number): SurfaceGui
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.PixelsPerStud = pixels
+	gui.LightInfluence = lightInfluence
+	gui.Parent = part
+	return gui
 end
 
--- The outbreak map of the town, hand-marked: streets, infected zones, crossed-out places, "HERE".
-local function outbreakMap(room: Model)
-	local gui = paperBoard(room, "OutbreakMap", Vector2.new(9, 6), at(-16.5, 9, -22.75), SOUTH, C.paper)
-	local ink, red = C.ink, Color3.fromRGB(170, 24, 30)
-	text(
-		gui,
-		UDim2.fromScale(0.04, 0.02),
-		UDim2.fromScale(0.92, 0.13),
-		"OUTBREAK - RAVEN HOLLOW",
-		ink,
-		Enum.Font.SpecialElite
+--------------------------------------------------------------------------- the room
+
+-- Concrete walls, hardwood floor, a dropped ceiling with a glowing LED cove and downlights, the
+-- front door opening in the north wall, glass along the south wall and the south half of the east.
+local function shell(room: Model)
+	piece(room, "Floor", Vector3.new(W, 2, D), BASE, C.wood, Enum.Material.WoodPlanks)
+	piece(room, "Ceiling", Vector3.new(W, 1, D), at(0, H + 1.5, 0), C.ceiling, Enum.Material.Concrete)
+	local function wall(size: Vector3, pos: Vector3)
+		piece(room, "Wall", size, pos, C.concrete, Enum.Material.Concrete)
+	end
+	-- north wall with the front door x -23..-17, up to y 11
+	local nz = -D / 2
+	wall(Vector3.new(9, H, 2), at(-27.5, 1 + H / 2, nz))
+	wall(Vector3.new(6, H - 10, 2), at(-20, 11 + (H - 10) / 2, nz))
+	wall(Vector3.new(49, H, 2), at(7.5, 1 + H / 2, nz))
+	wall(Vector3.new(2, H, D), at(-W / 2, 1 + H / 2, 0)) -- west
+	wall(Vector3.new(2, H, D / 2), at(W / 2, 1 + H / 2, -D / 4)) -- east, kitchen half
+	-- the glass: a low concrete ledge, a header, dark mullions, tinted panes
+	piece(room, "Ledge", Vector3.new(W, 1, 2.4), at(0, 1.5, D / 2 - 0.2), C.concrete, Enum.Material.Concrete)
+	piece(
+		room,
+		"Ledge",
+		Vector3.new(2.4, 1, D / 2),
+		at(W / 2 - 0.2, 1.5, D / 4),
+		C.concrete,
+		Enum.Material.Concrete
 	)
-	-- streets
+	piece(room, "Header", Vector3.new(W + 2, 1.4, 2), at(0, H + 0.3, D / 2), C.frame, Enum.Material.Metal)
+	piece(room, "Header", Vector3.new(2, 1.4, D / 2), at(W / 2, H + 0.3, D / 4), C.frame, Enum.Material.Metal)
+	for x = -W / 2, W / 2, 8 do
+		piece(
+			room,
+			"Mullion",
+			Vector3.new(0.6, H - 1, 0.6),
+			at(x, 1 + (H - 1) / 2 + 0.5, D / 2),
+			C.frame,
+			Enum.Material.Metal
+		)
+	end
+	for z = 0, D / 2, 8 do
+		piece(
+			room,
+			"Mullion",
+			Vector3.new(0.6, H - 1, 0.6),
+			at(W / 2, 1 + (H - 1) / 2 + 0.5, z),
+			C.frame,
+			Enum.Material.Metal
+		)
+	end
+	-- the dropped ceiling band along the solid walls, a warm LED strip on its inner edge
+	local soffitY = H - 0.25
 	for _, s in
 		{
-			{ 0.05, 0.42, 0.9, 0.035 },
-			{ 0.05, 0.72, 0.9, 0.035 },
-			{ 0.3, 0.16, 0.025, 0.8 },
-			{ 0.66, 0.16, 0.025, 0.8 },
+			{ Vector3.new(W, 1.5, 5), at(0, soffitY + 0.75, -D / 2 + 2.5) },
+			{ Vector3.new(5, 1.5, D - 5), at(-W / 2 + 2.5, soffitY + 0.75, 2.5) },
+			{ Vector3.new(5, 1.5, D / 2 - 5), at(W / 2 - 2.5, soffitY + 0.75, -D / 4 + 2.5) },
 		}
 	do
-		frame(gui, UDim2.fromScale(s[1], s[2]), UDim2.fromScale(s[3], s[4]), Color3.fromRGB(120, 112, 100))
+		deco(piece(room, "Soffit", s[1], s[2], C.ceiling, Enum.Material.Concrete))
 	end
-	-- blocks
-	for _, b in
+	local function led(a: Vector3, b: Vector3)
+		local strip = rod(room, "LEDStrip", a, b, 0.2, C.led, Enum.Material.Neon)
+		strip.CastShadow = false
+	end
+	led(at(-W / 2 + 5, soffitY + 0.1, -D / 2 + 5.1), at(W / 2 - 5, soffitY + 0.1, -D / 2 + 5.1))
+	led(at(-W / 2 + 5.1, soffitY + 0.1, -D / 2 + 5), at(-W / 2 + 5.1, soffitY + 0.1, D / 2 - 1))
+	led(at(W / 2 - 5.1, soffitY + 0.1, -D / 2 + 5), at(W / 2 - 5.1, soffitY + 0.1, -0.5))
+	for _, p in
 		{
-			{ 0.08, 0.2 },
-			{ 0.38, 0.2 },
-			{ 0.72, 0.2 },
-			{ 0.08, 0.5 },
-			{ 0.38, 0.5 },
-			{ 0.72, 0.5 },
-			{ 0.08, 0.79 },
-			{ 0.38, 0.79 },
-			{ 0.72, 0.79 },
+			at(-20, soffitY - 0.4, -18),
+			at(0, soffitY - 0.4, -18),
+			at(20, soffitY - 0.4, -18),
+			at(-26, soffitY - 0.4, 0),
+			at(-26, soffitY - 0.4, 16),
 		}
 	do
-		frame(gui, UDim2.fromScale(b[1], b[2]), UDim2.fromScale(0.18, 0.17), Color3.fromRGB(176, 166, 146))
+		local glow = deco(piece(room, "CoveGlow", Vector3.new(0.4, 0.4, 0.4), p, C.led, Enum.Material.Neon))
+		glow.Transparency = 1
+		softLight(glow, 20, 0.5, C.led).Name = "CoveLight"
 	end
-	-- infected zones and crossed-out places
-	frame(gui, UDim2.fromScale(0.62, 0.12), UDim2.fromScale(0.36, 0.45), red, true, 0.75)
-	frame(gui, UDim2.fromScale(0.02, 0.62), UDim2.fromScale(0.3, 0.36), red, true, 0.75)
-	text(
-		gui,
-		UDim2.fromScale(0.68, 0.24),
-		UDim2.fromScale(0.24, 0.12),
-		"INFECTED",
-		red,
-		Enum.Font.PermanentMarker
-	)
-	for _, x in { { 0.42, 0.22 }, { 0.12, 0.52 }, { 0.78, 0.8 }, { 0.12, 0.82 } } do
-		text(
-			gui,
-			UDim2.fromScale(x[1], x[2]),
-			UDim2.fromScale(0.1, 0.13),
-			"X",
-			red,
-			Enum.Font.PermanentMarker
-		)
+	-- recessed downlights in the band
+	for _, p in
+		{
+			at(-26, soffitY, -20.5),
+			at(-10, soffitY, -20.5),
+			at(10, soffitY, -20.5),
+			at(26, soffitY, -20.5),
+			at(-28.5, soffitY, -6),
+			at(-28.5, soffitY, 10),
+			at(28.5, soffitY, -12),
+		}
+	do
+		local can = deco(upright("Downlight", room, 0.15, 1, p, C.warm, Enum.Material.Neon))
+		local beam = Instance.new("SpotLight")
+		beam.Face = Enum.NormalId.Left -- the cylinder lies on its side: Left points down
+		beam.Angle = 70
+		beam.Range = 16
+		beam.Brightness = 1.1
+		beam.Color = C.warm
+		beam.Shadows = false
+		beam.Parent = can
 	end
-	text(
-		gui,
-		UDim2.fromScale(0.36, 0.55),
-		UDim2.fromScale(0.22, 0.12),
-		"WE ARE HERE",
-		Color3.fromRGB(30, 90, 50),
-		Enum.Font.PermanentMarker
+end
+
+--------------------------------------------------------------------------- north: the TV wall
+
+local function pottedPlant(room: Model, pos: Vector3, height: number, rng: Random)
+	upright(
+		"Pot",
+		room,
+		2.6,
+		1.8,
+		pos + Vector3.new(0, 1.3, 0),
+		Color3.fromRGB(70, 62, 56),
+		Enum.Material.Slate
 	)
-	-- pins
-	for _, p in { { -19.6, 10.4 }, { -13.6, 10.6 }, { -18.9, 7.2 }, { -14.4, 7.6 }, { -16.4, 8.6 } } do
-		local pin = deco(
+	upright(
+		"Stem",
+		room,
+		height,
+		0.2,
+		pos + Vector3.new(0, 2.6 + height / 2, 0),
+		Color3.fromRGB(70, 60, 40),
+		Enum.Material.Wood
+	)
+	-- leaves: dull, browning at the edges (nobody waters them any more)
+	for _ = 1, 9 do
+		local leaf = pos
+			+ Vector3.new(
+				rng:NextNumber(-1.3, 1.3),
+				2.6 + height * rng:NextNumber(0.5, 1.05),
+				rng:NextNumber(-1.3, 1.3)
+			)
+		local p = deco(
 			piece(
 				room,
-				"MapPin",
-				Vector3.new(0.3, 0.3, 0.3),
-				at(p[1], p[2], -22.6),
-				if p[1] == -16.4 then Color3.fromRGB(40, 140, 60) else Color3.fromRGB(190, 30, 30)
+				"Leaves",
+				Vector3.new(1.4, 1, 1.4),
+				leaf,
+				Color3.fromRGB(58, 72, 40):Lerp(Color3.fromRGB(96, 78, 44), rng:NextNumber(0, 0.7)),
+				Enum.Material.Grass
 			)
 		)
-		pin.Shape = Enum.PartType.Ball
+		p.Shape = Enum.PartType.Ball
 	end
 end
 
--- Spray paint and chalk on the walls.
-local function graffiti(room: Model)
-	local spray = Enum.Font.PermanentMarker
-	sign(room, "Graffiti", Vector2.new(8, 3.2), at(-30.85, 14.2, -8), EAST, "DAY 47\n||||/ ||||/ ||||/ ||", {
-		text = Color3.fromRGB(214, 208, 196),
-		font = spray,
-	})
-	sign(room, "Graffiti", Vector2.new(7, 2.4), at(-30.85, 12.8, -20), EAST, "SAFE ZONE", {
-		text = Color3.fromRGB(110, 200, 120),
-		font = spray,
-	})
-	sign(room, "Graffiti", Vector2.new(7, 2.2), at(30.85, 14.8, 4), WEST, "DON'T GET BIT", {
-		text = Color3.fromRGB(196, 44, 52),
-		font = spray,
-	})
-	sign(room, "Graffiti", Vector2.new(5.6, 2), at(0, 12, D / 2 - 1.15), NORTH, "SHHH...\nTHEY HEAR YOU", {
-		text = Color3.fromRGB(196, 44, 52),
-		font = spray,
-	})
+-- A framed picture: a little scene drawn with UI frames. `scene` draws into the canvas.
+local function picture(room: Model, pos: Vector3, dir: Vector3, size: Vector2, scene: (Frame) -> ())
+	Kit.part(
+		room,
+		"PictureFrame",
+		Vector3.new(size.X + 0.4, size.Y + 0.4, 0.2),
+		CFrame.lookAt(pos, pos + dir),
+		Color3.fromRGB(26, 24, 22),
+		Enum.Material.Wood
+	)
+	local mount = deco(
+		Kit.part(
+			room,
+			"Picture",
+			Vector3.new(size.X, size.Y, 0.05),
+			CFrame.lookAt(pos, pos + dir) * CFrame.new(0, 0, -0.13),
+			C.paper
+		)
+	)
+	local canvas = frame(
+		surface(mount, 40, 0.8),
+		UDim2.fromScale(0.06, 0.06),
+		UDim2.fromScale(0.88, 0.88),
+		Color3.fromRGB(40, 42, 50)
+	)
+	scene(canvas)
 end
 
--- Yellow-black hazard stripes around the deploy door and a stencilled warning on it.
-local function hazardDoor(room: Model)
-	local z = -D / 2 + 1.75
-	local yellow, black = Color3.fromRGB(226, 186, 40), Color3.fromRGB(22, 20, 18)
-	for _, x in { 17.6, 26.4 } do
-		for i = 0, 8 do
-			deco(
-				piece(
-					room,
-					"HazardStripe",
-					Vector3.new(0.82, 1.4, 0.06),
-					at(x, 1.7 + i * 1.4, z),
-					if i % 2 == 0 then yellow else black,
-					Enum.Material.Metal
-				)
+-- Lighthouse at night, its light red.
+local function lighthouseScene(c: Frame)
+	frame(c, UDim2.fromScale(0, 0.62), UDim2.fromScale(1, 0.38), Color3.fromRGB(26, 34, 44))
+	frame(c, UDim2.fromScale(0.55, 0.3), UDim2.fromScale(0.1, 0.34), Color3.fromRGB(180, 176, 166))
+	frame(c, UDim2.fromScale(0.54, 0.22), UDim2.fromScale(0.12, 0.09), Color3.fromRGB(220, 40, 40), true)
+end
+
+-- A hallway... with someone pale standing at the end of it.
+local function hallwayScene(c: Frame)
+	frame(c, UDim2.fromScale(0.3, 0.2), UDim2.fromScale(0.4, 0.8), Color3.fromRGB(70, 64, 58))
+	frame(c, UDim2.fromScale(0.42, 0.35), UDim2.fromScale(0.16, 0.45), Color3.fromRGB(20, 18, 18))
+	frame(c, UDim2.fromScale(0.47, 0.38), UDim2.fromScale(0.06, 0.07), Color3.fromRGB(214, 214, 204), true)
+	frame(c, UDim2.fromScale(0.46, 0.46), UDim2.fromScale(0.08, 0.26), Color3.fromRGB(196, 196, 186))
+end
+
+-- The TV over the fireplace: the vote board, on an emergency broadcast. Returns the map slots.
+local function tvWall(room: Model, rng: Random): { { label: TextLabel, prompt: ProximityPrompt } }
+	local z = -D / 2 + 1
+	-- the dark wood-slat wall behind
+	for x = -11, 11, 1 do
+		Kit.part(
+			room,
+			"Slat",
+			Vector3.new(0.8, H - 1.5, 0.3),
+			CFrame.new(at(x, 1 + (H - 1.5) / 2, z + 0.15)),
+			C.slats,
+			Enum.Material.Wood
+		)
+	end
+	-- the linear fireplace: a dark box, a long glowing bed, flames along it
+	piece(
+		room,
+		"FireBox",
+		Vector3.new(16, 3.6, 1.6),
+		at(0, 3, z + 0.9),
+		Color3.fromRGB(14, 12, 12),
+		Enum.Material.SmoothPlastic
+	)
+	piece(
+		room,
+		"Hearth",
+		Vector3.new(19, 0.5, 3.2),
+		at(0, 1.25, z + 1.6),
+		Color3.fromRGB(150, 144, 134),
+		Enum.Material.Marble
+	)
+	local bed = deco(
+		piece(room, "DrumFire", Vector3.new(13.6, 0.4, 0.8), at(0, 2.1, z + 1.3), C.ember, Enum.Material.Neon)
+	)
+	Kit.light(bed, 26, 1.6, Color3.fromRGB(255, 150, 80)).Name = "FireLight"
+	for x = -5, 5, 2.5 do
+		local spot = deco(piece(room, "Flame", Vector3.new(1, 0.2, 0.5), at(x, 2.4, z + 1.3), C.ember))
+		spot.Transparency = 1
+		local fire = Instance.new("Fire")
+		fire.Size = 2.5
+		fire.Heat = 4
+		fire.Color = Color3.fromRGB(255, 150, 60)
+		fire.SecondaryColor = Color3.fromRGB(255, 70, 20)
+		fire.Parent = spot
+	end
+	deco(
+		piece(
+			room,
+			"FireGlass",
+			Vector3.new(15, 3, 0.1),
+			at(0, 3, z + 1.75),
+			Color3.fromRGB(60, 50, 50),
+			Enum.Material.Glass
+		)
+	).Transparency =
+		0.7
+	-- the floating shelf between fireplace and TV
+	piece(room, "TVShelf", Vector3.new(22, 0.6, 2.2), at(0, 5.4, z + 1.1), C.shelf, Enum.Material.Wood)
+	-- the TV: black bezel, a screen of cold static with the vote on it
+	piece(
+		room,
+		"TV",
+		Vector3.new(16.4, 9.4, 0.5),
+		at(0, 10.6, z + 0.55),
+		C.frame,
+		Enum.Material.SmoothPlastic
+	)
+	local screen = deco(
+		piece(
+			room,
+			"CRTScreen",
+			Vector3.new(15.8, 8.8, 0.08),
+			at(0, 10.6, z + 0.84),
+			Color3.fromRGB(60, 66, 78),
+			Enum.Material.Neon
+		)
+	)
+	screen.Transparency = 0.15
+	softLight(screen, 22, 1, C.signal)
+	local gui = surface(screen, 30, 0)
+	local static = frame(gui, UDim2.fromScale(0, 0), UDim2.fromScale(1, 1), Color3.fromRGB(26, 30, 38))
+	for _ = 1, 40 do
+		frame(
+			static,
+			UDim2.fromScale(rng:NextNumber(0, 0.98), rng:NextNumber(0, 0.98)),
+			UDim2.fromScale(rng:NextNumber(0.01, 0.06), 0.006),
+			Color3.fromRGB(120, 128, 140),
+			false,
+			0.5
+		)
+	end
+	frame(gui, UDim2.fromScale(0, 0.04), UDim2.fromScale(1, 0.12), Color3.fromRGB(150, 20, 26))
+	local banner = Instance.new("TextLabel")
+	banner.BackgroundTransparency = 1
+	banner.Position = UDim2.fromScale(0.02, 0.05)
+	banner.Size = UDim2.fromScale(0.96, 0.1)
+	banner.Font = Enum.Font.GothamBlack
+	banner.TextScaled = true
+	banner.TextColor3 = Color3.fromRGB(255, 240, 230)
+	banner.Text = "EMERGENCY BROADCAST - STAY INDOORS - VOTE: WHERE DO WE GO TONIGHT?"
+	banner.Parent = gui
+	-- the three map slots on the screen, and the three pads on the floor in front
+	local slots = {}
+	for i, x in { -5.2, 0, 5.2 } do
+		local label = sign(room, `MapSlot{i}`, Vector2.new(4.8, 5), at(x, 9.8, z + 0.95), SOUTH, "", {
+			text = Color3.fromRGB(230, 236, 246),
+			board = Color3.fromRGB(34, 40, 52),
+			glow = true,
+		})
+		local pz = -14
+		local pad =
+			deco(upright("VotePad", room, 0.08, 5, at(x * 1.15, 1.05, pz), C.signal, Enum.Material.Neon))
+		pad.Transparency = 0.75
+		local ring = deco(
+			upright(
+				"VoteRing",
+				room,
+				0.06,
+				5.6,
+				at(x * 1.15, 1.03, pz),
+				Color3.fromRGB(30, 34, 44),
+				Enum.Material.SmoothPlastic
 			)
+		)
+		ring.Transparency = 0.2
+		local vote = prompt(pad, "Vote", "Map", "MapVotePrompt", 7)
+		vote.Enabled = false
+		vote:SetAttribute("Slot", i)
+		table.insert(slots, { label = label, prompt = vote })
+	end
+	-- floating side shelves with cube lamps, pictures above, plants on the floor
+	for _, side in { -1, 1 } do
+		local x = side * 13.5
+		piece(room, "SideShelf", Vector3.new(5, 0.4, 1.6), at(x, 8, z + 0.8), C.shelf, Enum.Material.Wood)
+		local cube = deco(
+			piece(
+				room,
+				"CubeLamp",
+				Vector3.new(1.1, 1.1, 1.1),
+				at(x - side * 1.5, 8.75, z + 0.9),
+				C.warm,
+				Enum.Material.Neon
+			)
+		)
+		cube.Transparency = 0.1
+		softLight(cube, 16, 0.9, C.warm).Name = "LampLight"
+		picture(
+			room,
+			at(x, 12, z + 0.15),
+			SOUTH,
+			Vector2.new(2.6, 3.4),
+			if side < 0 then lighthouseScene else hallwayScene
+		)
+		pottedPlant(room, at(x - side * 0.5, 1, z + 2.5), 4, rng)
+	end
+	return slots
+end
+
+-- The front door (the deploy door): warm wood with frosted glass slits, a lever handle, a red EXIT
+-- sign above it, the hallway beyond full of lavender fog. Returns the countdown display.
+local function frontDoor(room: Model): TextLabel
+	local z = -D / 2
+	local door = Instance.new("Model")
+	door.Name = "DeployDoor"
+	door.Parent = room
+	for _, f in
+		{
+			{ Vector3.new(0.6, 10.3, 2.2), at(-23.2, 6.15, z) },
+			{ Vector3.new(0.6, 10.3, 2.2), at(-16.8, 6.15, z) },
+			{ Vector3.new(7, 0.6, 2.2), at(-20, 11.3, z) },
+		}
+	do
+		piece(room, "DoorFrame", f[1], f[2], Color3.fromRGB(120, 112, 104), Enum.Material.Concrete)
+	end
+	piece(
+		door,
+		"DoorPanel",
+		Vector3.new(6, 10, 0.5),
+		at(-20, 6, z + 0.4),
+		Color3.fromRGB(150, 88, 50),
+		Enum.Material.WoodPlanks
+	)
+	for _, y in { 3, 5.2, 7.4, 9.6 } do
+		local slit = piece(
+			door,
+			"DoorGlass",
+			Vector3.new(3.6, 0.9, 0.12),
+			at(-20.4, y, z + 0.7),
+			Color3.fromRGB(200, 196, 186),
+			Enum.Material.Glass
+		)
+		slit.Transparency = 0.3
+	end
+	-- the lever handle (the client turns it: someone outside trying the door)
+	local handle = Instance.new("Model")
+	handle.Name = "DoorWheel"
+	handle.Parent = door
+	local hub = at(-17.9, 6, z + 0.85)
+	local hubPart = Kit.cylinder(
+		handle,
+		"WheelHub",
+		0.3,
+		0.45,
+		CFrame.new(hub) * CFrame.Angles(0, math.rad(90), 0),
+		Color3.fromRGB(30, 30, 32),
+		Enum.Material.Metal
+	)
+	Kit.part(
+		handle,
+		"Lever",
+		Vector3.new(1.3, 0.22, 0.22),
+		CFrame.new(hub + Vector3.new(-0.6, 0, 0.15)),
+		Color3.fromRGB(30, 30, 32),
+		Enum.Material.Metal
+	)
+	handle.PrimaryPart = hubPart
+	-- DO NOT OPEN, sprayed across it
+	sign(door, "DoorWarning", Vector2.new(5.4, 1.6), at(-20, 6.9, z + 0.72), SOUTH, "DO NOT OPEN", {
+		text = Color3.fromRGB(200, 30, 36),
+		font = Enum.Font.PermanentMarker,
+	})
+	-- beyond: the hallway, the fog
+	piece(room, "DoorOutside", Vector3.new(6, 10, 1), at(-20, 6, z - 4), C.black)
+	local fog = deco(
+		piece(room, "DoorFog", Vector3.new(5.6, 9.6, 2.4), at(-20, 6, z - 2), C.lavender, Enum.Material.Neon)
+	)
+	fog.Transparency = 0.55
+	fog.CastShadow = false
+	local fogLight = softLight(fog, 26, 2.2, C.lavender)
+	fogLight.Name = "FogLight"
+	fogLight.Enabled = false
+	local vaporAt = deco(piece(room, "DoorVapor", Vector3.new(5, 1, 1), at(-20, 4, z + 2), C.black))
+	vaporAt.Transparency = 1
+	local vapor = Instance.new("ParticleEmitter")
+	vapor.Name = "Vapor"
+	vapor.Enabled = false
+	vapor.Rate = 10
+	vapor.Lifetime = NumberRange.new(2, 3)
+	vapor.Speed = NumberRange.new(1, 2.5)
+	vapor.EmissionDirection = Enum.NormalId.Back
+	vapor.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 4) })
+	vapor.Transparency =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 1) })
+	vapor.Color = ColorSequence.new(Color3.fromRGB(210, 205, 230))
+	vapor.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	vapor.Parent = vaporAt
+	-- the red EXIT sign: the room's beacon
+	local exit = deco(
+		piece(
+			room,
+			"DoorBulb",
+			Vector3.new(2.6, 1, 0.3),
+			at(-20, 14.6, z + 1.2),
+			Color3.fromRGB(60, 10, 12),
+			Enum.Material.SmoothPlastic
+		)
+	)
+	softLight(exit, 14, 1.4, C.danger)
+	sign(room, "ExitText", Vector2.new(2.4, 0.8), at(-20, 14.6, z + 1.4), SOUTH, "EXIT", {
+		text = C.danger,
+		font = Enum.Font.GothamBlack,
+		glow = true,
+	})
+	-- the countdown display over the door
+	return sign(
+		room,
+		"ModeSign",
+		Vector2.new(8, 1.5),
+		at(-20, 12.8, z + 1.15),
+		SOUTH,
+		"WAITING FOR PLAYERS",
+		{
+			text = Color3.fromRGB(255, 70, 70),
+			board = Color3.fromRGB(14, 12, 14),
+			font = Enum.Font.Code,
+			glow = true,
+		}
+	)
+end
+
+-- The MISSING posters on a corkboard left of the door.
+local function missingPosters(room: Model): { Poster }
+	local zWall = -D / 2 + 1.15
+	piece(
+		room,
+		"Corkboard",
+		Vector3.new(6.6, 7, 0.3),
+		at(-27.5, 8, zWall - 0.1),
+		Color3.fromRGB(116, 88, 60),
+		Enum.Material.Cardboard
+	)
+	local posters = {}
+	for i = 0, 3 do
+		local col, row = i % 2, math.floor(i / 2)
+		local pos = at(-29 + col * 3, 9.7 - row * 3.3, zWall + 0.1)
+		local paper = deco(
+			Kit.part(
+				room,
+				"Poster",
+				Vector3.new(2.7, 3, 0.08),
+				CFrame.lookAt(pos, pos + SOUTH) * CFrame.Angles(0, 0, (col - 0.5) * 0.06),
+				C.paper
+			)
+		)
+		local gui = surface(paper, 50, 0.8)
+		local header = Instance.new("TextLabel")
+		header.BackgroundTransparency = 1
+		header.Size = UDim2.fromScale(1, 0.2)
+		header.Font = Enum.Font.SpecialElite
+		header.TextScaled = true
+		header.TextColor3 = Color3.fromRGB(150, 20, 24)
+		header.Text = "MISSING"
+		header.Parent = gui
+		local face = Instance.new("ImageLabel")
+		face.Name = "Face"
+		face.BackgroundColor3 = Color3.fromRGB(150, 144, 130)
+		face.BorderSizePixel = 0
+		face.Position = UDim2.fromScale(0.2, 0.22)
+		face.Size = UDim2.fromScale(0.6, 0.56)
+		face.ImageColor3 = Color3.fromRGB(200, 196, 186)
+		face.Parent = gui
+		local name = Instance.new("TextLabel")
+		name.Name = "Name"
+		name.BackgroundTransparency = 1
+		name.Position = UDim2.fromScale(0.05, 0.8)
+		name.Size = UDim2.fromScale(0.9, 0.18)
+		name.Font = Enum.Font.SpecialElite
+		name.TextScaled = true
+		name.TextColor3 = C.ink
+		name.Text = "HAVE YOU SEEN ME?"
+		name.Parent = gui
+		table.insert(posters, { face = face, name = name })
+	end
+	return posters
+end
+
+--------------------------------------------------------------------------- the living room
+
+-- One run of the sectional: base, seat cushions with rounded fronts, leaning back cushions.
+-- `cf` stands at the floor in the middle of the run, looking where people sitting look.
+local function sofaRun(room: Model, cf: CFrame, length: number)
+	Kit.part(
+		room,
+		"SofaBase",
+		Vector3.new(length, 1.4, 4.6),
+		cf * CFrame.new(0, 0.9, 0),
+		C.fabricDark,
+		Enum.Material.Fabric
+	)
+	Kit.part(
+		room,
+		"SofaBack",
+		Vector3.new(length, 2.4, 1),
+		cf * CFrame.new(0, 2.6, 1.8),
+		C.fabricDark,
+		Enum.Material.Fabric
+	)
+	local n = math.max(1, math.floor(length / 3.6))
+	local w = length / n
+	for i = 0, n - 1 do
+		local x = -length / 2 + w / 2 + i * w
+		Kit.part(
+			room,
+			"SeatCushion",
+			Vector3.new(w - 0.15, 0.9, 3.4),
+			cf * CFrame.new(x, 2.05, -0.4),
+			C.fabric,
+			Enum.Material.Fabric
+		)
+		Kit.cylinder(
+			room,
+			"CushionRoll",
+			w - 0.15,
+			0.9,
+			cf * CFrame.new(x, 2.05, -2.1),
+			C.fabric,
+			Enum.Material.Fabric
+		)
+		Kit.part(
+			room,
+			"BackCushion",
+			Vector3.new(w - 0.25, 2.6, 1.1),
+			cf * CFrame.new(x, 3.6, 1.1) * CFrame.Angles(-0.18, 0, 0),
+			C.fabric,
+			Enum.Material.Fabric
+		)
+	end
+end
+
+-- A geometric pendant: a wire octahedron cage around a bare bulb, on a long cord.
+local function pendant(room: Model, pos: Vector3, size: number, name: string, shadows: boolean)
+	rod(
+		room,
+		"PendantCord",
+		at(pos.X - BASE.X, H + 1, pos.Z - BASE.Z),
+		pos + Vector3.new(0, size, 0),
+		0.06,
+		Color3.fromRGB(20, 20, 20)
+	)
+	local v = {
+		pos + Vector3.new(0, size, 0),
+		pos - Vector3.new(0, size, 0),
+		pos + Vector3.new(size, 0, 0),
+		pos - Vector3.new(size, 0, 0),
+		pos + Vector3.new(0, 0, size),
+		pos - Vector3.new(0, 0, size),
+	}
+	for _, e in
+		{
+			{ 1, 3 },
+			{ 1, 4 },
+			{ 1, 5 },
+			{ 1, 6 },
+			{ 2, 3 },
+			{ 2, 4 },
+			{ 2, 5 },
+			{ 2, 6 },
+			{ 3, 5 },
+			{ 5, 4 },
+			{ 4, 6 },
+			{ 6, 3 },
+		}
+	do
+		rod(room, "PendantCage", v[e[1]], v[e[2]], 0.08, Color3.fromRGB(150, 116, 60))
+	end
+	local bulb = deco(piece(room, name, Vector3.new(0.5, 0.5, 0.5), pos, C.warm, Enum.Material.Neon))
+	bulb.Shape = Enum.PartType.Ball
+	local light = Kit.light(bulb, 30, if shadows then 1.8 else 0.9, C.warm)
+	light.Shadows = shadows
+	light.Name = if shadows then "BulbLight" else "PendantLight"
+end
+
+local function livingRoom(room: Model, rng: Random)
+	-- the shag rug
+	deco(piece(room, "Rug", Vector3.new(30, 0.12, 24), at(-3, 1.06, 2), C.rug, Enum.Material.Carpet))
+	-- the L-sectional: the long run faces the TV, the short run faces east, a corner joins them
+	sofaRun(room, CFrame.lookAt(at(-3, 1, 11.3), at(-3, 1, 0)), 24)
+	sofaRun(room, CFrame.lookAt(at(-17.3, 1, 1.4), at(0, 1, 1.4)), 14.4)
+	piece(
+		room,
+		"SofaCorner",
+		Vector3.new(4.6, 2.5, 4.6),
+		at(-17.3, 2.25, 11.3),
+		C.fabric,
+		Enum.Material.Fabric
+	)
+	piece(room, "SofaArm", Vector3.new(1, 2.8, 4.6), at(9.5, 2.4, 11.3), C.fabricDark, Enum.Material.Fabric)
+	piece(room, "SofaArm", Vector3.new(4.6, 2.8, 1), at(-17.3, 2.4, -6.3), C.fabricDark, Enum.Material.Fabric)
+	-- a throw blanket and a couple of pillows left where people slept
+	deco(
+		Kit.part(
+			room,
+			"Throw",
+			Vector3.new(5, 0.25, 3.2),
+			CFrame.new(at(-8, 3.2, 10)) * CFrame.Angles(0, 0.2, 0.05),
+			Color3.fromRGB(120, 70, 56),
+			Enum.Material.Fabric
+		)
+	)
+	for _, p in { at(2, 3.4, 11.5), at(-16.8, 3.4, -2) } do
+		Kit.part(
+			room,
+			"Pillow",
+			Vector3.new(2, 1.6, 0.7),
+			CFrame.new(p) * CFrame.Angles(0, rng:NextNumber(-0.4, 0.4), 0),
+			Color3.fromRGB(150, 120, 90),
+			Enum.Material.Fabric
+		)
+	end
+	-- the leather ottoman with a red wood tray, glowing softly underneath
+	piece(room, "Ottoman", Vector3.new(9, 2.2, 7), at(-3, 2.2, 1), C.leather, Enum.Material.Leather)
+	local under = deco(
+		piece(room, "OttomanGlow", Vector3.new(8.4, 0.1, 6.4), at(-3, 1.12, 1), C.led, Enum.Material.Neon)
+	)
+	under.Transparency = 0.5
+	piece(
+		room,
+		"Tray",
+		Vector3.new(7, 0.3, 5),
+		at(-3, 3.45, 1),
+		Color3.fromRGB(120, 40, 28),
+		Enum.Material.Wood
+	)
+	piece(
+		room,
+		"TrayInset",
+		Vector3.new(6.2, 0.1, 4.2),
+		at(-3, 3.62, 1),
+		Color3.fromRGB(90, 30, 22),
+		Enum.Material.Wood
+	)
+	piece(
+		room,
+		"Remote",
+		Vector3.new(0.5, 0.15, 2),
+		at(-4.6, 3.75, 1.4),
+		Color3.fromRGB(20, 20, 22),
+		Enum.Material.SmoothPlastic
+	)
+	for i, p in { at(-1.4, 3.7, 0), at(-0.6, 3.7, 0.4), at(-2.2, 3.7, 2.4) } do
+		upright(
+			"Candle",
+			room,
+			0.6,
+			0.35,
+			p + Vector3.new(0, 0.3, 0),
+			Color3.fromRGB(214, 204, 180),
+			Enum.Material.SmoothPlastic
+		)
+		local flame = deco(
+			piece(
+				room,
+				"CandleFlame",
+				Vector3.new(0.15, 0.3, 0.15),
+				p + Vector3.new(0, 0.75, 0),
+				C.ember,
+				Enum.Material.Neon
+			)
+		)
+		if i <= 2 then
+			softLight(flame, 8, 0.5, C.ember).Name = "CandleLight"
 		end
 	end
+	-- three geometric pendants over the ottoman (the middle one is the room's main light)
+	pendant(room, at(-6, 12.2, -1), 1, "PendantBulb", false)
+	pendant(room, at(-3, 10.6, 2), 1.1, "HearthBulb", true)
+	pendant(room, at(0.5, 11.6, -0.5), 0.9, "PendantBulb", false)
+	-- the bean bag by the TV, a teddy bear slumped on it with one button eye
+	local bag = piece(
+		room,
+		"BeanBag",
+		Vector3.new(4.4, 3, 4.4),
+		at(12.5, 2.4, -15.5),
+		Color3.fromRGB(120, 76, 44),
+		Enum.Material.Fabric
+	)
+	bag.Shape = Enum.PartType.Ball
+	local bear = Color3.fromRGB(150, 110, 72)
+	deco(piece(room, "Teddy", Vector3.new(1.4, 1.6, 1.2), at(12.3, 4.4, -15.3), bear, Enum.Material.Fabric)).Shape =
+		Enum.PartType.Ball
+	deco(
+		piece(room, "TeddyHead", Vector3.new(1.1, 1.1, 1.1), at(12.5, 5.5, -15.5), bear, Enum.Material.Fabric)
+	).Shape =
+		Enum.PartType.Ball
+	deco(
+		piece(
+			room,
+			"TeddyEye",
+			Vector3.new(0.18, 0.18, 0.1),
+			at(12.25, 5.6, -14.98),
+			Color3.fromRGB(10, 10, 10)
+		)
+	)
+	-- a tall plant by the window, dying
+	pottedPlant(room, at(-27, 1, 20), 6, rng)
+	pottedPlant(room, at(27, 1, 20), 5, rng)
+end
+
+--------------------------------------------------------------------------- west: shelves, painting, jars, mirror
+
+local JAR_LOOK = {
+	Runner = Vector3.new(0.35, 1.5, 0.3),
+	Tank = Vector3.new(0.8, 1.2, 0.5),
+	Screamer = Vector3.new(0.5, 1.35, 0.35),
+}
+
+local function westWall(room: Model)
+	local x = -W / 2 + 1
+	-- floating shelves with lamps and things
+	for _, y in { 6, 10 } do
+		piece(room, "WallShelf", Vector3.new(1.6, 0.4, 10), at(x + 0.8, y, -16), C.shelf, Enum.Material.Wood)
+	end
+	local lamp = deco(
+		piece(room, "CubeLamp", Vector3.new(1, 1, 1), at(x + 0.8, 10.7, -19.5), C.warm, Enum.Material.Neon)
+	)
+	softLight(lamp, 16, 0.9, C.warm).Name = "LampLight"
+	local lamp2 = deco(
+		piece(room, "CubeLamp", Vector3.new(1, 1, 1), at(x + 0.8, 6.7, -12.5), C.warm, Enum.Material.Neon)
+	)
+	softLight(lamp2, 14, 0.8, C.warm).Name = "LampLight"
 	for i = 0, 5 do
+		piece(
+			room,
+			"Book",
+			Vector3.new(1.2, 1.4, 0.35),
+			at(x + 0.8, 6.9, -18 + i * 0.4),
+			Color3.fromHSV(0.02 + i * 0.12, 0.45, 0.35),
+			Enum.Material.SmoothPlastic
+		)
+	end
+	upright("Vase", room, 1.6, 0.8, at(x + 0.8, 11, -14), Color3.fromRGB(40, 40, 44), Enum.Material.Glass)
+	-- the big painting
+	picture(room, at(x + 0.15, 9, -5), EAST, Vector2.new(6, 6.6), hallwayScene)
+	-- the specimen jars on their shelf: the private Alpha pick
+	piece(room, "JarShelf", Vector3.new(2.2, 0.4, 15), at(x + 1.1, 4.6, 6), C.shelf, Enum.Material.Wood)
+	for i, className in AlphaClasses.order do
+		local class = (AlphaClasses :: any)[className]
+		local z = -0.5 + (i - 1) * 6.5
+		local base = at(x + 1.1, 4.8, z)
+		local jar = upright(
+			"Jar",
+			room,
+			2.8,
+			1.8,
+			base + Vector3.new(0, 1.4, 0),
+			Color3.fromRGB(90, 120, 104),
+			Enum.Material.Glass
+		)
+		jar.Transparency = 0.35
+		local liquid = deco(
+			upright("JarLiquid", room, 2.2, 1.6, base + Vector3.new(0, 1.15, 0), Color3.fromRGB(52, 78, 60))
+		)
+		liquid.Transparency = 0.25
+		upright(
+			"JarLid",
+			room,
+			0.3,
+			1.9,
+			base + Vector3.new(0, 2.95, 0),
+			Color3.fromRGB(80, 80, 84),
+			Enum.Material.Metal
+		)
 		deco(
 			piece(
 				room,
-				"HazardStripe",
-				Vector3.new(1.6, 0.82, 0.06),
-				at(18 + i * 1.6, 13.2, z),
-				if i % 2 == 0 then black else yellow,
-				Enum.Material.Metal
+				"JarShape",
+				JAR_LOOK[className] or JAR_LOOK.Screamer,
+				base + Vector3.new(0, 1.2, 0),
+				Color3.fromRGB(14, 18, 14)
+			)
+		)
+		local glow = deco(
+			piece(
+				room,
+				"JarGlow",
+				Vector3.new(0.3, 0.3, 0.3),
+				base + Vector3.new(0, 0.4, 0),
+				C.jar,
+				Enum.Material.Neon
+			)
+		)
+		glow.Transparency = 0.6
+		softLight(glow, 5, 0.25, C.jar).Name = "JarLight"
+		sign(room, "JarLabel", Vector2.new(1.9, 0.6), at(x + 2.25, 4.2, z), EAST, string.upper(class.name), {
+			text = C.ink,
+			board = C.paper,
+			font = Enum.Font.SpecialElite,
+		})
+		local pick = prompt(jar, "Choose your nightmare", class.name, "AlphaPickPrompt", 6)
+		pick:SetAttribute("Class", className)
+	end
+	-- the days, scratched on the concrete above the jars
+	sign(room, "Graffiti", Vector2.new(7, 2.6), at(x + 0.1, 12.6, 6), EAST, "DAY 47\n||||/ ||||/ ||||/ ||", {
+		text = Color3.fromRGB(214, 208, 196),
+		font = Enum.Font.PermanentMarker,
+	})
+	-- the wardrobe mirror (the character catalog)
+	piece(room, "Wardrobe", Vector3.new(2.4, 11, 6), at(x + 1.2, 6.5, 17.5), C.shelf, Enum.Material.Wood)
+	local mirror = piece(
+		room,
+		"Mirror",
+		Vector3.new(0.15, 9.4, 4.6),
+		at(x + 2.45, 6.6, 17.5),
+		Color3.fromRGB(176, 182, 190),
+		Enum.Material.Glass
+	)
+	mirror.Reflectance = 0.4
+	prompt(mirror, "Look in the mirror", "Catalog", "CatalogPrompt", 9)
+	for _, crack in { { 0.6, 0.5 }, { -0.9, -0.3 } } do
+		deco(
+			Kit.part(
+				room,
+				"Crack",
+				Vector3.new(0.05, 3, 0.08),
+				CFrame.new(at(x + 2.55, 7 + crack[1], 17.5 + crack[2])) * CFrame.Angles(crack[2], 0, 0),
+				Color3.fromRGB(30, 30, 34)
 			)
 		)
 	end
-	local door = room:FindFirstChild("DeployDoor")
-	if door then
-		sign(
-			door,
-			"DoorWarning",
-			Vector2.new(5.4, 1.4),
-			at(22, 9.6, -D / 2 + 1.45),
-			SOUTH,
-			"INFECTED ZONE - DO NOT OPEN",
-			{
-				text = yellow,
-				board = black,
-				font = Enum.Font.GothamBlack,
-			}
-		)
-	end
 end
 
--- The survival rules, pinned up by someone who learned them the hard way.
-local function rulesPoster(room: Model)
+--------------------------------------------------------------------------- north-east: the kitchen (the shop)
+
+local function kitchen(room: Model)
+	local x1 = W / 2 - 1
+	local stone = Color3.fromRGB(40, 38, 40)
+	-- the back counter, upper cabinets, the under-cabinet light that stutters
+	piece(
+		room,
+		"Counter",
+		Vector3.new(3, 3.6, 18),
+		at(x1 - 1.5, 2.8, -13),
+		Color3.fromRGB(56, 40, 32),
+		Enum.Material.Wood
+	)
+	piece(room, "Worktop", Vector3.new(3.2, 0.3, 18.2), at(x1 - 1.5, 4.75, -13), stone, Enum.Material.Marble)
+	piece(
+		room,
+		"Cabinets",
+		Vector3.new(1.8, 4, 18),
+		at(x1 - 0.9, 12, -13),
+		Color3.fromRGB(56, 40, 32),
+		Enum.Material.Wood
+	)
+	local tube = deco(
+		piece(
+			room,
+			"ShopTube",
+			Vector3.new(0.2, 0.2, 16),
+			at(x1 - 1.9, 9.85, -13),
+			C.sick,
+			Enum.Material.Neon
+		)
+	)
+	softLight(tube, 14, 1, C.sick)
+	piece(
+		room,
+		"Fridge",
+		Vector3.new(3.2, 9, 3.2),
+		at(x1 - 1.6, 5.5, -2.2),
+		Color3.fromRGB(150, 150, 150),
+		Enum.Material.Metal
+	)
 	sign(
 		room,
 		"SurvivalRules",
-		Vector2.new(4.8, 6.2),
-		at(12.8, 8, -22.75),
-		SOUTH,
-		"SURVIVAL RULES\n\n1. STAY QUIET\n2. NEVER GO ALONE\n3. CHECK FOR BITES\n4. AIM FOR THE HEAD\n5. NEVER OPEN THE DOOR AT NIGHT",
+		Vector2.new(2.4, 3.4),
+		at(x1 - 3.25, 7, -2.2),
+		WEST,
+		"RULES\n1. STAY QUIET\n2. NEVER ALONE\n3. CHECK FOR BITES\n4. AIM FOR THE HEAD",
 		{
 			text = C.ink,
 			board = C.paper,
+			font = Enum.Font.SpecialElite,
 		}
 	)
-end
-
--- A shooting target on the east wall: a zombie silhouette, holes everywhere, an X on the head.
-local function zombieTarget(room: Model)
-	piece(
-		room,
-		"TargetBoard",
-		Vector3.new(0.3, 6, 4.4),
-		at(W / 2 - 1.15, 6.5, 4),
-		Color3.fromRGB(150, 120, 84),
-		Enum.Material.WoodPlanks
-	)
-	local gui = paperBoard(
-		room,
-		"Target",
-		Vector2.new(3.8, 5.4),
-		at(W / 2 - 1.35, 6.5, 4),
-		WEST,
-		Color3.fromRGB(226, 220, 204)
-	)
-	local shape = Color3.fromRGB(46, 58, 44)
-	frame(gui, UDim2.fromScale(0.36, 0.06), UDim2.fromScale(0.28, 0.2), shape, true) -- head
-	frame(gui, UDim2.fromScale(0.3, 0.27), UDim2.fromScale(0.4, 0.4), shape) -- body
-	frame(gui, UDim2.fromScale(0.02, 0.3), UDim2.fromScale(0.3, 0.08), shape) -- arms reaching
-	frame(gui, UDim2.fromScale(0.68, 0.33), UDim2.fromScale(0.3, 0.08), shape)
-	frame(gui, UDim2.fromScale(0.32, 0.67), UDim2.fromScale(0.13, 0.3), shape) -- legs
-	frame(gui, UDim2.fromScale(0.55, 0.67), UDim2.fromScale(0.13, 0.3), shape)
-	text(
-		gui,
-		UDim2.fromScale(0.38, 0.05),
-		UDim2.fromScale(0.24, 0.2),
-		"X",
-		Color3.fromRGB(200, 30, 36),
-		Enum.Font.PermanentMarker
-	)
-	for _, h in
-		{
-			{ 0.45, 0.4 },
-			{ 0.52, 0.48 },
-			{ 0.4, 0.55 },
-			{ 0.6, 0.33 },
-			{ 0.2, 0.8 },
-			{ 0.82, 0.15 },
-			{ 0.48, 0.13 },
-		}
-	do
-		frame(gui, UDim2.fromScale(h[1], h[2]), UDim2.fromScale(0.04, 0.03), Color3.fromRGB(10, 10, 10), true)
+	-- what's left to eat: cans, water, a flashlight, a radio
+	for i = 0, 5 do
+		upright(
+			"Can",
+			room,
+			0.8,
+			0.6,
+			at(x1 - 1.6, 5.3, -20 + i * 0.75),
+			Color3.fromRGB(150, 140, 120),
+			Enum.Material.Metal
+		)
 	end
-end
-
--- The stockpile in the north-east corner: canned food, water jugs, a gas can, a rations crate.
-local function supplies(room: Model)
-	piece(room, "Pallet", Vector3.new(4, 0.5, 4), at(28.5, 1.25, -16.5), C.rotten, Enum.Material.WoodPlanks)
-	local level = 0
-	for _, side in { 3, 2, 1 } do
-		for i = 0, side - 1 do
-			for j = 0, side - 1 do
-				local off = (3 - side) * 0.35
-				upright(
-					"Can",
-					room,
-					0.8,
-					0.6,
-					at(27.3 + off + i * 0.7, 1.9 + level * 0.8, -17.7 + off + j * 0.7),
-					Color3.fromRGB(150, 140, 120),
-					Enum.Material.Metal
-				)
-			end
-		end
-		level += 1
-	end
-	for _, p in { at(29.6, 2.2, -21.4), at(30.3, 2.2, -19.9), at(28.6, 2.2, -20.4) } do
-		local jug = upright("WaterJug", room, 2.4, 1.3, p, Color3.fromRGB(110, 160, 200), Enum.Material.Glass)
+	for _, z in { -8.5, -7.2 } do
+		local jug = upright(
+			"WaterJug",
+			room,
+			2.2,
+			1.2,
+			at(x1 - 1.6, 6, z),
+			Color3.fromRGB(110, 160, 200),
+			Enum.Material.Glass
+		)
 		jug.Transparency = 0.35
 	end
+	-- the island: the Z-Shop. Ring the bell.
 	piece(
 		room,
-		"GasCan",
-		Vector3.new(0.8, 1.6, 1.3),
-		at(30.2, 1.8, -13.8),
-		Color3.fromRGB(170, 40, 34),
+		"Island",
+		Vector3.new(3.4, 3.6, 10),
+		at(24, 2.8, -13),
+		Color3.fromRGB(56, 40, 32),
+		Enum.Material.Wood
+	)
+	piece(room, "IslandTop", Vector3.new(4, 0.3, 10.6), at(24, 4.75, -13), stone, Enum.Material.Marble)
+	local bell = upright(
+		"ShopBell",
+		room,
+		0.5,
+		1,
+		at(24, 5.15, -11),
+		Color3.fromRGB(196, 150, 60),
 		Enum.Material.Metal
 	)
-	Kit.crate(room, at(26, 1, -14.2), 2.6, 0)
-	sign(room, "RationsStencil", Vector2.new(2.2, 0.8), at(26, 2.6, -12.88), SOUTH, "RATIONS", {
-		text = Color3.fromRGB(30, 26, 22),
-		font = Enum.Font.GothamBlack,
+	prompt(bell, "Ring the bell", "Z-Shop", "ShopPrompt", 8)
+	piece(
+		room,
+		"SupplyBox",
+		Vector3.new(2.2, 1.4, 1.6),
+		at(24, 5.6, -15),
+		Color3.fromRGB(84, 90, 60),
+		Enum.Material.Metal
+	)
+	sign(room, "ShopSign", Vector2.new(5, 1.4), at(x1 - 1.85, 12, -13), WEST, "Z-SHOP", {
+		text = Color3.fromRGB(255, 210, 140),
+		board = Color3.fromRGB(26, 20, 18),
+		font = Enum.Font.SpecialElite,
+		glow = true,
+	})
+	for _, z in { -16.5, -13, -9.5 } do
+		upright("StoolSeat", room, 0.4, 1.6, at(21, 4, z), C.leather, Enum.Material.Leather)
+		upright("StoolLeg", room, 3, 0.3, at(21, 2.5, z), Color3.fromRGB(30, 30, 32), Enum.Material.Metal)
+	end
+	-- two small pendants over the island
+	for _, z in { -15.5, -10.5 } do
+		rod(room, "IslandCord", at(24, H + 1, z), at(24, 10.5, z), 0.06, Color3.fromRGB(20, 20, 20))
+		local shade = deco(
+			upright(
+				"IslandLamp",
+				room,
+				0.8,
+				1.2,
+				at(24, 10.2, z),
+				Color3.fromRGB(30, 30, 32),
+				Enum.Material.Metal
+			)
+		)
+		softLight(shade, 12, 0.7, C.warm).Name = "PendantLight"
+	end
+end
+
+--------------------------------------------------------------------------- outside: windows, balcony, the city
+
+-- One stretch of window: tinted glass, a few boards nailed across the bottom, tape crosses,
+-- handprints. `along` runs along the glass, `inward` points into the room.
+local function windowBay(
+	room: Model,
+	name: string,
+	from: Vector3,
+	along: Vector3,
+	length: number,
+	inward: Vector3,
+	rng: Random
+): Model
+	local bay = Instance.new("Model")
+	bay.Name = name
+	bay.Parent = room
+	local mid = from + along * (length / 2)
+	local look = CFrame.lookAt(mid, mid + inward)
+	local glass = Kit.part(
+		bay,
+		"Glass",
+		Vector3.new(length, H - 2, 0.3),
+		look * CFrame.new(0, (H - 2) / 2 + 1.5 - (mid.Y - BASE.Y), 0),
+		C.glass,
+		Enum.Material.Glass
+	)
+	glass.Transparency = 0.6
+	glass.CastShadow = false
+	-- boards across the lower part
+	for i, y in { 3.2, 4.6, 6 } do
+		local board = Kit.part(
+			bay,
+			"Board",
+			Vector3.new(length * 0.55, 0.7, 0.3),
+			look
+				* CFrame.new(rng:NextNumber(-3, 3), y - (mid.Y - BASE.Y), -1)
+				* CFrame.Angles(0, 0, rng:NextNumber(-0.05, 0.05) * i),
+			Color3.fromRGB(110, 90, 66),
+			Enum.Material.WoodPlanks
+		)
+		board.CastShadow = true
+	end
+	local puff = Instance.new("ParticleEmitter")
+	puff.Name = "BangDust"
+	puff.Enabled = false
+	puff.Lifetime = NumberRange.new(1, 2)
+	puff.Speed = NumberRange.new(1, 3)
+	puff.SpreadAngle = Vector2.new(60, 60)
+	puff.Acceleration = Vector3.new(0, -4, 0)
+	puff.EmissionDirection = Enum.NormalId.Front
+	puff.Size = NumberSequence.new(0.25)
+	puff.Color = ColorSequence.new(Color3.fromRGB(120, 112, 100))
+	puff.Parent = bay:FindFirstChild("Board")
+	-- tape crosses on two panes, a bloody handprint, cracks
+	for _, offset in { -length * 0.3, length * 0.2 } do
+		for _, a in { 0.7, -0.7 } do
+			deco(
+				Kit.part(
+					bay,
+					"Tape",
+					Vector3.new(9, 0.35, 0.05),
+					look * CFrame.new(offset, 11 - (mid.Y - BASE.Y), -0.2) * CFrame.Angles(0, 0, a),
+					Color3.fromRGB(196, 184, 150)
+				)
+			)
+		end
+	end
+	for _, h in { { -length * 0.1, 8.5 }, { -length * 0.08 + 0.8, 7.7 } } do
+		local print = deco(
+			Kit.part(
+				bay,
+				"Handprint",
+				Vector3.new(0.9, 1.1, 0.04),
+				look * CFrame.new(h[1], h[2] - (mid.Y - BASE.Y), -0.2),
+				C.blood
+			)
+		)
+		print.Transparency = 0.25
+	end
+	-- the things a scare shows: a hand on the glass outside, eyes
+	local hand = deco(
+		Kit.part(
+			bay,
+			"ScareHand",
+			Vector3.new(1.1, 1.5, 0.3),
+			look * CFrame.new(length * 0.15, 8 - (mid.Y - BASE.Y), 0.5),
+			Color3.fromRGB(70, 78, 66)
+		)
+	)
+	hand.Transparency = 1
+	for _, dx in { -0.4, 0.4 } do
+		local eye = deco(
+			Kit.part(
+				bay,
+				"ScareEye",
+				Vector3.new(0.25, 0.14, 0.05),
+				look * CFrame.new(-length * 0.25 + dx, 9 - (mid.Y - BASE.Y), 1.2),
+				Color3.fromRGB(226, 232, 206),
+				Enum.Material.Neon
+			)
+		)
+		eye.Transparency = 1
+	end
+	-- moonlight falling in through the glass (the boards cut stripes into it)
+	local source = mid + -inward * 22 + UP * 22
+	local moon = deco(
+		Kit.part(
+			bay,
+			"Moonbeam",
+			Vector3.new(1, 1, 1),
+			CFrame.lookAt(source, mid + inward * 12 - UP * 8),
+			C.black
+		)
+	)
+	moon.Transparency = 1
+	local beam = Instance.new("SpotLight")
+	beam.Name = "MoonLight"
+	beam.Face = Enum.NormalId.Front
+	beam.Angle = 35
+	beam.Range = 60
+	beam.Brightness = 1.8
+	beam.Color = C.lavender
+	beam.Shadows = true
+	beam.Parent = moon
+	local motes = deco(
+		Kit.part(
+			bay,
+			"Motes",
+			Vector3.new(length * 0.6, 8, 6),
+			look * CFrame.new(0, 6 - (mid.Y - BASE.Y), -5),
+			C.black
+		)
+	)
+	motes.Transparency = 1
+	local dust = Instance.new("ParticleEmitter")
+	dust.Shape = Enum.ParticleEmitterShape.Box
+	dust.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	dust.Rate = 4
+	dust.Lifetime = NumberRange.new(6, 9)
+	dust.Speed = NumberRange.new(0.1, 0.3)
+	dust.SpreadAngle = Vector2.new(180, 180)
+	dust.Size = NumberSequence.new(0.06)
+	dust.Transparency = NumberSequence.new(0.4)
+	dust.LightInfluence = 1
+	dust.Parent = motes
+	return bay
+end
+
+-- The balcony outside the south windows, where something stands some nights.
+local function balcony(room: Model)
+	piece(room, "Balcony", Vector3.new(W, 1, 9), at(0, 0.5, D / 2 + 5.5), C.concrete, Enum.Material.Concrete)
+	local rail = piece(
+		room,
+		"BalconyGlass",
+		Vector3.new(W, 3.4, 0.2),
+		at(0, 2.7, D / 2 + 9.9),
+		C.glass,
+		Enum.Material.Glass
+	)
+	rail.Transparency = 0.6
+	rail.CastShadow = false
+	piece(
+		room,
+		"BalconyRail",
+		Vector3.new(W, 0.3, 0.4),
+		at(0, 4.5, D / 2 + 9.9),
+		C.frame,
+		Enum.Material.Metal
+	)
+	-- the Tall One: very tall, very thin, outside the left windows (hidden until it isn't)
+	local tall = Instance.new("Model")
+	tall.Name = "TallOne"
+	tall.Parent = room
+	for _, part in
+		{
+			{ Vector3.new(0.9, 9, 0.7), at(-14.6, 5.5, D / 2 + 5) },
+			{ Vector3.new(0.9, 9, 0.7), at(-13.4, 5.5, D / 2 + 5) },
+			{ Vector3.new(2.2, 7, 1), at(-14, 13.5, D / 2 + 5) },
+			{ Vector3.new(1.2, 1.6, 1.2), at(-14, 18, D / 2 + 5) },
+		}
+	do
+		local p = deco(piece(tall, "TallPart", part[1], part[2], C.black))
+		p.Transparency = 1
+	end
+	-- DON'T GO OUT, written on the glass from the inside
+	sign(room, "GlassWriting", Vector2.new(9, 2.6), at(12, 9, D / 2 - 0.25), NORTH, "DON'T GO OUT", {
+		text = Color3.fromRGB(176, 24, 30),
+		font = Enum.Font.PermanentMarker,
 	})
 end
 
--- A barricade under the first window: crates and sandbags piled up.
-local function windowBarricade(room: Model, rng: Random)
-	Kit.crate(room, at(-7.6, 1, 21.4), 2.8, 0.08)
-	Kit.crate(room, at(-4.5, 1, 21.6), 2.8, -0.1)
-	Clutter.sandbags(room, CFrame.new(at(-6, 3.8, 21.5)), 6, rng)
+-- The dead city in the fog: dark towers with a few lit windows, a red warning light, fires and
+-- smoke, and a dark floor of fog far below that hides everything under it.
+local function skyline(room: Model, rng: Random)
+	local city = Instance.new("Model")
+	city.Name = "Skyline"
+	city.Parent = room
+	piece(
+		city,
+		"FogFloor",
+		Vector3.new(1200, 2, 1200),
+		at(0, -70, 0),
+		Color3.fromRGB(22, 20, 28),
+		Enum.Material.SmoothPlastic
+	)
+	local spots = {}
+	for _ = 1, 16 do
+		table.insert(spots, Vector3.new(rng:NextNumber(-220, 220), 0, rng:NextNumber(70, 230))) -- south
+	end
+	for _ = 1, 10 do
+		table.insert(spots, Vector3.new(rng:NextNumber(70, 230), 0, rng:NextNumber(-160, 60))) -- east
+	end
+	local tallest: Vector3? = nil
+	for i, s in spots do
+		local w, d = rng:NextNumber(18, 34), rng:NextNumber(18, 34)
+		local top = rng:NextNumber(-20, 90)
+		local height = top + 75
+		local centre = at(s.X, top - height / 2, s.Z)
+		piece(
+			city,
+			"Tower",
+			Vector3.new(w, height, d),
+			centre,
+			Color3.fromRGB(30, 30, 38):Lerp(Color3.fromRGB(44, 42, 50), rng:NextNumber(0, 1)),
+			Enum.Material.Concrete
+		)
+		-- a few lit windows on the face toward the apartment
+		local towards = if math.abs(s.X) > math.abs(s.Z) and s.X > 60 then WEST else NORTH
+		for _ = 1, rng:NextInteger(2, 9) do
+			local u = rng:NextNumber(-0.42, 0.42) * (if towards == NORTH then w else d)
+			local y = top - rng:NextNumber(2, 60)
+			local face = if towards == NORTH
+				then Vector3.new(s.X + u, y, s.Z - d / 2 - 0.1)
+				else Vector3.new(s.X - w / 2 - 0.1, y, s.Z + u)
+			local roll = rng:NextNumber()
+			local color = if roll < 0.1
+				then Color3.fromRGB(200, 40, 40)
+				elseif roll < 0.4 then Color3.fromRGB(170, 190, 230)
+				else Color3.fromRGB(255, 196, 120)
+			deco(
+				piece(
+					city,
+					"LitWindow",
+					if towards == NORTH then Vector3.new(1.4, 1.8, 0.1) else Vector3.new(0.1, 1.8, 1.4),
+					BASE + face,
+					color,
+					Enum.Material.Neon
+				)
+			)
+		end
+		if not tallest or top > tallest.Y then
+			tallest = Vector3.new(s.X, top, s.Z)
+		end
+		-- two of the towers are burning
+		if i == 3 or i == 18 then
+			local fireAt = deco(
+				piece(
+					city,
+					"CityFire",
+					Vector3.new(6, 2, 6),
+					at(s.X, top + 1, s.Z),
+					Color3.fromRGB(255, 100, 30),
+					Enum.Material.Neon
+				)
+			)
+			fireAt.Transparency = 0.3
+			local flames = Instance.new("Fire")
+			flames.Size = 18
+			flames.Heat = 20
+			flames.Parent = fireAt
+			local smoke = Instance.new("Smoke")
+			smoke.Color = Color3.fromRGB(30, 28, 30)
+			smoke.Size = 30
+			smoke.Opacity = 0.4
+			smoke.RiseVelocity = 8
+			smoke.Parent = fireAt
+			softLight(fireAt, 60, 2, Color3.fromRGB(255, 120, 50))
+		end
+	end
+	-- the aircraft warning light on the tallest tower, blinking red
+	if tallest then
+		local red = deco(
+			piece(
+				city,
+				"WarningLight",
+				Vector3.new(1.2, 1.2, 1.2),
+				at(tallest.X, tallest.Y + 1, tallest.Z),
+				C.danger,
+				Enum.Material.Neon
+			)
+		)
+		Kit.light(red, 30, 2, C.danger, true).Shadows = false
+	end
+end
+
+local function spawnPoint(room: Model)
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "LobbySpawn"
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Duration = 0 -- no forcefield
+	spawn.Size = Vector3.new(6, 1, 6)
+	spawn.CFrame = CFrame.lookAt(at(-20, 1.5, -15), at(-3, 1.5, 2)) -- just inside the door, facing the room
+	spawn.Transparency = 1
+	spawn.CanCollide = false
+	spawn.CanQuery = false
+	spawn.Parent = room
+	CollectionService:AddTag(spawn, "LobbySpawn")
 end
 
 -- Builds the safehouse as workspace.Lobby (`parent`) and returns what LobbyService updates.
@@ -1877,28 +1553,19 @@ function Safehouse.build(parent: Instance): Refs
 	local room = Instance.new("Model")
 	room.Name = "Lobby"
 	room.Parent = parent
-	local rng = Random.new(9)
+	local rng = Random.new(12)
 	shell(room)
-	stairwell(room)
-	local slots = chalkboard(room)
-	local modeLabel = deployDoor(room)
-	loadoutRack(room)
-	specimenJars(room)
-	hearth(room, rng)
-	shopCage(room, rng)
-	mirrorAlcove(room)
-	archive(room)
-	windows(room, rng)
+	local slots = tvWall(room, rng)
+	local modeLabel = frontDoor(room)
 	local posters = missingPosters(room)
-	lights(room)
-	comfort(room)
-	outbreakMap(room)
-	graffiti(room)
-	hazardDoor(room)
-	rulesPoster(room)
-	zombieTarget(room)
-	supplies(room)
-	windowBarricade(room, rng)
+	livingRoom(room, rng)
+	westWall(room)
+	kitchen(room)
+	windowBay(room, "Window1", at(-W / 2, 1, D / 2 - 0.6), EAST, W, NORTH, rng)
+	windowBay(room, "Window2", at(W / 2 - 0.6, 1, 0), SOUTH, D / 2, WEST, rng)
+	balcony(room)
+	skyline(room, rng)
+	spawnPoint(room)
 	return { mapSlots = slots, modeLabel = modeLabel, posters = posters }
 end
 

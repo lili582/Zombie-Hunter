@@ -273,3 +273,6 @@ Built with the recommended answers to §10: Future lighting, Relay Station 9, an
 - **Done:** the room and every zone in §2 (`src/server/Maps/Safehouse.luau`), the lighting rig with 4 shadow casters and 15 lights, particles (fire, embers, moths, dust motes in the moonbeams, the leak, breath at the door), MISSING posters with the last round's infected (`LobbyService`, `Lobby.missingIds`), the scare director with captions and its budget rules (`SafehouseController`, `Rules/LobbyScares`, tested), and the countdown escalation and door.
 - **Scares built:** window bang + hand, bulb dip, footsteps (dust only), door test, eyes in the boards, the Tall One.
 - **Not yet:** audio and music, MaterialVariants / SurfaceAppearance, the loadout / archive / stats / spectate panels (the rack, tape shelf and CCTV are props), camera moments, the ready switch, first-time footprints, mirror lag, poster swap, the wrong radio, and the reduce-flicker setting.
+
+
+**Update:** the room was later restyled from the Relay Station 9 basement into a high-rise apartment (after a modern apartment reference). The stations and scares stay; their objects changed: TV = vote, front door = deploy door, kitchen island = shop, wardrobe mirror = catalog, shelf jars = Alpha pick.
